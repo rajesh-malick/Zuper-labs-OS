@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Zuper Web OS — Concept Prototype (React)</title>
+  <meta name="description" content="A design-concept exploration of labs.zuper.co as a desktop-OS shell, built with React + Tailwind. Not the real site." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Inconsolata:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js" crossorigin></script>
+  <style>
+    html, body, #root { height: 100%; margin: 0; background: #020402; }
+    body { font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; overscroll-behavior: none; }
+    /* OS-chrome text (icon labels, window titles, badges, taskbar) stays a clean readable
+       mono at a real size, with a drop shadow for contrast against the animated background —
+       the same trick windows93.net/real desktop OSes use for icon labels over wallpaper. */
+    .font-mono { font-family: 'Inconsolata', 'Courier New', monospace !important; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 1px rgba(0,0,0,.6); }
+    /* Retro terminal font (VT323, the same family windows93.net's terminal uses) — reserved
+       for genuine terminal/shell output, never for small chrome labels (illegible that small). */
+    .font-terminal { font-family: 'VT323', 'Inconsolata', monospace !important; letter-spacing: .01em; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    /* Tailwind's browser CDN JIT unreliably generates CSS for opacity-slash utilities in this
+       app (confirmed: it silently drops most text-white/N, border-white/N, bg-white/N, and even
+       plain opacity-40 — leaving those elements with NO color rule, which resolves to black).
+       Rather than depend on that scanner, every such utility actually used in app.jsx gets an
+       explicit, guaranteed rule here. */
+    .text-white\/40 { color: rgba(255,255,255,.40) !important; }
+    .text-white\/48 { color: rgba(255,255,255,.48) !important; }
+    .text-white\/58 { color: rgba(255,255,255,.58) !important; }
+    .text-white\/68 { color: rgba(255,255,255,.68) !important; }
+    .text-white\/72 { color: rgba(255,255,255,.72) !important; }
+    .text-white\/78 { color: rgba(255,255,255,.78) !important; }
+    .text-white\/85 { color: rgba(255,255,255,.85) !important; }
+    .text-white\/88 { color: rgba(255,255,255,.88) !important; }
+    .text-white\/92 { color: rgba(255,255,255,.92) !important; }
+    .border-white\/10 { border-color: rgba(255,255,255,.10) !important; }
+    .border-white\/15 { border-color: rgba(255,255,255,.15) !important; }
+    .border-white\/25 { border-color: rgba(255,255,255,.25) !important; }
+    .border-white\/30 { border-color: rgba(255,255,255,.30) !important; }
+    .bg-white\/5 { background-color: rgba(255,255,255,.05) !important; }
+    .bg-white\/10 { background-color: rgba(255,255,255,.10) !important; }
+    .border-red-400\/50 { border-color: rgba(248,113,113,.5) !important; }
+    .opacity-40 { opacity: .4 !important; }
+    button:disabled.disabled\:opacity-40 { opacity: .4 !important; }
+    button:hover.hover\:border-white\/30:not(:disabled) { border-color: rgba(255,255,255,.30) !important; }
+    button:hover.hover\:border-white\/25:not(:disabled) { border-color: rgba(255,255,255,.25) !important; }
+    button:hover.hover\:bg-white\/5:not(:disabled) { background-color: rgba(255,255,255,.05) !important; }
+    button:hover.hover\:bg-white\/10:not(:disabled) { background-color: rgba(255,255,255,.10) !important; }
+    button:hover.hover\:text-white:not(:disabled) { color: #fff !important; }
+    a:hover.hover\:bg-white\/5 { background-color: rgba(255,255,255,.05) !important; }
+    .pointer-events-none { pointer-events: none !important; }
+    .overflow-y-auto { overflow-y: auto !important; }
+    .overflow-x-hidden { overflow-x: hidden !important; }
+    @keyframes zuper-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    @keyframes crt-sweep { 0% { transform: translateY(-160px); } 100% { transform: translateY(100vh); } }
+    @keyframes crt-flicker { 0%, 100% { opacity: .015; } 50% { opacity: .035; } 92% { opacity: .06; } }
+    @keyframes crt-icon-glow { 0%, 100% { filter: drop-shadow(0 0 2px currentColor); } 50% { filter: drop-shadow(0 0 6px currentColor); } }
+    html { cursor: default; }
+    ::selection { background: rgba(63,230,118,.35); color: #eafff0; }
+    /* CRT menu/list rows — a bright-green hover highlight (not white) and a classic
+       "> " selection cursor prefix, inspired by real green-phosphor terminal UIs. */
+    .crt-item { position: relative; transition: background-color .1s; }
+    .crt-item:hover { background-color: rgba(63,230,118,.14) !important; }
+    .crt-item::before { content: ">"; position: absolute; left: 4px; top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity .1s; color: #3fe676; font-family: 'VT323', monospace; font-size: 1.1em; }
+    .crt-item:hover::before { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react" src="./app.jsx"></script>
+</body>
+</html>

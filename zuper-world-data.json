@@ -1,0 +1,987 @@
+[
+  {
+    "id": "command-center",
+    "name": "command-center",
+    "center": "7,-1,0",
+    "entities": [
+      {
+        "id": "command-console",
+        "name": "command-console",
+        "type": "server",
+        "description": "Central command console — the nerve center of Zuper's engineering operations",
+        "category": "core",
+        "details": null
+      }
+    ],
+    "flows": []
+  },
+  {
+    "id": "core-platform",
+    "name": "core-platform",
+    "center": "-24.5,-1.8,15",
+    "entities": [
+      {
+        "id": "zuper-platform",
+        "name": "zuper-web-app",
+        "type": "server",
+        "description": "Core platform orchestrating all field service operations",
+        "category": "core",
+        "details": null
+      },
+      {
+        "id": "api-gateway",
+        "name": "api-gateway",
+        "type": "server",
+        "description": "Unified API gateway handling all external and internal requests",
+        "category": "infrastructure",
+        "details": [
+          "Rate limiting",
+          "Authentication",
+          "Request routing",
+          "API versioning"
+        ]
+      },
+      {
+        "id": "database",
+        "name": "database",
+        "type": "database",
+        "description": "Distributed database cluster",
+        "category": "infrastructure",
+        "details": [
+          "Sharded architecture",
+          "Read replicas",
+          "Automated backups",
+          "Point-in-time recovery"
+        ]
+      },
+      {
+        "id": "event-system",
+        "name": "event-system",
+        "type": "service",
+        "description": "Event-driven messaging backbone",
+        "category": "infrastructure",
+        "details": [
+          "Pub/sub messaging",
+          "Event sourcing",
+          "Dead letter queues",
+          "Replay capability"
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "id": "platform-to-api",
+        "from": "zuper-platform",
+        "to": "api-gateway",
+        "frequency": 30,
+        "speed": 2.5,
+        "signalType": "data"
+      },
+      {
+        "id": "api-to-platform",
+        "from": "api-gateway",
+        "to": "zuper-platform",
+        "frequency": 25,
+        "speed": 2,
+        "signalType": "data"
+      },
+      {
+        "id": "platform-to-db",
+        "from": "zuper-platform",
+        "to": "database",
+        "frequency": 35,
+        "speed": 3,
+        "signalType": "data"
+      },
+      {
+        "id": "db-to-platform",
+        "from": "database",
+        "to": "zuper-platform",
+        "frequency": 30,
+        "speed": 3,
+        "signalType": "data"
+      },
+      {
+        "id": "platform-to-events",
+        "from": "zuper-platform",
+        "to": "event-system",
+        "frequency": 25,
+        "speed": 3.5,
+        "signalType": "event"
+      },
+      {
+        "id": "events-to-platform",
+        "from": "event-system",
+        "to": "zuper-platform",
+        "frequency": 20,
+        "speed": 3,
+        "signalType": "event"
+      },
+      {
+        "id": "api-to-db",
+        "from": "api-gateway",
+        "to": "database",
+        "frequency": 20,
+        "speed": 2.5,
+        "signalType": "data"
+      },
+      {
+        "id": "events-to-db",
+        "from": "event-system",
+        "to": "database",
+        "frequency": 15,
+        "speed": 2.5,
+        "signalType": "data"
+      }
+    ]
+  },
+  {
+    "id": "ai-intelligence",
+    "name": "ai-intelligence",
+    "center": "23.6,-.8,-110.8",
+    "entities": [
+      {
+        "id": "zuper-llm",
+        "name": "llm-engine",
+        "type": "llm",
+        "description": "Zuper's proprietary large language model for field service intelligence",
+        "category": "intelligence",
+        "details": null
+      },
+      {
+        "id": "ai-agents",
+        "name": "agents",
+        "type": "agent",
+        "description": "Autonomous AI agents that analyze and optimize operations",
+        "category": "intelligence",
+        "details": [
+          "Multi-agent collaboration",
+          "Context-aware reasoning",
+          "Continuous learning"
+        ]
+      },
+      {
+        "id": "dispatch-agent",
+        "name": "dispatch",
+        "type": "agent",
+        "description": "AI-powered dispatch optimization agent",
+        "category": "intelligence",
+        "details": [
+          "Technician matching",
+          "Route optimization",
+          "Skill-based assignment",
+          "Workload balancing"
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "id": "agents-to-llm",
+        "from": "ai-agents",
+        "to": "zuper-llm",
+        "frequency": 35,
+        "speed": 3,
+        "signalType": "ai"
+      },
+      {
+        "id": "llm-to-agents",
+        "from": "zuper-llm",
+        "to": "ai-agents",
+        "frequency": 30,
+        "speed": 3,
+        "signalType": "decision"
+      },
+      {
+        "id": "dispatch-to-llm",
+        "from": "dispatch-agent",
+        "to": "zuper-llm",
+        "frequency": 20,
+        "speed": 2.5,
+        "signalType": "ai"
+      },
+      {
+        "id": "llm-to-dispatch",
+        "from": "zuper-llm",
+        "to": "dispatch-agent",
+        "frequency": 18,
+        "speed": 2.5,
+        "signalType": "decision"
+      },
+      {
+        "id": "agents-to-dispatch",
+        "from": "ai-agents",
+        "to": "dispatch-agent",
+        "frequency": 15,
+        "speed": 2,
+        "signalType": "ai"
+      }
+    ]
+  },
+  {
+    "id": "workflows-cluster",
+    "name": "workflows-cluster",
+    "center": "33.1,-1.6,-2.6",
+    "entities": [
+      {
+        "id": "workflow-engine",
+        "name": "engine",
+        "type": "workflow",
+        "description": "Configurable workflow automation engine",
+        "category": "core",
+        "details": null
+      },
+      {
+        "id": "report-builder",
+        "name": "report-builder",
+        "type": "report",
+        "description": "Dynamic report generation and analytics engine",
+        "category": "analytics",
+        "details": [
+          "Custom report templates",
+          "Real-time dashboards",
+          "Export capabilities",
+          "Scheduled reports"
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "id": "workflow-to-reports",
+        "from": "workflow-engine",
+        "to": "report-builder",
+        "frequency": 18,
+        "speed": 2,
+        "signalType": "data"
+      },
+      {
+        "id": "reports-to-workflow",
+        "from": "report-builder",
+        "to": "workflow-engine",
+        "frequency": 15,
+        "speed": 1.8,
+        "signalType": "data"
+      }
+    ]
+  },
+  {
+    "id": "field-operations",
+    "name": "field-operations",
+    "center": "-39.3,-3,-16.1",
+    "entities": [
+      {
+        "id": "roofing-ops",
+        "name": "operations",
+        "type": "operations",
+        "description": "Field operations management for roofing projects",
+        "category": "operations",
+        "details": null
+      },
+      {
+        "id": "notification-service",
+        "name": "notifications",
+        "type": "service",
+        "description": "Multi-channel notification delivery system",
+        "category": "services",
+        "details": [
+          "Push notifications",
+          "SMS / Email",
+          "In-app messaging",
+          "Preference management"
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "id": "ops-to-notifications",
+        "from": "roofing-ops",
+        "to": "notification-service",
+        "frequency": 15,
+        "speed": 2,
+        "signalType": "event"
+      },
+      {
+        "id": "notifications-to-ops",
+        "from": "notification-service",
+        "to": "roofing-ops",
+        "frequency": 12,
+        "speed": 1.8,
+        "signalType": "event"
+      }
+    ]
+  },
+  {
+    "id": "security-compliance",
+    "name": "security-compliance",
+    "center": "82.6,-3,8",
+    "entities": [
+      {
+        "id": "security-hub",
+        "name": "hub",
+        "type": "server",
+        "description": "Centralized security operations and threat monitoring",
+        "category": "security",
+        "details": null
+      },
+      {
+        "id": "compliance-engine",
+        "name": "engine",
+        "type": "service",
+        "description": "Automated compliance checks and regulatory reporting",
+        "category": "security",
+        "details": [
+          "SOC 2 compliance",
+          "GDPR enforcement",
+          "Audit trail generation",
+          "Policy enforcement"
+        ]
+      },
+      {
+        "id": "identity-store",
+        "name": "identity-store",
+        "type": "database",
+        "description": "Secure identity and credential management",
+        "category": "security",
+        "details": [
+          "SSO integration",
+          "Token management",
+          "Role-based access",
+          "MFA policies"
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "id": "security-to-compliance",
+        "from": "security-hub",
+        "to": "compliance-engine",
+        "frequency": 20,
+        "speed": 2.5,
+        "signalType": "data"
+      },
+      {
+        "id": "compliance-to-security",
+        "from": "compliance-engine",
+        "to": "security-hub",
+        "frequency": 15,
+        "speed": 2,
+        "signalType": "feedback"
+      },
+      {
+        "id": "security-to-identity",
+        "from": "security-hub",
+        "to": "identity-store",
+        "frequency": 25,
+        "speed": 3,
+        "signalType": "data"
+      },
+      {
+        "id": "identity-to-security",
+        "from": "identity-store",
+        "to": "security-hub",
+        "frequency": 20,
+        "speed": 2.5,
+        "signalType": "data"
+      }
+    ]
+  },
+  {
+    "id": "careers",
+    "name": "careers",
+    "center": "38,-3,40",
+    "entities": [
+      {
+        "id": "careers-server",
+        "name": "server",
+        "type": "server",
+        "description": "Careers hub — explore opportunities, solve challenges, and join the Zuper engineering team",
+        "category": "careers",
+        "details": null
+      },
+      {
+        "id": "careers-agent",
+        "name": "agent",
+        "type": "agent",
+        "description": "AI-powered candidate matching and challenge evaluation",
+        "category": "careers",
+        "details": [
+          "Skill assessment",
+          "Challenge verification",
+          "Candidate matching",
+          "Interview scheduling"
+        ]
+      },
+      {
+        "id": "careers-db",
+        "name": "database",
+        "type": "database",
+        "description": "Candidate profiles, challenge submissions, and hiring pipeline data",
+        "category": "careers",
+        "details": [
+          "Application tracking",
+          "Challenge results",
+          "Interview records",
+          "Hiring analytics"
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "id": "careers-server-to-agent",
+        "from": "careers-server",
+        "to": "careers-agent",
+        "frequency": 25,
+        "speed": 2.5,
+        "signalType": "data"
+      },
+      {
+        "id": "careers-agent-to-server",
+        "from": "careers-agent",
+        "to": "careers-server",
+        "frequency": 20,
+        "speed": 2,
+        "signalType": "decision"
+      },
+      {
+        "id": "careers-server-to-db",
+        "from": "careers-server",
+        "to": "careers-db",
+        "frequency": 18,
+        "speed": 2.5,
+        "signalType": "data"
+      },
+      {
+        "id": "careers-db-to-server",
+        "from": "careers-db",
+        "to": "careers-server",
+        "frequency": 15,
+        "speed": 2,
+        "signalType": "data"
+      }
+    ]
+  },
+  {
+    "id": "blog",
+    "name": "blog",
+    "center": "55,-3,40",
+    "entities": [
+      {
+        "id": "blog-server",
+        "name": "server",
+        "type": "server",
+        "description": "Blog hub — engineering articles, product updates, and technical deep-dives",
+        "category": "content",
+        "details": null
+      },
+      {
+        "id": "blog-db",
+        "name": "database",
+        "type": "server",
+        "description": "Content store for blog posts, drafts, and media assets",
+        "category": "content",
+        "details": [
+          "Post storage",
+          "Media assets",
+          "Draft management",
+          "Version history"
+        ]
+      },
+      {
+        "id": "blog-web",
+        "name": "web",
+        "type": "server",
+        "description": "Web frontend for reading and browsing blog content",
+        "category": "content",
+        "details": [
+          "Article rendering",
+          "Search & filtering",
+          "Comment system",
+          "Social sharing"
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "id": "blog-server-to-db",
+        "from": "blog-server",
+        "to": "blog-db",
+        "frequency": 20,
+        "speed": 2.5,
+        "signalType": "data"
+      },
+      {
+        "id": "blog-db-to-server",
+        "from": "blog-db",
+        "to": "blog-server",
+        "frequency": 18,
+        "speed": 2,
+        "signalType": "data"
+      },
+      {
+        "id": "blog-server-to-web",
+        "from": "blog-server",
+        "to": "blog-web",
+        "frequency": 25,
+        "speed": 2.5,
+        "signalType": "data"
+      },
+      {
+        "id": "blog-web-to-server",
+        "from": "blog-web",
+        "to": "blog-server",
+        "frequency": 15,
+        "speed": 2,
+        "signalType": "event"
+      }
+    ]
+  },
+  {
+    "id": "customer-portal",
+    "name": "customer-portal",
+    "center": "15.2,-3,70.4",
+    "entities": [
+      {
+        "id": "customer-portal",
+        "name": "portal",
+        "type": "server",
+        "description": "Self-service customer portal for booking and tracking",
+        "category": "customer",
+        "details": null
+      },
+      {
+        "id": "booking-service",
+        "name": "booking",
+        "type": "service",
+        "description": "Online appointment scheduling and availability engine",
+        "category": "customer",
+        "details": [
+          "Calendar sync",
+          "Availability rules",
+          "Confirmation flow",
+          "Rescheduling logic"
+        ]
+      },
+      {
+        "id": "customer-reports",
+        "name": "reports",
+        "type": "report",
+        "description": "Customer-facing reports and service history",
+        "category": "customer",
+        "details": [
+          "Service history",
+          "Satisfaction scores",
+          "SLA tracking",
+          "Usage analytics"
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "id": "portal-to-booking",
+        "from": "customer-portal",
+        "to": "booking-service",
+        "frequency": 22,
+        "speed": 2.5,
+        "signalType": "data"
+      },
+      {
+        "id": "booking-to-portal",
+        "from": "booking-service",
+        "to": "customer-portal",
+        "frequency": 18,
+        "speed": 2,
+        "signalType": "data"
+      },
+      {
+        "id": "portal-to-custreports",
+        "from": "customer-portal",
+        "to": "customer-reports",
+        "frequency": 15,
+        "speed": 2,
+        "signalType": "data"
+      },
+      {
+        "id": "custreports-to-portal",
+        "from": "customer-reports",
+        "to": "customer-portal",
+        "frequency": 12,
+        "speed": 1.8,
+        "signalType": "feedback"
+      }
+    ]
+  },
+  {
+    "id": "data-pipeline",
+    "name": "data-pipeline",
+    "center": "-3.7,-3,50.5",
+    "entities": [
+      {
+        "id": "data-pipeline",
+        "name": "pipeline",
+        "type": "workflow",
+        "description": "ETL and streaming data pipeline for analytics ingestion",
+        "category": "data",
+        "details": null
+      },
+      {
+        "id": "data-warehouse",
+        "name": "warehouse",
+        "type": "database",
+        "description": "Columnar data warehouse for analytical queries",
+        "category": "data",
+        "details": [
+          "Columnar storage",
+          "Materialized views",
+          "Partitioned tables",
+          "Query optimization"
+        ]
+      },
+      {
+        "id": "stream-processor",
+        "name": "processor",
+        "type": "service",
+        "description": "Real-time event stream processing engine",
+        "category": "data",
+        "details": [
+          "Windowed aggregation",
+          "Exactly-once delivery",
+          "Backpressure handling",
+          "State checkpointing"
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "id": "pipeline-to-warehouse",
+        "from": "data-pipeline",
+        "to": "data-warehouse",
+        "frequency": 28,
+        "speed": 3,
+        "signalType": "data"
+      },
+      {
+        "id": "warehouse-to-pipeline",
+        "from": "data-warehouse",
+        "to": "data-pipeline",
+        "frequency": 12,
+        "speed": 2,
+        "signalType": "feedback"
+      },
+      {
+        "id": "pipeline-to-stream",
+        "from": "data-pipeline",
+        "to": "stream-processor",
+        "frequency": 22,
+        "speed": 3.5,
+        "signalType": "event"
+      },
+      {
+        "id": "stream-to-pipeline",
+        "from": "stream-processor",
+        "to": "data-pipeline",
+        "frequency": 18,
+        "speed": 2.5,
+        "signalType": "data"
+      }
+    ]
+  },
+  {
+    "id": "payment-processing",
+    "name": "payment-processing",
+    "center": "-25.8,-3,63.5",
+    "entities": [
+      {
+        "id": "payment-gateway",
+        "name": "gateway",
+        "type": "server",
+        "description": "Secure payment processing and transaction management",
+        "category": "payments",
+        "details": null
+      },
+      {
+        "id": "invoice-service",
+        "name": "invoice",
+        "type": "service",
+        "description": "Automated invoice generation and billing cycles",
+        "category": "payments",
+        "details": [
+          "Recurring billing",
+          "Pro-rating",
+          "Tax calculation",
+          "PDF generation"
+        ]
+      },
+      {
+        "id": "ledger-db",
+        "name": "ledger",
+        "type": "database",
+        "description": "Immutable financial ledger and transaction log",
+        "category": "payments",
+        "details": [
+          "Double-entry accounting",
+          "Immutable records",
+          "Reconciliation",
+          "Audit compliance"
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "id": "payment-to-invoice",
+        "from": "payment-gateway",
+        "to": "invoice-service",
+        "frequency": 20,
+        "speed": 2.5,
+        "signalType": "data"
+      },
+      {
+        "id": "invoice-to-payment",
+        "from": "invoice-service",
+        "to": "payment-gateway",
+        "frequency": 15,
+        "speed": 2,
+        "signalType": "data"
+      },
+      {
+        "id": "payment-to-ledger",
+        "from": "payment-gateway",
+        "to": "ledger-db",
+        "frequency": 25,
+        "speed": 3,
+        "signalType": "data"
+      },
+      {
+        "id": "ledger-to-payment",
+        "from": "ledger-db",
+        "to": "payment-gateway",
+        "frequency": 18,
+        "speed": 2.5,
+        "signalType": "data"
+      }
+    ]
+  },
+  {
+    "id": "inventory-management",
+    "name": "inventory-management",
+    "center": "-54.3,-3,27.2",
+    "entities": [
+      {
+        "id": "inventory-hub",
+        "name": "hub",
+        "type": "operations",
+        "description": "Parts and materials inventory tracking across warehouses",
+        "category": "inventory",
+        "details": null
+      },
+      {
+        "id": "inventory-db",
+        "name": "database",
+        "type": "database",
+        "description": "Inventory records and warehouse state",
+        "category": "inventory",
+        "details": [
+          "SKU catalog",
+          "Location tracking",
+          "Batch tracking",
+          "Expiry management"
+        ]
+      },
+      {
+        "id": "procurement-service",
+        "name": "procurement",
+        "type": "service",
+        "description": "Automated procurement and vendor management",
+        "category": "inventory",
+        "details": [
+          "Vendor scoring",
+          "Purchase orders",
+          "Price comparison",
+          "Delivery tracking"
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "id": "inventory-to-inventorydb",
+        "from": "inventory-hub",
+        "to": "inventory-db",
+        "frequency": 22,
+        "speed": 2.5,
+        "signalType": "data"
+      },
+      {
+        "id": "inventorydb-to-inventory",
+        "from": "inventory-db",
+        "to": "inventory-hub",
+        "frequency": 18,
+        "speed": 2,
+        "signalType": "data"
+      },
+      {
+        "id": "inventory-to-procurement",
+        "from": "inventory-hub",
+        "to": "procurement-service",
+        "frequency": 15,
+        "speed": 2,
+        "signalType": "event"
+      },
+      {
+        "id": "procurement-to-inventory",
+        "from": "procurement-service",
+        "to": "inventory-hub",
+        "frequency": 12,
+        "speed": 1.8,
+        "signalType": "feedback"
+      }
+    ]
+  },
+  {
+    "id": "integration-hub",
+    "name": "integration-hub",
+    "center": "83.6,-3,-74.4",
+    "entities": [
+      {
+        "id": "integration-hub",
+        "name": "hub",
+        "type": "service",
+        "description": "Third-party integration orchestrator and connector framework",
+        "category": "integrations",
+        "details": null
+      },
+      {
+        "id": "crm-connector",
+        "name": "crm-connector",
+        "type": "server",
+        "description": "Bi-directional sync with external CRM platforms",
+        "category": "integrations",
+        "details": [
+          "Salesforce sync",
+          "HubSpot sync",
+          "Contact mapping",
+          "Deal tracking"
+        ]
+      },
+      {
+        "id": "sync-agent",
+        "name": "sync-agent",
+        "type": "agent",
+        "description": "Intelligent data synchronization and conflict resolution",
+        "category": "integrations",
+        "details": [
+          "Conflict resolution",
+          "Delta detection",
+          "Retry policies",
+          "Sync scheduling"
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "id": "integration-to-crm",
+        "from": "integration-hub",
+        "to": "crm-connector",
+        "frequency": 20,
+        "speed": 2.5,
+        "signalType": "data"
+      },
+      {
+        "id": "crm-to-integration",
+        "from": "crm-connector",
+        "to": "integration-hub",
+        "frequency": 15,
+        "speed": 2,
+        "signalType": "data"
+      },
+      {
+        "id": "integration-to-sync",
+        "from": "integration-hub",
+        "to": "sync-agent",
+        "frequency": 18,
+        "speed": 2.5,
+        "signalType": "event"
+      },
+      {
+        "id": "sync-to-integration",
+        "from": "sync-agent",
+        "to": "integration-hub",
+        "frequency": 15,
+        "speed": 2,
+        "signalType": "feedback"
+      }
+    ]
+  },
+  {
+    "id": "predictive-analytics",
+    "name": "predictive-analytics",
+    "center": "-6.6,-3,-59.2",
+    "entities": [
+      {
+        "id": "predictive-engine",
+        "name": "engine",
+        "type": "llm",
+        "description": "ML-powered prediction engine for demand and capacity planning",
+        "category": "analytics",
+        "details": null
+      },
+      {
+        "id": "forecast-agent",
+        "name": "forecast",
+        "type": "agent",
+        "description": "Autonomous forecasting agent for resource optimization",
+        "category": "analytics",
+        "details": [
+          "Resource allocation",
+          "Cost prediction",
+          "Risk assessment",
+          "What-if analysis"
+        ]
+      },
+      {
+        "id": "analytics-reports",
+        "name": "reports",
+        "type": "report",
+        "description": "Advanced analytics dashboards and predictive reports",
+        "category": "analytics",
+        "details": [
+          "Predictive dashboards",
+          "Cohort analysis",
+          "Funnel visualization",
+          "Trend reports"
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "id": "predictive-to-forecast",
+        "from": "predictive-engine",
+        "to": "forecast-agent",
+        "frequency": 22,
+        "speed": 2.5,
+        "signalType": "ai"
+      },
+      {
+        "id": "forecast-to-predictive",
+        "from": "forecast-agent",
+        "to": "predictive-engine",
+        "frequency": 18,
+        "speed": 2,
+        "signalType": "feedback"
+      },
+      {
+        "id": "predictive-to-analytics",
+        "from": "predictive-engine",
+        "to": "analytics-reports",
+        "frequency": 15,
+        "speed": 2,
+        "signalType": "data"
+      },
+      {
+        "id": "analytics-to-predictive",
+        "from": "analytics-reports",
+        "to": "predictive-engine",
+        "frequency": 10,
+        "speed": 1.8,
+        "signalType": "feedback"
+      }
+    ]
+  }
+]
