@@ -70,18 +70,34 @@ alien-cat meme reference shared during design, not a copy of that photo or
 any specific artwork/likeness) that docks near the currently focused
 window until you manually drag it, then stays where you put it.
 
-Click it to open a small chat panel with real capability: type any
-question and it keyword-searches the **actual** cluster/entity/data-flow
-data loaded from `zuper-world-data.json` (the same real labs.zuper.co data
-used everywhere else in this app) and answers from it — e.g. "what is
-ai-intelligence", an entity's name, "how many clusters are there?", or
-"what does workflows-cluster connect to?". Suggested-question chips and a
-"give me a tip" fallback (the old canned usage tips) are included.
+Click it to open a small chat panel: type any question and it tries a real
+Claude model first, falling back to deterministic local keyword search over
+`zuper-world-data.json` if Claude isn't configured or the call fails.
+Suggested-question chips and a "give me a tip" fallback (the old canned
+usage tips) are included. Every answer is tagged with where it actually
+came from — "via Claude" or "local search" — so it's never ambiguous which
+one answered.
 
-Explicitly badged **"Real-data Q&A — local search, not a live LLM"** —
-this is deterministic string/keyword matching against the real local JSON,
-not a language model. No backend, no API key, no network call; everything
-it "knows" is the same static data file already shipped in this repo.
+**Backend:** `api/ask.js` is a small Vercel serverless function — the only
+backend component in this otherwise fully static project. It holds the
+Anthropic API key server-side (an environment variable, never shipped to
+the browser) and forwards the question plus the real cluster/entity/flow
+data as context, instructing the model to answer only from that real data.
+To enable it:
+1. Create an Anthropic API key at [console.anthropic.com](https://console.anthropic.com/).
+2. In the Vercel project's Settings → Environment Variables, add
+   `ANTHROPIC_API_KEY` with that value, then redeploy.
+3. **Set a spend limit on the Anthropic account.** This endpoint is public
+   once deployed — anyone on the live site can trigger a Claude call. A
+   client-side session cap (`LLM_SESSION_LIMIT` in app.jsx, currently 30
+   calls per browser tab) guards against one runaway tab, but it is *not*
+   real abuse protection (no server-side per-IP rate limiting) — treat the
+   Anthropic account's own spend limit as the real safety net.
+
+Without the key configured (e.g. running the plain static file server
+locally, or before the env var is set on Vercel), `/api/ask` 404s or
+returns 503 and the assistant transparently falls back to local search —
+the app never breaks, it just answers from the local data instead.
 
 ## Icon licensing note
 
@@ -192,6 +208,8 @@ zuper-web-os-react/
                              shell/dashboard windows, 4 games, terminal, taskbar
   zuper-world-data.json     Real cluster/entity/flow data, extracted from
                              labs.zuper.co's own zuper-world.js this session
+  api/ask.js                Vercel serverless function — Claude proxy for the
+                             desktop assistant (the only backend component)
 ```
 
 Each of the 14 real clusters is a desktop folder containing `readme.md`,
@@ -207,6 +225,10 @@ Hosted on [Vercel](https://vercel.com/), connected directly to this repo's
 triggers a new production deployment automatically, no manual redeploy
 step or CI config needed. Zero build command (static `index.html`), so
 there's nothing to configure beyond pointing Vercel at the repo root.
+The one exception is `api/ask.js` — Vercel auto-detects it as a serverless
+function with zero extra config, but it needs `ANTHROPIC_API_KEY` set in
+the project's environment variables to actually call Claude (see Desktop
+assistant above).
 
 ## Running locally
 

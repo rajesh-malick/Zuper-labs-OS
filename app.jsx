@@ -1272,6 +1272,12 @@ function answerFromWorldData(worldData, question) {
   return "I couldn't match that to real platform data — I only answer from labs.zuper.co's actual clusters/entities/flows, no live language model behind this. Try \"what is ai-intelligence\", an entity name, or \"how many clusters are there?\".";
 }
 
+/* Session-only cap on real LLM calls from a single browser tab — this endpoint is public
+   once deployed, so this is a cheap guardrail against one runaway tab burning API spend.
+   Not real abuse protection (that would need server-side rate limiting); documented as a
+   known limitation in the README. */
+const LLM_SESSION_LIMIT = 30;
+
 function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem("zuper-os-assistant-pos")); } catch (e) { return null; }
@@ -1279,18 +1285,37 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [thinking, setThinking] = useState(false);
+  const llmCallsRef = useRef(0);
   const logRef = useRef(null);
   const dragRef = useRef({ dragging: false, moved: false, startX: 0, startY: 0, startLeft: 0, startTop: 0 });
   const t = theme || THEME;
 
-  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [messages, open]);
+  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [messages, open, thinking]);
 
-  function ask(question) {
-    const text = (question || input).trim();
-    if (!text) return;
-    const answer = answerFromWorldData(worldData, text);
-    setMessages((m) => [...m, { role: "user", text: text }, { role: "assistant", text: answer }]);
+  async function ask(question) {
+    const text = (typeof question === "string" ? question : input).trim();
+    if (!text || thinking) return;
+    setMessages((m) => [...m, { role: "user", text: text }]);
     setInput("");
+    setThinking(true);
+    let answer = null, source = "local";
+    if (llmCallsRef.current < LLM_SESSION_LIMIT) {
+      try {
+        const r = await fetch("/api/ask", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ question: text }),
+        });
+        if (r.ok) {
+          const data = await r.json();
+          if (data && data.answer) { answer = data.answer; source = "claude"; llmCallsRef.current += 1; }
+        }
+      } catch (e) { /* network/API unavailable — fall through to local search */ }
+    }
+    if (!answer) answer = answerFromWorldData(worldData, text);
+    setThinking(false);
+    setMessages((m) => [...m, { role: "assistant", text: answer, source: source }]);
   }
 
   const suggestions = React.useMemo(() => {
@@ -1341,30 +1366,35 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
         <div className="absolute bottom-[74px] right-0 w-72 p-3 font-mono text-[0.82rem] flex flex-col"
           style={{ background: t.panelBg, backdropFilter: t.panelBlur, border: "1px solid " + t.winBorder, borderRadius: t.winRadius === "0px" ? "0px" : "10px", boxShadow: "0 16px 40px rgba(0,0,0,.5)" }}>
           <div className="flex items-start justify-between gap-2">
-            <ConceptBadge>Real-data Q&A — local search, not a live LLM</ConceptBadge>
+            <ConceptBadge>Claude when configured, else local real-data search</ConceptBadge>
             <button type="button" onClick={() => setOpen(false)} className="text-[0.9rem] leading-none px-1" style={{ color: t.chromeTextDim }} aria-label="Hide assistant">×</button>
           </div>
           <div ref={logRef} className="overflow-y-auto my-2" style={{ maxHeight: 220, minHeight: messages.length ? 60 : 0 }}>
             {messages.length === 0 && (
               <p className="leading-relaxed" style={{ color: t.chromeTextDim }}>
-                Ask about any real Zuper cluster, entity, or data-flow — I search the actual platform data loaded into this app.
+                Ask about any real Zuper cluster, entity, or data-flow. Every answer is tagged
+                with where it came from — Claude, or this app's own local search.
               </p>
             )}
             {messages.map((m, i) => (
               <p key={i} className="leading-relaxed whitespace-pre-wrap my-1.5" style={{ color: m.role === "user" ? t.chromeTextDim : t.chromeText }}>
                 {m.role === "user" ? "> " : ""}{m.text}
+                {m.role === "assistant" && (
+                  <span style={{ color: t.chromeTextDim, fontSize: "0.7rem" }}>{m.source === "claude" ? "  — via Claude" : "  — local search"}</span>
+                )}
               </p>
             ))}
+            {thinking && <p className="leading-relaxed" style={{ color: t.chromeTextDim }}>…thinking</p>}
           </div>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {suggestions.map((s, i) => (
-              <button key={i} type="button" onClick={() => ask(s)} className="px-2 py-0.5 text-[0.72rem]" style={{ border: "1px solid " + t.winBorder, color: t.chromeTextDim, borderRadius: t.winRadius === "0px" ? "0px" : "6px" }}>{s}</button>
+              <button key={i} type="button" disabled={thinking} onClick={() => ask(s)} className="px-2 py-0.5 text-[0.72rem] disabled:opacity-40" style={{ border: "1px solid " + t.winBorder, color: t.chromeTextDim, borderRadius: t.winRadius === "0px" ? "0px" : "6px" }}>{s}</button>
             ))}
           </div>
           <form onSubmit={onSubmit} className="flex gap-1.5">
-            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask a question…" autoComplete="off"
-              className="flex-1 px-2 py-1 text-[0.82rem] bg-transparent outline-none" style={{ border: "1px solid " + t.winBorder, color: t.chromeText, borderRadius: t.winRadius === "0px" ? "0px" : "6px", caretColor: t.accent }} />
-            <button type="submit" className="px-2.5 py-1 text-[0.8rem]" style={{ border: "1px solid " + t.winBorder, color: t.chromeText, borderRadius: t.winRadius === "0px" ? "0px" : "6px" }}>Ask</button>
+            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask a question…" autoComplete="off" disabled={thinking}
+              className="flex-1 px-2 py-1 text-[0.82rem] bg-transparent outline-none disabled:opacity-40" style={{ border: "1px solid " + t.winBorder, color: t.chromeText, borderRadius: t.winRadius === "0px" ? "0px" : "6px", caretColor: t.accent }} />
+            <button type="submit" disabled={thinking} className="px-2.5 py-1 text-[0.8rem] disabled:opacity-40" style={{ border: "1px solid " + t.winBorder, color: t.chromeText, borderRadius: t.winRadius === "0px" ? "0px" : "6px" }}>Ask</button>
           </form>
         </div>
       )}
@@ -1375,7 +1405,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
           boxShadow: "0 10px 24px rgba(0,0,0,.5), inset 0 2px 3px rgba(255,255,255,.5), inset 0 -3px 6px rgba(0,0,0,.4)",
           animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible",
         }}
-        aria-label="Zuper OS assistant — answers from real platform data, not a live LLM">
+        aria-label="Zuper OS assistant — real platform data, Claude when configured">
         <svg width={64} height={78} viewBox="0 0 64 78" style={{ position: "absolute", left: 0, top: -14, overflow: "visible", pointerEvents: "none" }}>
           <polygon points="14,20 6,2 24,14" fill={t.accent} stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
           <polygon points="50,20 58,2 40,14" fill={t.accent} stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
