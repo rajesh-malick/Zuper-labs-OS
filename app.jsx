@@ -1208,9 +1208,13 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
   );
 }
 
-/* ================= Desktop assistant — an original character (own design, not
-   ryo.lu's art/branding). Canned rotating tips only, never claims to be live AI. Docks
-   near the focused window until manually dragged, then stays wherever you put it. ================= */
+/* ================= Desktop assistant — an original alien-cat mascot (own design:
+   pointy ears, twin antennae, big glossy eyes — inspired by the *vibe* of a green
+   alien-cat meme reference, not a copy of that photo or any specific artwork/likeness).
+   Answers questions by keyword-searching the REAL labs.zuper.co cluster/entity/flow
+   data already loaded into this app (zuper-world-data.json) — genuinely useful, but
+   explicitly NOT a live language model; it's deterministic string matching, badged as
+   such. Docks near the focused window until manually dragged, then stays put. ================= */
 const ASSISTANT_TIPS = [
   "Right-click the desktop for more options, or double-click empty space for New.",
   "Open Display settings to change icon size or text size.",
@@ -1221,14 +1225,80 @@ const ASSISTANT_TIPS = [
   "Right-click any icon for Rename or Move to Trash.",
 ];
 
-function AssistantWidget({ theme, dockTarget, stageRef }) {
+function normalizeQ(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
+function includesWord(haystack, needle) {
+  if (!needle) return false;
+  return new RegExp("(^|\\s)" + needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(\\s|$)").test(haystack);
+}
+
+/* Deterministic local search over the real cluster/entity/flow data — no network call,
+   no model, just substring/word-boundary matching against zuper-world-data.json. */
+function answerFromWorldData(worldData, question) {
+  const q = normalizeQ(question);
+  if (!q) return "Ask me something — try a cluster name, an entity name, or \"how many clusters are there?\".";
+  if (!worldData || !worldData.length) return "Platform data hasn't finished loading yet — give it a second and try again.";
+
+  if (/\btip\b/.test(q)) return ASSISTANT_TIPS[Math.floor(Math.random() * ASSISTANT_TIPS.length)];
+  if (/how many cluster/.test(q)) return worldData.length + " real clusters, straight from labs.zuper.co: " + worldData.map((c) => c.name).join(", ") + ".";
+  if (/how many entit/.test(q)) return worldData.reduce((s, c) => s + c.entities.length, 0) + " real entities across " + worldData.length + " clusters.";
+  if (/list.*cluster|what clusters|which clusters/.test(q)) return worldData.map((c) => "• " + c.name + " (" + c.id + ")").join("\n");
+
+  let bestEntity = null, bestCluster = null;
+  worldData.forEach((c) => {
+    c.entities.forEach((e) => {
+      const n = normalizeQ(e.name);
+      if (n.length >= 3 && includesWord(q, n) && (!bestEntity || n.length > normalizeQ(bestEntity.name).length)) {
+        bestEntity = e; bestCluster = c;
+      }
+    });
+  });
+  if (bestEntity) {
+    let out = bestEntity.name + " (" + bestEntity.type + ", in " + bestCluster.name + "): " + bestEntity.description;
+    if (bestEntity.details && bestEntity.details.length) out += "\n" + bestEntity.details.map((d) => "• " + d).join("\n");
+    return out;
+  }
+
+  const cluster = worldData.find((c) => includesWord(q, normalizeQ(c.id)) || includesWord(q, normalizeQ(c.name)));
+  if (cluster) {
+    if (/flow|connect|signal|talk|send/.test(q)) {
+      if (!cluster.flows.length) return cluster.name + " has no recorded data-flows in the source data.";
+      const list = cluster.flows.slice(0, 6).map((f) => f.from + " → " + f.to + " (" + f.signalType + ")").join("\n");
+      return cluster.name + "'s real data-flows:\n" + list + (cluster.flows.length > 6 ? "\n…and " + (cluster.flows.length - 6) + " more." : "");
+    }
+    const sample = cluster.entities.slice(0, 5).map((e) => e.name + " (" + e.type + ")").join(", ");
+    return cluster.name + " is one of Zuper's 14 real product clusters — " + cluster.entities.length + " entities, " + cluster.flows.length + " data-flows. Entities include: " + sample + (cluster.entities.length > 5 ? ", …" : "") + ".";
+  }
+
+  return "I couldn't match that to real platform data — I only answer from labs.zuper.co's actual clusters/entities/flows, no live language model behind this. Try \"what is ai-intelligence\", an entity name, or \"how many clusters are there?\".";
+}
+
+function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem("zuper-os-assistant-pos")); } catch (e) { return null; }
   });
   const [open, setOpen] = useState(false);
-  const [tipIndex, setTipIndex] = useState(0);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const logRef = useRef(null);
   const dragRef = useRef({ dragging: false, moved: false, startX: 0, startY: 0, startLeft: 0, startTop: 0 });
   const t = theme || THEME;
+
+  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [messages, open]);
+
+  function ask(question) {
+    const text = (question || input).trim();
+    if (!text) return;
+    const answer = answerFromWorldData(worldData, text);
+    setMessages((m) => [...m, { role: "user", text: text }, { role: "assistant", text: answer }]);
+    setInput("");
+  }
+
+  const suggestions = React.useMemo(() => {
+    if (!worldData || !worldData.length) return ["Give me a tip"];
+    const withEntities = worldData.find((c) => c.entities.length);
+    const sample = withEntities ? withEntities.entities[0].name : null;
+    return ["How many clusters are there?", "What is " + worldData[0].name + "?"].concat(sample ? ["Tell me about " + sample] : []).concat(["Give me a tip"]);
+  }, [worldData]);
 
   function defaultPos() {
     const rect = stageRef.current ? stageRef.current.getBoundingClientRect() : { width: 1400, height: 800 };
@@ -1262,20 +1332,40 @@ function AssistantWidget({ theme, dockTarget, stageRef }) {
   function onClickCapture(e) {
     if (dragRef.current.moved) { e.preventDefault(); e.stopPropagation(); dragRef.current.moved = false; }
   }
-  function nextTip() { setTipIndex((i) => (i + 1) % ASSISTANT_TIPS.length); }
+  function onSubmit(e) { e.preventDefault(); ask(); }
 
   return (
     <div className="absolute pointer-events-auto" style={{ left: current.x, top: current.y, zIndex: 500, transition: docked ? "left .4s ease, top .4s ease" : "none" }}
       onPointerDown={onPointerDown}>
       {open && (
-        <div className="absolute bottom-[74px] right-0 w-64 p-3 font-mono text-[0.84rem]"
+        <div className="absolute bottom-[74px] right-0 w-72 p-3 font-mono text-[0.82rem] flex flex-col"
           style={{ background: t.panelBg, backdropFilter: t.panelBlur, border: "1px solid " + t.winBorder, borderRadius: t.winRadius === "0px" ? "0px" : "10px", boxShadow: "0 16px 40px rgba(0,0,0,.5)" }}>
-          <ConceptBadge>Concept assistant — canned tips, not live AI</ConceptBadge>
-          <p className="leading-relaxed my-2" style={{ color: t.chromeText }}>{ASSISTANT_TIPS[tipIndex]}</p>
-          <div className="flex gap-2">
-            <button type="button" onClick={nextTip} className="px-2.5 py-1 text-[0.8rem]" style={{ border: "1px solid " + t.winBorder, color: t.chromeText, borderRadius: t.winRadius === "0px" ? "0px" : "6px" }}>Next tip</button>
-            <button type="button" onClick={() => setOpen(false)} className="px-2.5 py-1 text-[0.8rem]" style={{ border: "1px solid " + t.winBorder, color: t.chromeTextDim, borderRadius: t.winRadius === "0px" ? "0px" : "6px" }}>Hide</button>
+          <div className="flex items-start justify-between gap-2">
+            <ConceptBadge>Real-data Q&A — local search, not a live LLM</ConceptBadge>
+            <button type="button" onClick={() => setOpen(false)} className="text-[0.9rem] leading-none px-1" style={{ color: t.chromeTextDim }} aria-label="Hide assistant">×</button>
           </div>
+          <div ref={logRef} className="overflow-y-auto my-2" style={{ maxHeight: 220, minHeight: messages.length ? 60 : 0 }}>
+            {messages.length === 0 && (
+              <p className="leading-relaxed" style={{ color: t.chromeTextDim }}>
+                Ask about any real Zuper cluster, entity, or data-flow — I search the actual platform data loaded into this app.
+              </p>
+            )}
+            {messages.map((m, i) => (
+              <p key={i} className="leading-relaxed whitespace-pre-wrap my-1.5" style={{ color: m.role === "user" ? t.chromeTextDim : t.chromeText }}>
+                {m.role === "user" ? "> " : ""}{m.text}
+              </p>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {suggestions.map((s, i) => (
+              <button key={i} type="button" onClick={() => ask(s)} className="px-2 py-0.5 text-[0.72rem]" style={{ border: "1px solid " + t.winBorder, color: t.chromeTextDim, borderRadius: t.winRadius === "0px" ? "0px" : "6px" }}>{s}</button>
+            ))}
+          </div>
+          <form onSubmit={onSubmit} className="flex gap-1.5">
+            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask a question…" autoComplete="off"
+              className="flex-1 px-2 py-1 text-[0.82rem] bg-transparent outline-none" style={{ border: "1px solid " + t.winBorder, color: t.chromeText, borderRadius: t.winRadius === "0px" ? "0px" : "6px", caretColor: t.accent }} />
+            <button type="submit" className="px-2.5 py-1 text-[0.8rem]" style={{ border: "1px solid " + t.winBorder, color: t.chromeText, borderRadius: t.winRadius === "0px" ? "0px" : "6px" }}>Ask</button>
+          </form>
         </div>
       )}
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}
@@ -1283,12 +1373,32 @@ function AssistantWidget({ theme, dockTarget, stageRef }) {
         style={{
           background: "radial-gradient(circle at 35% 30%, " + shade(t.accent, 0.5) + ", " + t.accent + " 60%, " + shade(t.accent, -0.4) + ")",
           boxShadow: "0 10px 24px rgba(0,0,0,.5), inset 0 2px 3px rgba(255,255,255,.5), inset 0 -3px 6px rgba(0,0,0,.4)",
-          animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent,
+          animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible",
         }}
-        aria-label="Zuper OS assistant — canned tips, not live AI">
-        <span className="absolute" style={{ top: "33%", left: "31%", width: 6, height: 6, borderRadius: "50%", background: "#0a0a0a" }}></span>
-        <span className="absolute" style={{ top: "33%", right: "31%", width: 6, height: 6, borderRadius: "50%", background: "#0a0a0a" }}></span>
-        <span className="absolute" style={{ bottom: "26%", left: "50%", width: 16, height: 8, borderRadius: "0 0 16px 16px", border: "2px solid #0a0a0a", borderTop: "none", transform: "translateX(-50%)" }}></span>
+        aria-label="Zuper OS assistant — answers from real platform data, not a live LLM">
+        <svg width={64} height={78} viewBox="0 0 64 78" style={{ position: "absolute", left: 0, top: -14, overflow: "visible", pointerEvents: "none" }}>
+          <polygon points="14,20 6,2 24,14" fill={t.accent} stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
+          <polygon points="50,20 58,2 40,14" fill={t.accent} stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
+          <line x1="22" y1="14" x2="16" y2="1" stroke="#0a0a0a" strokeWidth="2" strokeLinecap="round" />
+          <line x1="42" y1="14" x2="48" y2="1" stroke="#0a0a0a" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="16" cy="0" r="3" fill="#eafff0" stroke="#0a0a0a" strokeWidth="1.4" />
+          <circle cx="48" cy="0" r="3" fill="#eafff0" stroke="#0a0a0a" strokeWidth="1.4" />
+          <ellipse cx="25" cy="43" rx="6.5" ry="8.5" fill="#0a0a0a" />
+          <ellipse cx="39" cy="43" rx="6.5" ry="8.5" fill="#0a0a0a" />
+          <circle cx="23" cy="39" r="1.7" fill="#eafff0" />
+          <circle cx="37" cy="39" r="1.7" fill="#eafff0" />
+          <g stroke="#0a0a0a" strokeWidth="1.4" strokeLinecap="round">
+            <line x1="27" y1="56" x2="12" y2="53" />
+            <line x1="27" y1="59" x2="11" y2="59" />
+            <line x1="27" y1="62" x2="12" y2="65" />
+            <line x1="37" y1="56" x2="52" y2="53" />
+            <line x1="37" y1="59" x2="53" y2="59" />
+            <line x1="37" y1="62" x2="52" y2="65" />
+          </g>
+          <circle cx="32" cy="55" r="1.8" fill="#0a0a0a" />
+          <path d="M32 57 Q27 62 23 58" fill="none" stroke="#0a0a0a" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M32 57 Q37 62 41 58" fill="none" stroke="#0a0a0a" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
       </button>
     </div>
   );
@@ -1533,7 +1643,7 @@ function App({ worldData, onReboot }) {
           ]} />
         )}
 
-        <AssistantWidget theme={theme} dockTarget={assistantDockTarget} stageRef={stageRef} />
+        <AssistantWidget theme={theme} dockTarget={assistantDockTarget} stageRef={stageRef} worldData={worldData} />
 
         {toast && <Toast text={toast} onDone={() => setToast(null)} />}
         {launcher && (

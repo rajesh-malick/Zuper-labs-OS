@@ -64,12 +64,24 @@ a mismatch once Mono CRT became the only look, so that got fixed too.
 
 ## Desktop assistant
 
-A small draggable circular character (own original design — not any
-reference site's character art or branding) that docks near the currently
-focused window until you manually drag it, then stays where you put it.
-Click it for a rotating set of canned usage tips. Explicitly badged
-"Concept assistant — canned tips, not live AI" — it has no backend and
-answers nothing; it only cycles a fixed local list.
+An original alien-cat mascot (pointy ears, twin antennae, big glossy
+eyes — own hand-drawn SVG design, inspired by the *vibe* of a green
+alien-cat meme reference shared during design, not a copy of that photo or
+any specific artwork/likeness) that docks near the currently focused
+window until you manually drag it, then stays where you put it.
+
+Click it to open a small chat panel with real capability: type any
+question and it keyword-searches the **actual** cluster/entity/data-flow
+data loaded from `zuper-world-data.json` (the same real labs.zuper.co data
+used everywhere else in this app) and answers from it — e.g. "what is
+ai-intelligence", an entity's name, "how many clusters are there?", or
+"what does workflows-cluster connect to?". Suggested-question chips and a
+"give me a tip" fallback (the old canned usage tips) are included.
+
+Explicitly badged **"Real-data Q&A — local search, not a live LLM"** —
+this is deterministic string/keyword matching against the real local JSON,
+not a language model. No backend, no API key, no network call; everything
+it "knows" is the same static data file already shipped in this repo.
 
 ## Icon licensing note
 
