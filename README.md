@@ -1,6 +1,6 @@
 # Zuper Labs OS
 
-**Live demo: _add your Vercel URL here after the first deploy_**
+**Live demo: https://zuper-labs-os.vercel.app**
 
 A design-concept prototype that reimagines [labs.zuper.co](https://labs.zuper.co/)
 — Zuper's real cluster/entity map of its own platform — as a retro,
@@ -187,6 +187,14 @@ Each of the 14 real clusters is a desktop folder containing `readme.md`,
 `Terminal.app` supports a small VFS command set: `ls`, `cd <dir>`, `pwd`,
 `cat readme.md`, `bash status.sh`, `bash connections.sh`, `whoami`, `date`,
 `clear`.
+
+## Deployment
+
+Hosted on [Vercel](https://vercel.com/), connected directly to this repo's
+`main` branch via Vercel's GitHub integration — every push to `main`
+triggers a new production deployment automatically, no manual redeploy
+step or CI config needed. Zero build command (static `index.html`), so
+there's nothing to configure beyond pointing Vercel at the repo root.
 
 ## Running locally
 
