@@ -63,6 +63,21 @@
     @keyframes zuper-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
     @keyframes crt-sweep { 0% { transform: translateY(-160px); } 100% { transform: translateY(100vh); } }
     @keyframes crt-flicker { 0%, 100% { opacity: .015; } 50% { opacity: .035; } 92% { opacity: .06; } }
+    @keyframes watermark-breathe { 0%, 100% { opacity: .055; } 50% { opacity: .09; } }
+    @keyframes watermark-glitch-a {
+      0%, 89%, 100% { opacity: 0; transform: translate(-50%,-50%) translate(0,0); }
+      90% { opacity: .5; transform: translate(-50%,-50%) translate(-10px, 1px); }
+      91% { opacity: .3; transform: translate(-50%,-50%) translate(7px, -2px); }
+      92% { opacity: .55; transform: translate(-50%,-50%) translate(-4px, 0); }
+      93% { opacity: 0; transform: translate(-50%,-50%) translate(0,0); }
+    }
+    @keyframes watermark-glitch-b {
+      0%, 82%, 100% { opacity: 0; transform: translate(-50%,-50%) translate(0,0); }
+      83% { opacity: .4; transform: translate(-50%,-50%) translate(9px, 2px); }
+      84% { opacity: .2; transform: translate(-50%,-50%) translate(-6px, -1px); }
+      85% { opacity: .45; transform: translate(-50%,-50%) translate(5px, 1px); }
+      86% { opacity: 0; transform: translate(-50%,-50%) translate(0,0); }
+    }
     @keyframes crt-icon-glow { 0%, 100% { filter: drop-shadow(0 0 2px currentColor); } 50% { filter: drop-shadow(0 0 6px currentColor); } }
     html { cursor: default; }
     ::selection { background: rgba(63,230,118,.35); color: #eafff0; }

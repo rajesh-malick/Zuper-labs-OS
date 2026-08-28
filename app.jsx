@@ -245,6 +245,27 @@ function ScanlineBackground({ color }) {
   );
 }
 
+/* ================= Background watermark imprint — "ZUPER LABS" faintly stamped behind
+   the icons, with an occasional glitch pop (position-jittered, clipped-band copies that
+   flash in and cut out). Stays strictly mono green/black — no RGB channel-split, since
+   that would break the "mono CRT only" rule; the glitch reads through jitter + clipping
+   + brightness instead of color separation. ================= */
+function GlitchWatermark({ color }) {
+  const text = "ZUPER LABS";
+  const common = {
+    position: "absolute", left: "50%", top: "50%",
+    fontFamily: "'VT323','Inconsolata',monospace", fontWeight: 700,
+    fontSize: "min(15vw, 200px)", letterSpacing: "0.04em", whiteSpace: "nowrap", lineHeight: 1,
+  };
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true" style={{ zIndex: 0 }}>
+      <span style={{ ...common, color: color, transform: "translate(-50%,-50%)", animation: "watermark-breathe 6s ease-in-out infinite" }}>{text}</span>
+      <span style={{ ...common, color: "#eafff0", clipPath: "inset(38% 0 42% 0)", animation: "watermark-glitch-a 5.2s linear infinite" }}>{text}</span>
+      <span style={{ ...common, color: color, clipPath: "inset(8% 0 78% 0)", animation: "watermark-glitch-b 6.7s linear infinite" }}>{text}</span>
+    </div>
+  );
+}
+
 /* ================= CRT overlay: moving scanline sweep + screen curvature vignette +
    subtle flicker, layered on top of everything (pointer-events-none so it never blocks
    interaction). Pure CSS/keyframe animation, no canvas. ================= */
@@ -1634,6 +1655,7 @@ function App({ worldData, onReboot }) {
         onContextMenu={(e) => { e.preventDefault(); setDesktopMenu({ x: e.clientX, y: e.clientY }); }}
         onDoubleClick={(e) => { if (e.target === e.currentTarget) setCreateMenu({ x: e.clientX, y: e.clientY }); }}>
         <ScanlineBackground color={theme.accent} />
+        <GlitchWatermark color={theme.accent} />
         <CRTOverlay color={theme.accent} />
 
         {desktopIcons.map((a, i) => (
