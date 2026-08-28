@@ -62,6 +62,23 @@ a mismatch once Mono CRT became the only look, so that got fixed too.
 - `Terminal.app`'s input has a green `caretColor` for an authentic blinking
   cursor.
 
+### Bevel texture (technique borrowed from 1j01/os-gui, recolored)
+
+Flat 1px borders on window frames, menus, the taskbar, and buttons were
+replaced with a genuine raised/sunken **bevel** — a two-tone light
+(top-left) / dark (bottom-right) box-shadow edge, the classic Win9x "3D
+button" technique. This is a re-implementation of the *technique* used by
+[1j01/os-gui](https://github.com/1j01/os-gui)'s `.inset-deep`/`.outset-deep`
+utility classes (MIT licensed) — written here as original CSS
+(`bevel()` in app.jsx) in our own CRT green/black palette, not that
+library's actual code, its Windows-98 gray/blue skin, or its jQuery-based
+window engine (which would have meant a second, competing window manager —
+out of scope; this app keeps its own hand-built one). Applied to: window
+frames and title-bar buttons, the Start menu and context menus, the
+taskbar and its Start/running-app buttons (a focused taskbar button now
+looks genuinely *pressed*, sunken rather than just recolored), the
+assistant's chat input (sunken) and buttons, and the scrollbar thumb/track.
+
 ## Desktop assistant
 
 An original alien-cat mascot (pointy ears, twin antennae, big glossy

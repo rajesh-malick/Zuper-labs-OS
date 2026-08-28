@@ -21,9 +21,12 @@
     /* Retro terminal font (VT323, the same family windows93.net's terminal uses) — reserved
        for genuine terminal/shell output, never for small chrome labels (illegible that small). */
     .font-terminal { font-family: 'VT323', 'Inconsolata', monospace !important; letter-spacing: .01em; }
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar { width: 12px; height: 12px; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(63,230,118,.28);
+      box-shadow: inset 1px 1px 0 #8dffb8, inset -1px -1px 0 #020402;
+    }
+    ::-webkit-scrollbar-track { background: rgba(0,20,8,.4); box-shadow: inset 1px 1px 0 #020402, inset -1px -1px 0 #143a22; }
 
     /* Tailwind's browser CDN JIT unreliably generates CSS for opacity-slash utilities in this
        app (confirmed: it silently drops most text-white/N, border-white/N, bg-white/N, and even

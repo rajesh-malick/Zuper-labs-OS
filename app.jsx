@@ -34,6 +34,21 @@ function shade(hex, percent) {
   const nb = Math.round((t - b) * p) + b;
   return "rgb(" + nr + "," + ng + "," + nb + ")";
 }
+
+/* ---------- Win9x-style bevel texture — technique inspired by 1j01/os-gui's
+   .inset-deep/.outset-deep utility classes (MIT licensed), re-implemented here as
+   original layered box-shadow CSS in our own CRT green/black palette — not that
+   library's Windows-98 gray/blue skin, icons, or JS window engine. Two-tone light
+   (top-left) / dark (bottom-right) edges fake a raised or sunken 3D edge; "deep" stacks
+   two rings for chunkier chrome (windows), "shallow" is one ring for small controls. */
+function bevel(kind, accentHex) {
+  const hi2 = "#eafff0", hi = shade(accentHex, 0.2), lo = shade(accentHex, -0.6), lo2 = "#020402";
+  if (kind === "out-deep") return "inset 1px 1px 0 " + hi2 + ", inset -1px -1px 0 " + lo2 + ", inset 2px 2px 0 " + hi + ", inset -2px -2px 0 " + lo;
+  if (kind === "in-deep") return "inset 1px 1px 0 " + lo2 + ", inset -1px -1px 0 " + hi2 + ", inset 2px 2px 0 " + lo + ", inset -2px -2px 0 " + hi;
+  if (kind === "out-shallow") return "inset 1px 1px 0 " + hi2 + ", inset -1px -1px 0 " + lo2;
+  if (kind === "in-shallow") return "inset 1px 1px 0 " + lo2 + ", inset -1px -1px 0 " + hi2;
+  return "none";
+}
 function rand(n) { return Math.floor(Math.random() * n); }
 function shuffle(arr) {
   var a = arr.slice();
@@ -190,9 +205,8 @@ function IconImg({ icon, size, className, color }) {
 function iconTileVisuals(color, pressed) {
   return {
     background: "rgba(0,20,8,.55)", borderRadius: "0px", overlay: false,
-    borderTop: "1px solid " + color, borderLeft: "1px solid " + color,
-    borderRight: "1px solid " + color, borderBottom: "1px solid " + color,
-    boxShadow: pressed ? "none" : "0 0 12px " + color + "55",
+    border: "1px solid " + color,
+    boxShadow: bevel(pressed ? "in-shallow" : "out-shallow", color) + (pressed ? "" : ", 0 0 12px " + color + "55"),
     glow: !pressed,
   };
 }
@@ -271,7 +285,7 @@ function ContextMenu({ x, y, items, onClose, theme }) {
   return (
     <div
       className="fixed z-[1900] min-w-[190px] py-1.5 font-mono text-[0.92rem] overflow-hidden"
-      style={{ left: left, top: top, background: t.panelBg, backdropFilter: t.panelBlur, border: "1px solid " + t.winBorder, borderRadius: t.winRadius === "0px" ? "0px" : "8px", boxShadow: "0 20px 50px rgba(0,0,0,.6)", fontFamily: t.fontChrome || undefined }}
+      style={{ left: left, top: top, background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "8px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 20px 50px rgba(0,0,0,.6)", fontFamily: t.fontChrome || undefined }}
       onPointerDown={(e) => e.stopPropagation()}
     >
       {items.map((it, i) => it.divider ? (
@@ -532,7 +546,7 @@ function Window({ id, title, x, y, w, h, z, color, theme, isFocused, isMaximized
       WebkitBackdropFilter: t.winBlur,
       border: "1px solid " + (isFocused ? t.winBorderFocused : t.winBorder),
       borderRadius: isMaximized ? 0 : t.winRadius,
-      boxShadow: isFocused ? t.winShadowFocused(c) : t.winShadow,
+      boxShadow: bevel("out-deep", isFocused ? t.winBorderFocused : t.winBorder) + ", " + (isFocused ? t.winShadowFocused(c) : t.winShadow),
       opacity: entered ? (isFocused ? undefined : 0.85) : 0,
       transform: entered ? "scale(1)" : "scale(.96)",
       transition: "transform .16s cubic-bezier(.16,.8,.24,1), opacity .16s, box-shadow .15s, filter .15s",
@@ -556,9 +570,9 @@ function Window({ id, title, x, y, w, h, z, color, theme, isFocused, isMaximized
         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c }}></span>
         <span className="flex-1 truncate font-mono text-[0.9rem] tracking-wide" style={{ color: t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{title}</span>
         <div className="flex gap-1">
-          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onMinimize(id); }} className="w-[22px] h-[22px] flex items-center justify-center rounded hover:scale-110 transition-transform" style={{ border: "1px solid " + t.winBorder, color: t.chromeTextDim }}>&#8211;</button>
-          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onToggleMaximize(id); }} className="w-[22px] h-[22px] flex items-center justify-center rounded hover:scale-110 transition-transform" style={{ border: "1px solid " + t.winBorder, color: t.chromeTextDim }}>&#9723;</button>
-          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onClose(id); }} className="w-[22px] h-[22px] flex items-center justify-center rounded hover:scale-110 transition-transform" style={{ border: "1px solid " + t.winBorder, color: t.chromeTextDim }}>&times;</button>
+          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onMinimize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&#8211;</button>
+          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onToggleMaximize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&#9723;</button>
+          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onClose(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&times;</button>
         </div>
       </div>
       <div className="relative flex-1 min-h-0 overflow-y-auto touch-pan-y bg-zinc-900/90">{children}</div>
@@ -1157,13 +1171,13 @@ function Taskbar({ onStartClick, running, onRunningClick, theme }) {
     tick(); const id = setInterval(tick, 800); return () => clearInterval(id);
   }, []);
   return (
-    <div className="fixed left-0 right-0 bottom-0 h-[52px] flex items-center gap-3 px-3 z-[800]" style={{ background: t.taskbarBg, backdropFilter: t.winBlur === "none" ? undefined : "blur(10px)", borderTop: "1px solid " + t.winBorder }}>
-      <button type="button" onClick={onStartClick} className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[0.94rem]" style={{ background: t.accent, color: "#020402", fontWeight: "bold", borderRadius: t.winRadius === "0px" ? "0px" : "6px" }}>&#9635; Start</button>
+    <div className="fixed left-0 right-0 bottom-0 h-[52px] flex items-center gap-3 px-3 z-[800]" style={{ background: t.taskbarBg, backdropFilter: t.winBlur === "none" ? undefined : "blur(10px)", boxShadow: bevel("out-shallow", t.winBorder) + ", inset 0 1px 0 rgba(0,0,0,.4)" }}>
+      <button type="button" onClick={onStartClick} className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[0.94rem]" style={{ background: t.accent, color: "#020402", fontWeight: "bold", boxShadow: bevel("out-shallow", t.accent) }}>&#9635; Start</button>
       <div className="flex-1 flex gap-1.5 overflow-x-auto">
         {running.map((r) => (
           <button key={r.id} type="button" onClick={() => onRunningClick(r.id)}
-            className="px-2.5 py-1 border font-mono text-[0.88rem] whitespace-nowrap"
-            style={{ borderColor: r.focused ? t.accent : t.winBorder, color: r.focused ? t.chromeText : t.chromeTextDim, borderRadius: t.winRadius === "0px" ? "0px" : "6px", fontFamily: t.fontChrome || undefined }}>{r.title}</button>
+            className="px-2.5 py-1 font-mono text-[0.88rem] whitespace-nowrap"
+            style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel(r.focused ? "in-shallow" : "out-shallow", r.focused ? t.accent : t.winBorder), color: r.focused ? t.chromeText : t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{r.title}</button>
         ))}
       </div>
       <span aria-hidden="true" className="hidden sm:inline text-[0.84rem] font-mono" style={{ color: t.chromeTextDim, opacity: .6, fontFamily: t.fontChrome || undefined }}>{telemetry}</span>
@@ -1187,7 +1201,7 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
     <React.Fragment>
       <div className="fixed inset-0 z-[840]" onClick={onClose}></div>
       <div className="fixed left-3 bottom-[60px] w-72 max-h-[70vh] overflow-y-auto py-2 z-[850] font-mono text-[0.92rem]"
-        style={{ background: t.panelBg, backdropFilter: t.panelBlur, border: "1px solid " + t.winBorder, borderRadius: t.winRadius === "0px" ? "0px" : "8px", fontFamily: t.fontChrome || undefined }}
+        style={{ background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "8px", boxShadow: bevel("out-deep", t.winBorder), fontFamily: t.fontChrome || undefined }}
         onClick={(e) => e.stopPropagation()}>
         <div className="px-4 pt-1 pb-1.5 text-[0.78rem] uppercase tracking-wide" style={{ color: t.chromeTextDim, opacity: .7 }}>Programs</div>
         {topApps.map((a) => (
@@ -1364,7 +1378,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
       onPointerDown={onPointerDown}>
       {open && (
         <div className="absolute bottom-[74px] right-0 w-72 p-3 font-mono text-[0.82rem] flex flex-col"
-          style={{ background: t.panelBg, backdropFilter: t.panelBlur, border: "1px solid " + t.winBorder, borderRadius: t.winRadius === "0px" ? "0px" : "10px", boxShadow: "0 16px 40px rgba(0,0,0,.5)" }}>
+          style={{ background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "10px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 16px 40px rgba(0,0,0,.5)" }}>
           <div className="flex items-start justify-between gap-2">
             <ConceptBadge>Claude when configured, else local real-data search</ConceptBadge>
             <button type="button" onClick={() => setOpen(false)} className="text-[0.9rem] leading-none px-1" style={{ color: t.chromeTextDim }} aria-label="Hide assistant">×</button>
@@ -1388,13 +1402,13 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
           </div>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {suggestions.map((s, i) => (
-              <button key={i} type="button" disabled={thinking} onClick={() => ask(s)} className="px-2 py-0.5 text-[0.72rem] disabled:opacity-40" style={{ border: "1px solid " + t.winBorder, color: t.chromeTextDim, borderRadius: t.winRadius === "0px" ? "0px" : "6px" }}>{s}</button>
+              <button key={i} type="button" disabled={thinking} onClick={() => ask(s)} className="px-2 py-0.5 text-[0.72rem] disabled:opacity-40" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>{s}</button>
             ))}
           </div>
           <form onSubmit={onSubmit} className="flex gap-1.5">
             <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask a question…" autoComplete="off" disabled={thinking}
-              className="flex-1 px-2 py-1 text-[0.82rem] bg-transparent outline-none disabled:opacity-40" style={{ border: "1px solid " + t.winBorder, color: t.chromeText, borderRadius: t.winRadius === "0px" ? "0px" : "6px", caretColor: t.accent }} />
-            <button type="submit" disabled={thinking} className="px-2.5 py-1 text-[0.8rem] disabled:opacity-40" style={{ border: "1px solid " + t.winBorder, color: t.chromeText, borderRadius: t.winRadius === "0px" ? "0px" : "6px" }}>Ask</button>
+              className="flex-1 px-2 py-1 text-[0.82rem] bg-transparent outline-none disabled:opacity-40" style={{ border: "none", boxShadow: bevel("in-shallow", t.winBorder), color: t.chromeText, caretColor: t.accent }} />
+            <button type="submit" disabled={thinking} className="px-2.5 py-1 text-[0.8rem] disabled:opacity-40" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeText }}>Ask</button>
           </form>
         </div>
       )}
@@ -1483,7 +1497,7 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
         <span className="relative flex items-center justify-center overflow-hidden transition-transform"
           style={{
             width: tile, height: tile, fontSize: glyphSize, background: v.background, borderRadius: v.borderRadius,
-            borderTop: v.borderTop, borderLeft: v.borderLeft, borderRight: v.borderRight, borderBottom: v.borderBottom,
+            border: v.border,
             boxShadow: v.boxShadow,
           }}>
           <span className="relative" style={{ color: color, animation: v.glow ? "crt-icon-glow 2.4s ease-in-out infinite" : "none" }}>
