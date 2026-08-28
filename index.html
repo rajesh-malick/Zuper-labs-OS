@@ -63,20 +63,36 @@
     @keyframes zuper-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
     @keyframes crt-sweep { 0% { transform: translateY(-160px); } 100% { transform: translateY(100vh); } }
     @keyframes crt-flicker { 0%, 100% { opacity: .015; } 50% { opacity: .035; } 92% { opacity: .06; } }
-    @keyframes watermark-breathe { 0%, 100% { opacity: .055; } 50% { opacity: .09; } }
+    /* watermark-breathe/-glitch-a share the CRTOverlay scanline sweep's 7s period, timed
+       so the big glitch burst lands around the ~50% mark where the sweep band crosses the
+       viewport's vertical center — i.e. it flares "when the light touches" the watermark.
+       watermark-glitch-b runs on its own shorter, unrelated cycle for extra ambient glitch. */
+    @keyframes watermark-breathe {
+      0%, 100% { opacity: .06; filter: brightness(1); }
+      25% { opacity: .08; }
+      47% { opacity: .03; }
+      50% { opacity: .18; filter: brightness(2.4); }
+      53% { opacity: .05; filter: brightness(1); }
+      75% { opacity: .1; }
+    }
     @keyframes watermark-glitch-a {
-      0%, 89%, 100% { opacity: 0; transform: translate(-50%,-50%) translate(0,0); }
-      90% { opacity: .5; transform: translate(-50%,-50%) translate(-10px, 1px); }
-      91% { opacity: .3; transform: translate(-50%,-50%) translate(7px, -2px); }
-      92% { opacity: .55; transform: translate(-50%,-50%) translate(-4px, 0); }
-      93% { opacity: 0; transform: translate(-50%,-50%) translate(0,0); }
+      0%, 45%, 61%, 100% { opacity: 0; transform: translate(-50%,-50%) translate(0,0); }
+      46% { opacity: .5; transform: translate(-50%,-50%) translate(-14px, 2px); }
+      47% { opacity: .15; transform: translate(-50%,-50%) translate(10px, -3px); }
+      49% { opacity: .85; transform: translate(-50%,-50%) translate(-6px, 1px); }
+      50% { opacity: .1; transform: translate(-50%,-50%) translate(13px, 0); }
+      52% { opacity: .65; transform: translate(-50%,-50%) translate(-4px, -1px); }
+      54% { opacity: 0; transform: translate(-50%,-50%) translate(0,0); }
+      60% { opacity: .25; transform: translate(-50%,-50%) translate(8px, 1px); }
     }
     @keyframes watermark-glitch-b {
-      0%, 82%, 100% { opacity: 0; transform: translate(-50%,-50%) translate(0,0); }
-      83% { opacity: .4; transform: translate(-50%,-50%) translate(9px, 2px); }
-      84% { opacity: .2; transform: translate(-50%,-50%) translate(-6px, -1px); }
-      85% { opacity: .45; transform: translate(-50%,-50%) translate(5px, 1px); }
-      86% { opacity: 0; transform: translate(-50%,-50%) translate(0,0); }
+      0%, 16%, 24%, 58%, 66%, 100% { opacity: 0; transform: translate(-50%,-50%) translate(0,0); }
+      17% { opacity: .35; transform: translate(-50%,-50%) translate(8px, 2px); }
+      19% { opacity: .5; transform: translate(-50%,-50%) translate(-5px, -1px); }
+      21% { opacity: 0; transform: translate(-50%,-50%) translate(0,0); }
+      59% { opacity: .3; transform: translate(-50%,-50%) translate(-9px, 1px); }
+      61% { opacity: .45; transform: translate(-50%,-50%) translate(6px, -2px); }
+      63% { opacity: 0; transform: translate(-50%,-50%) translate(0,0); }
     }
     @keyframes crt-icon-glow { 0%, 100% { filter: drop-shadow(0 0 2px currentColor); } 50% { filter: drop-shadow(0 0 6px currentColor); } }
     html { cursor: default; }

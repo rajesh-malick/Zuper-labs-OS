@@ -259,9 +259,9 @@ function GlitchWatermark({ color }) {
   };
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true" style={{ zIndex: 0 }}>
-      <span style={{ ...common, color: color, transform: "translate(-50%,-50%)", animation: "watermark-breathe 6s ease-in-out infinite" }}>{text}</span>
-      <span style={{ ...common, color: "#eafff0", clipPath: "inset(38% 0 42% 0)", animation: "watermark-glitch-a 5.2s linear infinite" }}>{text}</span>
-      <span style={{ ...common, color: color, clipPath: "inset(8% 0 78% 0)", animation: "watermark-glitch-b 6.7s linear infinite" }}>{text}</span>
+      <span style={{ ...common, color: color, transform: "translate(-50%,-50%)", animation: "watermark-breathe 7s ease-in-out infinite" }}>{text}</span>
+      <span style={{ ...common, color: "#eafff0", clipPath: "inset(38% 0 42% 0)", animation: "watermark-glitch-a 7s linear infinite" }}>{text}</span>
+      <span style={{ ...common, color: color, clipPath: "inset(8% 0 78% 0)", animation: "watermark-glitch-b 3.3s linear infinite" }}>{text}</span>
     </div>
   );
 }
@@ -640,7 +640,7 @@ function FolderWindow({ clusterId, worldData, onOpenFile }) {
         {files.map((f) => (
           <button key={f.key} type="button" className="flex flex-col items-center gap-1.5 p-2 rounded hover:bg-white/5" onDoubleClick={() => onOpenFile(clusterId, f.key)}>
             <span className="text-3xl">{f.glyph}</span>
-            <span className="text-[0.82rem] text-white/85 text-center leading-tight break-all">{f.label}</span>
+            <span className="text-[0.82rem] text-white/85 text-center leading-tight break-words">{f.label}</span>
           </button>
         ))}
       </div>
@@ -1243,13 +1243,14 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
   );
 }
 
-/* ================= Desktop assistant — an original alien-cat mascot (own design:
-   pointy ears, twin antennae, big glossy eyes — inspired by the *vibe* of a green
-   alien-cat meme reference, not a copy of that photo or any specific artwork/likeness).
-   Answers questions by keyword-searching the REAL labs.zuper.co cluster/entity/flow
-   data already loaded into this app (zuper-world-data.json) — genuinely useful, but
-   explicitly NOT a live language model; it's deterministic string matching, badged as
-   such. Docks near the focused window until manually dragged, then stays put. ================= */
+/* ================= Desktop assistant — an original humanoid mascot (own design: a
+   friendly round head with eyebrows/eyes/nose/smile and a small collar/shoulders hint,
+   glossy CRT-green sphere skin — replaced an earlier alien-cat design per direction
+   toward something warmer and more humanoid). Tries a real Claude call first (via
+   api/ask.js) grounded in the REAL labs.zuper.co cluster/entity/flow data, falling back
+   to deterministic local keyword search if Claude isn't configured — every answer is
+   tagged with its actual source. Docks near the focused window until manually dragged,
+   then stays put. ================= */
 const ASSISTANT_TIPS = [
   "Right-click the desktop for more options, or double-click empty space for New.",
   "Open Display settings to change icon size or text size.",
@@ -1441,28 +1442,16 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
           animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible",
         }}
         aria-label="Zuper OS assistant — real platform data, Claude when configured">
-        <svg width={64} height={78} viewBox="0 0 64 78" style={{ position: "absolute", left: 0, top: -14, overflow: "visible", pointerEvents: "none" }}>
-          <polygon points="14,20 6,2 24,14" fill={t.accent} stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
-          <polygon points="50,20 58,2 40,14" fill={t.accent} stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
-          <line x1="22" y1="14" x2="16" y2="1" stroke="#0a0a0a" strokeWidth="2" strokeLinecap="round" />
-          <line x1="42" y1="14" x2="48" y2="1" stroke="#0a0a0a" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="16" cy="0" r="3" fill="#eafff0" stroke="#0a0a0a" strokeWidth="1.4" />
-          <circle cx="48" cy="0" r="3" fill="#eafff0" stroke="#0a0a0a" strokeWidth="1.4" />
-          <ellipse cx="25" cy="43" rx="6.5" ry="8.5" fill="#0a0a0a" />
-          <ellipse cx="39" cy="43" rx="6.5" ry="8.5" fill="#0a0a0a" />
-          <circle cx="23" cy="39" r="1.7" fill="#eafff0" />
-          <circle cx="37" cy="39" r="1.7" fill="#eafff0" />
-          <g stroke="#0a0a0a" strokeWidth="1.4" strokeLinecap="round">
-            <line x1="27" y1="56" x2="12" y2="53" />
-            <line x1="27" y1="59" x2="11" y2="59" />
-            <line x1="27" y1="62" x2="12" y2="65" />
-            <line x1="37" y1="56" x2="52" y2="53" />
-            <line x1="37" y1="59" x2="53" y2="59" />
-            <line x1="37" y1="62" x2="52" y2="65" />
-          </g>
-          <circle cx="32" cy="55" r="1.8" fill="#0a0a0a" />
-          <path d="M32 57 Q27 62 23 58" fill="none" stroke="#0a0a0a" strokeWidth="1.6" strokeLinecap="round" />
-          <path d="M32 57 Q37 62 41 58" fill="none" stroke="#0a0a0a" strokeWidth="1.6" strokeLinecap="round" />
+        <svg width={64} height={76} viewBox="0 0 64 76" style={{ position: "absolute", left: 0, top: 0, overflow: "visible", pointerEvents: "none" }}>
+          <line x1="20" y1="26" x2="28" y2="23" stroke="#0a0a0a" strokeWidth="2.2" strokeLinecap="round" />
+          <line x1="44" y1="26" x2="36" y2="23" stroke="#0a0a0a" strokeWidth="2.2" strokeLinecap="round" />
+          <ellipse cx="25" cy="34" rx="4.6" ry="5.6" fill="#0a0a0a" />
+          <ellipse cx="39" cy="34" rx="4.6" ry="5.6" fill="#0a0a0a" />
+          <circle cx="23.5" cy="31.5" r="1.3" fill="#eafff0" />
+          <circle cx="37.5" cy="31.5" r="1.3" fill="#eafff0" />
+          <path d="M32 38 q1.5 4 0 6" fill="none" stroke="#0a0a0a" strokeWidth="1.3" strokeLinecap="round" />
+          <path d="M23 48 Q32 55 41 48" fill="none" stroke="#0a0a0a" strokeWidth="2" strokeLinecap="round" />
+          <path d="M12 64 L52 64 L60 76 L4 76 Z" fill={t.accent} stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
         </svg>
       </button>
     </div>
@@ -1525,7 +1514,7 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
             <IconImg icon={icon} size={typeof icon === "string" ? glyphSize : Math.round(tile * 0.66)} color={color} />
           </span>
         </span>
-        <span className="text-center leading-tight font-mono break-all" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 0 6px " + color + "80" }}>{title}</span>
+        <span className="text-center leading-tight font-mono break-words" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 0 6px " + color + "80" }}>{title}</span>
       </button>
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} theme={t} items={[

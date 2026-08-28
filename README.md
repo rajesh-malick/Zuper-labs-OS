@@ -61,6 +61,13 @@ a mismatch once Mono CRT became the only look, so that got fixed too.
   hover, instead of the earlier generic white overlay.
 - `Terminal.app`'s input has a green `caretColor` for an authentic blinking
   cursor.
+- A large, faint "ZUPER LABS" watermark (`GlitchWatermark`) is stamped
+  behind the desktop icons. Its glitch burst is timed to the same 7s period
+  as the scanline sweep, peaking right as the sweep band crosses the
+  screen's vertical center — the watermark visibly glitches "when the
+  light touches it" — plus a second, shorter independent cycle for extra
+  ambient glitchiness in between. Strictly mono green/black; no RGB
+  channel-split, to stay consistent with the mono-CRT-only rule.
 
 ### Bevel texture (technique borrowed from 1j01/os-gui, recolored)
 
@@ -81,11 +88,12 @@ assistant's chat input (sunken) and buttons, and the scrollbar thumb/track.
 
 ## Desktop assistant
 
-An original alien-cat mascot (pointy ears, twin antennae, big glossy
-eyes — own hand-drawn SVG design, inspired by the *vibe* of a green
-alien-cat meme reference shared during design, not a copy of that photo or
-any specific artwork/likeness) that docks near the currently focused
-window until you manually drag it, then stays where you put it.
+An original humanoid mascot — a friendly round glossy-green head with
+eyebrows, expressive eyes, a small nose and smile, and a hint of
+collar/shoulders below (own hand-drawn SVG design). This replaced an
+earlier alien-cat design (pointy ears, antennae, whiskers) per direction
+toward something warmer and more human. It docks near the currently
+focused window until you manually drag it, then stays where you put it.
 
 Click it to open a small chat panel: type any question and it tries a real
 Claude model first, falling back to deterministic local keyword search over
