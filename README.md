@@ -219,7 +219,13 @@ is that extracted data (regex-parsed from the real bundle, values untouched).
   slot-fitting, trigger-to-action matching, meter-balancing) — **none
   simulate or represent Zuper's real algorithms**, stated explicitly on
   every game screen, the post-game achievement banner, and the "Skip & Read
-  Summary" copy.
+  Summary" copy. Restyled to match the mono-CRT look: the old orange brand
+  accent and red/yellow/blue state colors (invalid moves, warning meters,
+  visited markers) are gone, replaced by brightness/fill variation within
+  the same green — e.g. an invalid Dispatch Tetris slot flashes to a solid
+  green "invert" instead of turning red, matching how a real green-phosphor
+  terminal signals an error. Same bevel-textured buttons/panels as the rest
+  of the OS chrome.
 - **Achievement banner** after a win is local UI only — nothing scored,
   stored, or transmitted; notes a VIP-demo link as an unbuilt idea.
 - **Taskbar telemetry** is decorative sine/cosine motion, not real data.
@@ -242,6 +248,12 @@ Each of the 14 real clusters is a desktop folder containing `readme.md`,
 `Terminal.app` supports a small VFS command set: `ls`, `cd <dir>`, `pwd`,
 `cat readme.md`, `bash status.sh`, `bash connections.sh`, `whoami`, `date`,
 `clear`.
+
+**Clicking a cluster icon opens `Terminal.app` cd'd straight into that
+cluster** (instead of directly opening a folder window). From there, `ls`
+pops open a window/card showing that cluster's actual files — the same
+folder view as before, just reached through the shell instead of a direct
+double-click. `cd ..` (or `cd` with no argument) returns to `/desktop`.
 
 ## Deployment
 
