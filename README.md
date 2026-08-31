@@ -88,12 +88,16 @@ assistant's chat input (sunken) and buttons, and the scrollbar thumb/track.
 
 ## Desktop assistant
 
-An original humanoid mascot — a friendly round glossy-green head with
-eyebrows, expressive eyes, a small nose and smile, and a hint of
-collar/shoulders below (own hand-drawn SVG design). This replaced an
-earlier alien-cat design (pointy ears, antennae, whiskers) per direction
-toward something warmer and more human. It docks near the currently
-focused window until you manually drag it, then stays where you put it.
+An original humanoid mascot — a friendly round head with warm natural
+skin tones, eyebrows, expressive eyes, a small nose and smile, framed in a
+green ring/glow and a green shirt/collar so it still belongs to the
+mono-CRT chrome (own hand-drawn SVG design). Earlier passes used flat
+CRT-green "skin" on the face, which read as alien/uncanny — this pass
+takes loose color inspiration from the warm-toned portrait avatars Zuper's
+real "Zuper AI" agent personas (CSR Agent, Field Agent, etc.) use on
+zuper.co, not a copy of any specific agent's illustration. It docks near
+the currently focused window until you manually drag it, then stays where
+you put it.
 
 Click it to open a small chat panel: type any question and it tries a real
 Claude model first, falling back to deterministic local keyword search over

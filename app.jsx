@@ -1266,9 +1266,12 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
 }
 
 /* ================= Desktop assistant — an original humanoid mascot (own design: a
-   friendly round head with eyebrows/eyes/nose/smile and a small collar/shoulders hint,
-   glossy CRT-green sphere skin — replaced an earlier alien-cat design per direction
-   toward something warmer and more humanoid). Tries a real Claude call first (via
+   friendly round head with eyebrows/eyes/nose/smile, warm natural skin tones (not
+   green — flat CRT-green "skin" on a humanoid face was reading as alien/uncanny), a
+   green ring/glow frame and a green shirt/collar so it still visually belongs to the
+   mono-CRT chrome, loosely inspired by the *warm-toned portrait avatar* style of
+   Zuper's real "Zuper AI" agent personas on zuper.co — not a copy of any specific
+   agent's illustration). Tries a real Claude call first (via
    api/ask.js) grounded in the REAL labs.zuper.co cluster/entity/flow data, falling back
    to deterministic local keyword search if Claude isn't configured — every answer is
    tagged with its actual source. Docks near the focused window until manually dragged,
@@ -1459,20 +1462,21 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}
         className="w-16 h-16 rounded-full flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
         style={{
-          background: "radial-gradient(circle at 35% 30%, " + shade(t.accent, 0.5) + ", " + t.accent + " 60%, " + shade(t.accent, -0.4) + ")",
-          boxShadow: "0 10px 24px rgba(0,0,0,.5), inset 0 2px 3px rgba(255,255,255,.5), inset 0 -3px 6px rgba(0,0,0,.4)",
+          background: "radial-gradient(circle at 35% 30%, #f6d5a8, #dfae78 55%, #b98653 100%)",
+          border: "3px solid " + t.accent,
+          boxShadow: "0 10px 24px rgba(0,0,0,.5), 0 0 14px " + t.accent + "80, inset 0 2px 3px rgba(255,255,255,.5), inset 0 -3px 6px rgba(0,0,0,.25)",
           animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible",
         }}
         aria-label="Zuper OS assistant — real platform data, Claude when configured">
         <svg width={64} height={76} viewBox="0 0 64 76" style={{ position: "absolute", left: 0, top: 0, overflow: "visible", pointerEvents: "none" }}>
-          <line x1="20" y1="26" x2="28" y2="23" stroke="#0a0a0a" strokeWidth="2.2" strokeLinecap="round" />
-          <line x1="44" y1="26" x2="36" y2="23" stroke="#0a0a0a" strokeWidth="2.2" strokeLinecap="round" />
-          <ellipse cx="25" cy="34" rx="4.6" ry="5.6" fill="#0a0a0a" />
-          <ellipse cx="39" cy="34" rx="4.6" ry="5.6" fill="#0a0a0a" />
-          <circle cx="23.5" cy="31.5" r="1.3" fill="#eafff0" />
-          <circle cx="37.5" cy="31.5" r="1.3" fill="#eafff0" />
-          <path d="M32 38 q1.5 4 0 6" fill="none" stroke="#0a0a0a" strokeWidth="1.3" strokeLinecap="round" />
-          <path d="M23 48 Q32 55 41 48" fill="none" stroke="#0a0a0a" strokeWidth="2" strokeLinecap="round" />
+          <line x1="20" y1="26" x2="28" y2="23" stroke="#4a3222" strokeWidth="2.2" strokeLinecap="round" />
+          <line x1="44" y1="26" x2="36" y2="23" stroke="#4a3222" strokeWidth="2.2" strokeLinecap="round" />
+          <ellipse cx="25" cy="34" rx="4.6" ry="5.6" fill="#3a2a1c" />
+          <ellipse cx="39" cy="34" rx="4.6" ry="5.6" fill="#3a2a1c" />
+          <circle cx="23.5" cy="31.5" r="1.3" fill="#fff5e6" />
+          <circle cx="37.5" cy="31.5" r="1.3" fill="#fff5e6" />
+          <path d="M32 38 q1.5 4 0 6" fill="none" stroke="#a06840" strokeWidth="1.3" strokeLinecap="round" />
+          <path d="M23 48 Q32 55 41 48" fill="none" stroke="#7a4a2c" strokeWidth="2" strokeLinecap="round" />
           <path d="M12 64 L52 64 L60 76 L4 76 Z" fill={t.accent} stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
         </svg>
       </button>
