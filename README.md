@@ -88,11 +88,15 @@ assistant's chat input (sunken) and buttons, and the scrollbar thumb/track.
 
 ## Desktop assistant
 
-An original CRT-terminal-robot mascot — a boxy retro monitor head on
-tank treads, its screen glowing in the OS's own CRT accent color with a
-pixel-block smiley and a blinking `>_` cursor, plus a small power-LED
-in Zuper's real brand orange (`#ff4919`) as the one brand-color touch
-(own hand-drawn SVG design, own proportions and colors).
+An original CRT-terminal-robot mascot — a monitor head on tank treads
+with a real CRT silhouette (a thick bottom control-panel "chin" with
+two dummy buttons and the power LED, corner screws, and a diagonal
+glass-glare highlight on the curved screen, instead of reading as a
+plain rectangle), its screen glowing in the OS's own CRT accent color
+with a pixel-block smiley and a blinking `>_` cursor, plus a small
+power-LED in Zuper's real brand orange (`#ff4919`) as the one
+brand-color touch (own hand-drawn SVG design, own proportions and
+colors).
 
 This design exists because internal feedback pushed hard for "a
 Clippy-like character" — Microsoft's actual Clippy asset can't be used
@@ -137,13 +141,20 @@ reactive to touch, click, and idle time, not just clicks — that
 interaction-design vocabulary was used as design reference (not code or
 assets), reimplemented from scratch as CSS/SVG transforms on this
 original character: an idle eye-blink; a real hard-cut terminal cursor
-blink (`>_`, distinct from the eye-blink's soft squash); ambient CRT
+blink (`>_`, distinct from the eye-blink's soft squash, and always
+visible in the screen's corner regardless of state); ambient CRT
 scanline flicker; a tread-rock wave on opening the panel and a wave
 goodbye on closing it; a tread-rock right after a fresh reply; a
 hover-notice "perk up" on pointer-enter; a small randomized idle fidget
 (a head glance) every ~12-22s so the character stays alive even when
 nobody's touching it; and a head-tilt while a question is being
-answered. `@react95/clippy` itself was **not used** — inspecting
+answered. The **screen's own content swaps per state**, on top of all of
+that — a small pixel-block hand waving on greet (`Wave`/`Greeting`);
+"GOODBYE!!!" rendered in the VT323 terminal font on close (`GoodBye`); a
+bright scan-bar sweeping down the screen as a "glitch" cue on hover
+(`GetAttention`); three pulsing loading dots while thinking
+(`Processing`); and the default pixel-block smiley otherwise.
+`@react95/clippy` itself was **not used** — inspecting
 the published npm package confirmed it ships ~16.6MB of actual extracted
 Microsoft Office character sprites/sounds (Clippy, Merlin, Bonzi, Rover,
 etc.), with upstream docs stating outright those assets "remain property
