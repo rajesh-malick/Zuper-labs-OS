@@ -333,6 +333,13 @@ cluster** (instead of directly opening a folder window). From there, `ls`
 pops open a window/card showing that cluster's actual files — the same
 folder view as before, just reached through the shell instead of a direct
 double-click. `cd ..` (or `cd` with no argument) returns to `/desktop`.
+However it's opened — a cluster icon, the `Terminal.app` icon itself, or
+reopening it from the taskbar — the window re-centers on the stage every
+time, rather than sitting wherever it was last left. The prompt itself
+also behaves like a real terminal now: there's no separate input box below
+a divider with a "type 'help'" placeholder hint — the live prompt is just
+the last line of the same scrolling log, auto-focused, exactly the way
+`cmd.exe` or a real shell works.
 
 ## Deployment
 

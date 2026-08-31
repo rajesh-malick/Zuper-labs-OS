@@ -1176,7 +1176,8 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   const [input, setInput] = useState("");
   const [cwd, setCwd] = useState(null); // null = /desktop root, else cluster id
   const logRef = useRef(null);
-  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [lines]);
+  const inputRef = useRef(null);
+  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [lines, input]);
 
   /* Desktop icons open this terminal already cd'd into the clicked cluster (see
      handleIconOpen in App) — jumpTo is a fresh {cwd, nonce} object each time, even for
@@ -1188,11 +1189,12 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   }, [jumpTo]);
 
   function promptPath() { return cwd ? "/desktop/" + cwd : "/desktop"; }
+  function promptString() { return "guest@zuper-web-os:" + promptPath() + "$"; }
 
   function run(cmd) {
     const trimmed = cmd.trim();
     if (trimmed === "") return;
-    const out = [{ text: "guest@zuper-web-os:" + promptPath() + "$ " + trimmed, kind: "cmd" }];
+    const out = [{ text: promptString() + " " + trimmed, kind: "cmd" }];
     const [verb, ...rest] = trimmed.split(/\s+/);
     const arg = rest.join(" ");
 
@@ -1235,17 +1237,22 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
     setLines((prev) => prev.concat(out));
   }
 
+  /* The live prompt line lives INSIDE the scrolling log, right after the last output
+     line — same as a real terminal (cmd.exe, a shell), where there's no separate
+     "input box" below a divider and no placeholder hint; the prompt itself is where
+     you type, and it scrolls up into history once you hit Enter. Clicking anywhere in
+     the terminal refocuses the (invisible, borderless) input, same as a real one. */
   return (
-    <div className="p-3 flex flex-col h-full font-terminal text-[1.18rem]">
-      <div ref={logRef} className="flex-1 overflow-y-auto space-y-1 mb-2">
+    <div className="p-3 flex flex-col h-full font-terminal text-[1.18rem]" onClick={() => inputRef.current && inputRef.current.focus()}>
+      <div ref={logRef} className="flex-1 overflow-y-auto space-y-1">
         {lines.map((l, i) => (
           <div key={i} className={l.kind === "err" ? "text-red-400" : l.kind === "cmd" ? "text-white" : ""} style={l.kind === "out" ? { color: CRT_GREEN, opacity: 0.85 } : undefined}>{l.text}</div>
         ))}
-      </div>
-      <div className="flex items-center gap-2 border-t border-white/10 pt-2">
-        <span style={{ color: CRT_GREEN }}>{promptPath()}&gt;</span>
-        <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { run(input); setInput(""); } }}
-          className="flex-1 bg-transparent outline-none text-white placeholder-white/30" style={{ caretColor: CRT_GREEN }} placeholder="type 'help'" spellCheck={false} autoComplete="off" aria-label="Terminal command input" />
+        <div className="flex items-center gap-2">
+          <span style={{ color: CRT_GREEN }}>{promptString()}</span>
+          <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { run(input); setInput(""); } }}
+            className="flex-1 bg-transparent outline-none text-white" style={{ caretColor: CRT_GREEN }} spellCheck={false} autoComplete="off" autoFocus aria-label="Terminal command input" />
+        </div>
       </div>
     </div>
   );
@@ -1896,9 +1903,22 @@ function App({ worldData, onReboot }) {
 
   const desktopIcons = useMemo(() => desktopIconDefs.filter((a) => !hiddenIconIds.has(a.id)), [desktopIconDefs, hiddenIconIds]);
 
+  /* The terminal opens centered on the stage every time, no matter which app/icon
+     triggered it (a cluster folder, the Terminal.app icon itself, or reopening from
+     the taskbar) — otherwise it just sits wherever it was left (its registered rect,
+     or a previous drag position), which can land off-center or even off-screen
+     depending on viewport size. */
+  function openTerminalCentered() {
+    const w = wm.state.terminal;
+    const rect = stageRef.current ? stageRef.current.getBoundingClientRect() : { width: 1400, height: 800 };
+    wm.move("terminal", Math.max(8, Math.round((rect.width - w.w) / 2)), Math.max(8, Math.round((rect.height - w.h) / 2)));
+    wm.open("terminal");
+    wm.focus("terminal");
+  }
+
   function toggleFromTaskbar(id) {
     const w = wm.state[id];
-    if (!w.open || w.minimized) wm.open(id);
+    if (!w.open || w.minimized) { if (id === "terminal") openTerminalCentered(); else wm.open(id); }
     else if (wm.focusedId === id) wm.minimize(id);
     else wm.focus(id);
   }
@@ -1914,8 +1934,9 @@ function App({ worldData, onReboot }) {
     if (def && def.kind === "folder") {
       jumpCounterRef.current += 1;
       setTerminalJump({ cwd: def.id, nonce: jumpCounterRef.current });
-      wm.open("terminal");
-      wm.focus("terminal");
+      openTerminalCentered();
+    } else if (id === "terminal") {
+      openTerminalCentered();
     } else {
       wm.open(id);
     }
