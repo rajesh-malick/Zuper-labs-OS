@@ -88,17 +88,29 @@ assistant's chat input (sunken) and buttons, and the scrollbar thumb/track.
 
 ## Desktop assistant
 
-An original otter mascot — a wide/flat face, small round ears, whiskers,
-and a cap in Zuper's real brand orange over a green collar (own
-hand-drawn SVG design, own proportions and colors — not a trace of any
-reference image). The cap is the first time the mascot actually ties to
-Zuper's real brand color (`#ff4919`), not just the CRT green. Three
-earlier passes (an alien-cat, a humanoid face with flat CRT-green "skin"
-that read as uncanny, then a golden-dog) were replaced in turn before
-landing here; the collar/cap, not a ring border, are what tie this one to
-the app's chrome and Zuper's brand respectively. It docks near the
-currently focused window until you manually drag it, then stays where you
-put it.
+An original full-body otter mascot in roofer/field-tech workwear — a
+wide/flat face, small round ears, whiskers, a cap in Zuper's real brand
+orange, green overalls with straps, arms, legs, boots, and a tool belt
+(own hand-drawn SVG design, own proportions and colors — not a trace of
+any reference image). The cap is the first time the mascot actually ties
+to Zuper's real brand color (`#ff4919`), not just the CRT green.
+
+Earlier passes (alien-cat → humanoid → head-only golden-dog → head-only
+otter) were all clipped to a small circular badge, because the `<button>`
+itself visually *was* a 64x64 circle (background + border + boxShadow all
+circle-shaped) — that's the actual reason only a head ever fit, and why
+it kept reading as "a face inside a circular icon." The button is now
+just an invisible hit-box; every visible pixel is drawn by the SVG at
+whatever size the full figure needs, and the glow is a `drop-shadow`
+filter on the SVG (hugs the real silhouette) instead of a `boxShadow` on
+the button. The whole SVG also gets a genuine CSS 3D transform
+(`perspective` + `rotateY` — real 3D, not just gradient shading) as an
+idle animation, for visible dimensionality without the cost of a full
+WebGL rewrite (the Three.js attempt at real 3D for the whole Zuper Quest
+town, in the sibling side project, got reverted for being too big a
+swing — this is the lighter-weight version of that idea, scoped to one
+character). It docks near the currently focused window until you
+manually drag it, then stays where you put it.
 
 **Animation states.** Classic assistant-character libraries like
 `@react95/clippy` expose a named set of animations (`Wave`, `Greeting`,

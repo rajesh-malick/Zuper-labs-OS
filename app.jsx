@@ -1265,28 +1265,31 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
   );
 }
 
-/* ================= Desktop assistant — an original otter mascot (own design: a
-   wide/flat face, small round ears, whiskers, and a cap in Zuper's real brand orange
-   (ACCENT) over a green collar — own proportions/colors, not a trace of any reference
-   image; earlier passes were an alien-cat, a humanoid, and a golden-dog, replaced in
-   turn per direction). No hard cartoon outlines anywhere — every part is a gradient
-   fill plus a soft translucent under-jaw shadow, which is what actually reads as
-   "soft 3D" rather than a flat outlined icon; an earlier pass with black outlines on
-   every shape read as a helmet visor + suit collar instead of fur. A boxShadow-ring
-   glow on the button was another pass's mistake — a boxShadow always follows the
-   button's own circular hit-box, which is what made the whole thing read as "a face
-   in a circular badge." The glow here is a drop-shadow filter on the SVG instead,
-   which hugs the actual drawn silhouette; the ears are drawn on top of (after) the
-   head/cap shapes specifically so they stay fully visible rather than getting covered
-   by whichever shape happens to render later. Has its own small set of original
-   animation "states" — idle
-   blink, an ear-wiggle on opening or on a fresh reply, a head-tilt while thinking — in
-   the same interaction-design vocabulary classic assistant characters use (a named
-   greeting/thinking/idle animation set, the kind @react95/clippy exposes), but
-   hand-built as CSS/SVG transforms on this original character, not any borrowed sprite
-   frames — @react95/clippy ships actual extracted Microsoft Office character assets
-   (confirmed by inspecting the published package), so it and @react95/icons were both
-   ruled out earlier this session. Tries a real
+/* ================= Desktop assistant — an original full-body otter mascot in
+   roofer/field-tech workwear (own design: wide/flat face, small round ears, whiskers,
+   a cap in Zuper's real brand orange (ACCENT), green overalls with straps, arms, legs,
+   boots, a tool belt — own proportions/colors, not a trace of any reference image;
+   earlier passes were an alien-cat, a humanoid, then a head-only golden-dog and
+   head-only otter, replaced in turn per direction). No hard cartoon outlines anywhere
+   — every part is a gradient fill plus soft translucent shadows, which is what
+   actually reads as "soft 3D" rather than a flat outlined icon. The outer <button>
+   used to visually BE a 64x64 circular badge (background+border+boxShadow all
+   circle-shaped) — that's why only a head ever fit and why it always read as "a face
+   in a circular badge"; the button is now just an invisible hit-box, and every visible
+   pixel is drawn by the SVG at whatever size the figure actually needs. The glow is a
+   drop-shadow filter on the SVG (hugs the actual drawn silhouette) instead of a
+   boxShadow on the button. On top of that, the whole SVG gets a genuine CSS 3D
+   transform (perspective + rotateY, real 3D, not just shading) as an idle animation —
+   visible dimensionality without the cost/complexity of a full WebGL rewrite, which is
+   what got reverted earlier when tried for the whole Zuper Quest town. Has its own
+   small set of original animation "states" — idle blink, an ear-wiggle on opening or
+   on a fresh reply, a head-tilt while thinking — in the same interaction-design
+   vocabulary classic assistant characters use (a named greeting/thinking/idle
+   animation set, the kind @react95/clippy exposes), but hand-built as CSS/SVG
+   transforms on this original character, not any borrowed sprite frames —
+   @react95/clippy ships actual extracted Microsoft Office character assets (confirmed
+   by inspecting the published package), so it and @react95/icons were both ruled out
+   earlier this session. Tries a real
    Claude call first (via
    api/ask.js) grounded in the REAL labs.zuper.co cluster/entity/flow data, falling back
    to deterministic local keyword search if Claude isn't configured — every answer is
@@ -1430,7 +1433,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
 
   function defaultPos() {
     const rect = stageRef.current ? stageRef.current.getBoundingClientRect() : { width: 1400, height: 800 };
-    return { x: rect.width - 100, y: rect.height - 140 };
+    return { x: rect.width - 110, y: rect.height - 210 };
   }
   const docked = !pos;
   const current = pos || dockTarget || defaultPos();
@@ -1442,8 +1445,8 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
       const dx = e.clientX - d.startX, dy = e.clientY - d.startY;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) d.moved = true;
       const rect = stageRef.current ? stageRef.current.getBoundingClientRect() : { width: 2000, height: 2000 };
-      const nx = clamp(d.startLeft + dx, 4, rect.width - 76);
-      const ny = clamp(d.startTop + dy, 4, rect.height - 76);
+      const nx = clamp(d.startLeft + dx, 4, rect.width - 90);
+      const ny = clamp(d.startTop + dy, 4, rect.height - 170);
       setPos({ x: nx, y: ny });
     }
     function onUp() { dragRef.current.dragging = false; }
@@ -1466,7 +1469,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
     <div className="absolute pointer-events-auto" style={{ left: current.x, top: current.y, zIndex: 500, transition: docked ? "left .4s ease, top .4s ease" : "none" }}
       onPointerDown={onPointerDown}>
       {open && (
-        <div className="absolute bottom-[74px] right-0 w-72 p-3 font-mono text-[0.82rem] flex flex-col"
+        <div className="absolute bottom-[166px] right-0 w-72 p-3 font-mono text-[0.82rem] flex flex-col"
           style={{ background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "10px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 16px 40px rgba(0,0,0,.5)" }}>
           <div className="flex items-start justify-between gap-2">
             <ConceptBadge>Claude when configured, else local real-data search</ConceptBadge>
@@ -1502,20 +1505,25 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
         </div>
       )}
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}
-        className="w-16 h-16 flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
-        style={{ animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible" }}
+        className="flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
+        style={{ width: 80, height: 160, animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible" }}
         aria-label="Zuper OS assistant — real platform data, Claude when configured">
-        {/* An original otter mascot — wider/flatter face, small round ears, whiskers,
-            and a cap in Zuper's real brand orange (ACCENT, #ff4919 — the first time
-            the mascot actually ties to Zuper's real color, not just the CRT green).
-            Own proportions/design, not a trace of any reference image. Same soft-3D
-            approach as before: gradient fills, no hard cartoon outlines, and a
-            drop-shadow filter (hugs the actual silhouette) instead of a boxShadow on
-            the button (a boxShadow follows the button's own circle, which is what
-            made an earlier pass read as "a face in a circular badge"). */}
-        <svg width={80} height={92} viewBox="0 0 80 92" style={{
-          position: "absolute", left: -8, top: -4, overflow: "visible", pointerEvents: "none",
-          filter: "drop-shadow(0 6px 10px rgba(0,0,0,.45)) drop-shadow(0 0 7px " + t.accent + "90)",
+        {/* An original full-body otter mascot in roofer/field-tech workwear — head as
+            before (wide/flat face, small round ears, whiskers, a cap in Zuper's real
+            brand orange), now with a body: overalls, arms, legs, boots, a tool belt.
+            Own proportions/design, not a trace of any reference image. The outer
+            <button> used to BE the 64x64 circular badge (background+border+boxShadow
+            all shaped like a circle), which is why showing more than a head felt
+            impossible — it's now just an invisible hit-box; every visible pixel is
+            drawn by this SVG, sized to fit the full figure, not clipped to a small
+            round icon. Genuine CSS 3D (perspective + rotateY, real 3D transforms, not
+            just flat shading) gives it visible depth as it idles — a lighter-weight
+            way to get real dimensionality than a full WebGL rewrite, which is what got
+            reverted earlier when tried for the whole Zuper Quest town. */}
+        <svg width={80} height={160} viewBox="0 0 80 160" style={{
+          position: "absolute", left: 0, top: 0, overflow: "visible", pointerEvents: "none",
+          filter: "drop-shadow(0 10px 14px rgba(0,0,0,.5)) drop-shadow(0 0 7px " + t.accent + "90)",
+          animation: "mascot-3d-tilt 5s ease-in-out infinite",
         }}>
           <defs>
             <radialGradient id="assistantFur" cx="35%" cy="30%" r="85%">
@@ -1535,9 +1543,9 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
               <stop offset="0%" stopColor={shade(ACCENT, 0.35)} />
               <stop offset="100%" stopColor={shade(ACCENT, -0.25)} />
             </radialGradient>
-            <linearGradient id="assistantCollar" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={shade(t.accent, 0.35)} />
-              <stop offset="100%" stopColor={shade(t.accent, -0.25)} />
+            <linearGradient id="assistantOveralls" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={shade(t.accent, 0.3)} />
+              <stop offset="100%" stopColor={shade(t.accent, -0.3)} />
             </linearGradient>
           </defs>
           <ellipse cx="40" cy="21" rx="23" ry="16" fill="url(#assistantCap)" />
@@ -1562,8 +1570,29 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
             style={{ transformBox: "fill-box", transformOrigin: "center", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
           <circle cx="64" cy="38" r="7.5" fill="url(#assistantEar)"
             style={{ transformBox: "fill-box", transformOrigin: "center", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
-          <path d="M16 68 Q40 78 64 68 L64 73 Q40 83 16 73 Z" fill="url(#assistantCollar)" />
-          <circle cx="40" cy="76.5" r="2.6" fill={shade(ACCENT, 0.3)} />
+
+          {/* neck + torso (overalls bib) */}
+          <path d="M22 68 Q40 76 58 68 L58 72 Q40 80 22 72 Z" fill="url(#assistantOveralls)" />
+          <path d="M23 74 Q20 98 25 120 Q40 126 55 120 Q60 98 57 74 Q40 82 23 74 Z" fill="url(#assistantOveralls)" />
+          <path d="M27 76 L33 118" stroke={shade(ACCENT, -0.15)} strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M53 76 L47 118" stroke={shade(ACCENT, -0.15)} strokeWidth="2.2" strokeLinecap="round" />
+          <rect x="34" y="90" width="12" height="10" rx="1.5" fill={shade(t.accent, -0.15)} opacity="0.5" />
+
+          {/* arms */}
+          <path d="M24 80 Q9 88 8 106 Q8 116 15 118 Q21 116 20 105 Q21 90 28 82 Z" fill="url(#assistantFur)" />
+          <path d="M56 80 Q71 88 72 106 Q72 116 65 118 Q59 116 60 105 Q59 90 52 82 Z" fill="url(#assistantFur)" />
+          <circle cx="12.5" cy="116" r="5.5" fill="url(#assistantFur)" />
+          <circle cx="67.5" cy="116" r="5.5" fill="url(#assistantFur)" />
+
+          {/* tool belt */}
+          <path d="M24 119 Q40 125 56 119 L56 124 Q40 130 24 124 Z" fill="#8a6c44" />
+          <rect x="35.5" y="119.5" width="9" height="8" rx="1.5" fill="#e0c060" />
+
+          {/* legs + boots */}
+          <path d="M27 122 Q25 140 26 152 L36 152 Q37 140 36 122 Z" fill="url(#assistantOveralls)" />
+          <path d="M53 122 Q55 140 54 152 L44 152 Q43 140 44 122 Z" fill="url(#assistantOveralls)" />
+          <ellipse cx="31" cy="154" rx="7" ry="5" fill="#3a2a18" />
+          <ellipse cx="49" cy="154" rx="7" ry="5" fill="#3a2a18" />
         </svg>
       </button>
     </div>
