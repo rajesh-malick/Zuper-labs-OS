@@ -1265,19 +1265,21 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
   );
 }
 
-/* ================= Desktop assistant — an original golden-dog mascot (own design:
-   floppy ears, big warm eyes, a snout, and a green collar — own colors/proportions,
-   loosely inspired by the friendly-soft-3D-dog *vibe* of ryOS's "Rover" assistant, not
-   a copy of that character's actual design/render). No hard cartoon outlines anywhere
-   — every part is a gradient fill plus a soft translucent under-jaw shadow, which is
-   what actually reads as "soft 3D" rather than a flat outlined icon; an earlier pass
-   with black outlines on every shape read as a helmet visor + suit collar instead of
-   fur; a boxShadow-ring glow on the button was another pass's mistake — a boxShadow
-   always follows the button's own circular hit-box, which is what made the whole
-   thing read as "a dog face inside a circular badge." The glow here is a drop-shadow
-   filter on the SVG instead, which hugs the actual drawn silhouette, and the ears are
-   sized/positioned to stay clearly visible past the head ellipse's edge rather than
-   mostly hidden behind it. Has its own small set of original animation "states" — idle
+/* ================= Desktop assistant — an original otter mascot (own design: a
+   wide/flat face, small round ears, whiskers, and a cap in Zuper's real brand orange
+   (ACCENT) over a green collar — own proportions/colors, not a trace of any reference
+   image; earlier passes were an alien-cat, a humanoid, and a golden-dog, replaced in
+   turn per direction). No hard cartoon outlines anywhere — every part is a gradient
+   fill plus a soft translucent under-jaw shadow, which is what actually reads as
+   "soft 3D" rather than a flat outlined icon; an earlier pass with black outlines on
+   every shape read as a helmet visor + suit collar instead of fur. A boxShadow-ring
+   glow on the button was another pass's mistake — a boxShadow always follows the
+   button's own circular hit-box, which is what made the whole thing read as "a face
+   in a circular badge." The glow here is a drop-shadow filter on the SVG instead,
+   which hugs the actual drawn silhouette; the ears are drawn on top of (after) the
+   head/cap shapes specifically so they stay fully visible rather than getting covered
+   by whichever shape happens to render later. Has its own small set of original
+   animation "states" — idle
    blink, an ear-wiggle on opening or on a fresh reply, a head-tilt while thinking — in
    the same interaction-design vocabulary classic assistant characters use (a named
    greeting/thinking/idle animation set, the kind @react95/clippy exposes), but
@@ -1503,55 +1505,65 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
         className="w-16 h-16 flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
         style={{ animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible" }}
         aria-label="Zuper OS assistant — real platform data, Claude when configured">
-        {/* Soft-3D look: no hard cartoon outlines anywhere — every shape is a gradient
-            fill (highlight → shadow), plus a translucent under-jaw shadow blob for
-            gentle volume. The glow is a drop-shadow filter (follows the actual drawn
-            silhouette) rather than a boxShadow on the button — a boxShadow always
-            follows the button's own rectangle/circle, which was exactly why this used
-            to read as "a dog face inside a circular badge" instead of a dog. Ears are
-            drawn big enough, and attached far enough outside the head ellipse, to stay
-            clearly visible past the head's edge instead of mostly tucked behind it. */}
+        {/* An original otter mascot — wider/flatter face, small round ears, whiskers,
+            and a cap in Zuper's real brand orange (ACCENT, #ff4919 — the first time
+            the mascot actually ties to Zuper's real color, not just the CRT green).
+            Own proportions/design, not a trace of any reference image. Same soft-3D
+            approach as before: gradient fills, no hard cartoon outlines, and a
+            drop-shadow filter (hugs the actual silhouette) instead of a boxShadow on
+            the button (a boxShadow follows the button's own circle, which is what
+            made an earlier pass read as "a face in a circular badge"). */}
         <svg width={80} height={92} viewBox="0 0 80 92" style={{
           position: "absolute", left: -8, top: -4, overflow: "visible", pointerEvents: "none",
           filter: "drop-shadow(0 6px 10px rgba(0,0,0,.45)) drop-shadow(0 0 7px " + t.accent + "90)",
         }}>
           <defs>
-            <radialGradient id="assistantFur" cx="35%" cy="28%" r="80%">
-              <stop offset="0%" stopColor="#fbe6bd" />
-              <stop offset="50%" stopColor="#e0ab5c" />
-              <stop offset="100%" stopColor="#a8763c" />
+            <radialGradient id="assistantFur" cx="35%" cy="30%" r="85%">
+              <stop offset="0%" stopColor="#e6d6b3" />
+              <stop offset="50%" stopColor="#bd9c6c" />
+              <stop offset="100%" stopColor="#8a6c44" />
             </radialGradient>
-            <radialGradient id="assistantEar" cx="35%" cy="15%" r="95%">
-              <stop offset="0%" stopColor="#e6b567" />
-              <stop offset="100%" stopColor="#9c6c34" />
+            <radialGradient id="assistantEar" cx="35%" cy="20%" r="95%">
+              <stop offset="0%" stopColor="#c9aa78" />
+              <stop offset="100%" stopColor="#8a6c44" />
             </radialGradient>
             <radialGradient id="assistantSnout" cx="40%" cy="25%" r="85%">
-              <stop offset="0%" stopColor="#fbead0" />
-              <stop offset="100%" stopColor="#e6c58a" />
+              <stop offset="0%" stopColor="#f5ecd8" />
+              <stop offset="100%" stopColor="#dcc8a0" />
+            </radialGradient>
+            <radialGradient id="assistantCap" cx="35%" cy="20%" r="90%">
+              <stop offset="0%" stopColor={shade(ACCENT, 0.35)} />
+              <stop offset="100%" stopColor={shade(ACCENT, -0.25)} />
             </radialGradient>
             <linearGradient id="assistantCollar" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={shade(t.accent, 0.35)} />
               <stop offset="100%" stopColor={shade(t.accent, -0.25)} />
             </linearGradient>
           </defs>
-          <path d="M14 16 C -6 22, -8 48, 6 66 C 15 61, 21 54, 19 34 C 19 26, 17 19, 14 16 Z" fill="url(#assistantEar)"
-            style={{ transformBox: "fill-box", transformOrigin: "top center", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
-          <path d="M66 16 C 86 22, 88 48, 74 66 C 65 61, 59 54, 61 34 C 61 26, 63 19, 66 16 Z" fill="url(#assistantEar)"
-            style={{ transformBox: "fill-box", transformOrigin: "top center", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
+          <ellipse cx="40" cy="21" rx="23" ry="16" fill="url(#assistantCap)" />
           <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: thinking ? "dog-think-tilt 1.6s ease-in-out infinite" : "none" }}>
-            <ellipse cx="40" cy="38" rx="22" ry="19" fill="url(#assistantFur)" />
-            <ellipse cx="40" cy="53" rx="17" ry="8" fill="#8a5f2e" opacity="0.18" />
-            <ellipse className="assistant-eye" cx="31.5" cy="36" rx="5.2" ry="6" fill="#3a2415" />
-            <ellipse className="assistant-eye" cx="48.5" cy="36" rx="5.2" ry="6" fill="#3a2415" />
-            <circle cx="29.8" cy="33.4" r="1.5" fill="#fff8ec" />
-            <circle cx="46.8" cy="33.4" r="1.5" fill="#fff8ec" />
-            <ellipse cx="40" cy="51" rx="12" ry="9" fill="url(#assistantSnout)" />
-            <ellipse cx="40" cy="46.5" rx="3.6" ry="2.5" fill="#3a2415" />
-            <path d="M40 49 Q40 54.5 34 56.5" fill="none" stroke="#a8763c" strokeWidth="1.3" strokeLinecap="round" />
-            <path d="M40 49 Q40 54.5 46 56.5" fill="none" stroke="#a8763c" strokeWidth="1.3" strokeLinecap="round" />
+            <ellipse cx="40" cy="41" rx="24" ry="19" fill="url(#assistantFur)" />
+            <path d="M16 29 Q40 20 64 29 L64 25 Q40 17 16 25 Z" fill={shade(ACCENT, -0.3)} />
+            <ellipse cx="40" cy="55" rx="18" ry="8" fill="#5c4626" opacity="0.16" />
+            <ellipse className="assistant-eye" cx="30" cy="39" rx="5" ry="5.6" fill="#3a2a18" />
+            <ellipse className="assistant-eye" cx="50" cy="39" rx="5" ry="5.6" fill="#3a2a18" />
+            <circle cx="28.3" cy="36.6" r="1.5" fill="#fff8ec" />
+            <circle cx="48.3" cy="36.6" r="1.5" fill="#fff8ec" />
+            <ellipse cx="40" cy="54" rx="13.5" ry="9.5" fill="url(#assistantSnout)" />
+            <ellipse cx="40" cy="49" rx="3.6" ry="2.5" fill="#3a2a18" />
+            <path d="M40 51.5 Q40 56.5 34 58" fill="none" stroke="#a88c5e" strokeWidth="1.2" strokeLinecap="round" />
+            <path d="M40 51.5 Q40 56.5 46 58" fill="none" stroke="#a88c5e" strokeWidth="1.2" strokeLinecap="round" />
+            <g stroke="#c9aa78" strokeWidth="1" strokeLinecap="round" opacity="0.85">
+              <path d="M27 52 L14 49" /><path d="M27 55 L13 55" /><path d="M27 58 L14 61" />
+              <path d="M53 52 L66 49" /><path d="M53 55 L67 55" /><path d="M53 58 L66 61" />
+            </g>
           </g>
-          <path d="M16 65 Q40 75 64 65 L64 70 Q40 80 16 70 Z" fill="url(#assistantCollar)" />
-          <circle cx="40" cy="73.5" r="2.6" fill="#f2d98a" />
+          <circle cx="16" cy="38" r="7.5" fill="url(#assistantEar)"
+            style={{ transformBox: "fill-box", transformOrigin: "center", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
+          <circle cx="64" cy="38" r="7.5" fill="url(#assistantEar)"
+            style={{ transformBox: "fill-box", transformOrigin: "center", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
+          <path d="M16 68 Q40 78 64 68 L64 73 Q40 83 16 73 Z" fill="url(#assistantCollar)" />
+          <circle cx="40" cy="76.5" r="2.6" fill={shade(ACCENT, 0.3)} />
         </svg>
       </button>
     </div>

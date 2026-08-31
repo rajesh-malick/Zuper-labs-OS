@@ -88,15 +88,17 @@ assistant's chat input (sunken) and buttons, and the scrollbar thumb/track.
 
 ## Desktop assistant
 
-An original golden-dog mascot — floppy ears, big warm eyes, a snout, and
-a green collar with a tag (own hand-drawn SVG design, own colors and
-proportions). Loosely inspired by the friendly-soft-3D-dog *vibe* of
-ryOS's "Rover" assistant character — not a copy of that character's
-actual design or render. Two earlier passes (an alien-cat, then a
-humanoid face with flat CRT-green "skin" that read as uncanny) were
-replaced before landing here; the collar, not a ring border, is what ties
-this one to the mono-CRT green chrome. It docks near the currently
-focused window until you manually drag it, then stays where you put it.
+An original otter mascot — a wide/flat face, small round ears, whiskers,
+and a cap in Zuper's real brand orange over a green collar (own
+hand-drawn SVG design, own proportions and colors — not a trace of any
+reference image). The cap is the first time the mascot actually ties to
+Zuper's real brand color (`#ff4919`), not just the CRT green. Three
+earlier passes (an alien-cat, a humanoid face with flat CRT-green "skin"
+that read as uncanny, then a golden-dog) were replaced in turn before
+landing here; the collar/cap, not a ring border, are what tie this one to
+the app's chrome and Zuper's brand respectively. It docks near the
+currently focused window until you manually drag it, then stays where you
+put it.
 
 **Animation states.** Classic assistant-character libraries like
 `@react95/clippy` expose a named set of animations (`Wave`, `Greeting`,
