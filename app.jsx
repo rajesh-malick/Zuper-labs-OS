@@ -1288,10 +1288,13 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
    transform (perspective + rotateY, real 3D, not just shading) as an idle animation —
    visible dimensionality without the cost/complexity of a full WebGL rewrite, which is
    what got reverted earlier when tried for the whole Zuper Quest town. Has its own
-   small set of original animation "states" — idle blink, a wire-arm wiggle on opening
-   or on a fresh reply, a head-tilt while thinking — in the same interaction-design
-   vocabulary classic assistant characters use (a named greeting/thinking/idle
-   animation set, the kind @react95/clippy exposes), but hand-built as CSS/SVG
+   set of original animation "states" — idle blink, a wire-arm wave on opening and a
+   wave goodbye on closing, a hover-notice perk-up, a randomized idle fidget every
+   ~12-22s so it stays alive even untouched, a wire-arm wiggle on a fresh reply, and a
+   head-tilt while thinking — in the same "always a little alive, reacts to
+   touch/click/idle" interaction-design vocabulary classic assistant characters use (a
+   named greeting/thinking/idle animation set, the kind @react95/clippy exposes), but
+   hand-built as CSS/SVG
    transforms on this original character, not any borrowed sprite frames —
    @react95/clippy ships actual extracted Microsoft Office character assets (confirmed
    by inspecting the published package), so it and @react95/icons were both ruled out
@@ -1378,15 +1381,23 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
   const t = theme || THEME;
 
   /* Original animation "states" for the mascot — same interaction vocabulary classic
-     assistant characters use (a greeting gesture on open, a thinking pose while
-     waiting, an excited response) but hand-built here as CSS/SVG transforms on our own
-     original character, not any borrowed sprite frames. */
+     assistant characters use (a greeting gesture on open, a goodbye on close, a
+     hover-notice, idle fidgets, a thinking pose while waiting, an excited response)
+     but hand-built here as CSS/SVG transforms on our own original character, not any
+     borrowed sprite frames. */
   const [greet, setGreet] = useState(false);
+  const [bye, setBye] = useState(false);
   const prevOpenRef = useRef(false);
   useEffect(() => {
     if (open && !prevOpenRef.current) {
       setGreet(true);
       const id = setTimeout(() => setGreet(false), 700);
+      prevOpenRef.current = open;
+      return () => clearTimeout(id);
+    }
+    if (!open && prevOpenRef.current) {
+      setBye(true);
+      const id = setTimeout(() => setBye(false), 700);
       prevOpenRef.current = open;
       return () => clearTimeout(id);
     }
@@ -1402,6 +1413,28 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
       return () => clearTimeout(id);
     }
   }, [messages]);
+
+  /* Hover-notice — a quick "perk up" when the pointer lands on the mascot, the same
+     kind of always-alive touch-reactivity classic assistant characters have. */
+  const [hover, setHover] = useState(false);
+
+  /* Idle fidgets — small unprompted gestures on a randomized timer while the panel is
+     closed, so the character feels alive even when nobody's interacting with it
+     (mirrors the idle-animation habit of classic assistant characters), not just
+     when clicked/hovered. */
+  const [fidget, setFidget] = useState(false);
+  useEffect(() => {
+    if (open) return;
+    let waitId, holdId;
+    function schedule() {
+      waitId = setTimeout(() => {
+        setFidget(true);
+        holdId = setTimeout(() => { setFidget(false); schedule(); }, 900);
+      }, 12000 + Math.random() * 10000);
+    }
+    schedule();
+    return () => { clearTimeout(waitId); clearTimeout(holdId); };
+  }, [open]);
 
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [messages, open, thinking]);
 
@@ -1511,6 +1544,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
         </div>
       )}
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}
+        onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
         className="flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
         style={{ width: 80, height: 160, animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible" }}
         aria-label="Zuper OS assistant — real platform data, Claude when configured">
@@ -1529,7 +1563,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
         <svg width={80} height={160} viewBox="0 0 80 160" style={{
           position: "absolute", left: 0, top: 0, overflow: "visible", pointerEvents: "none",
           filter: "drop-shadow(0 10px 14px rgba(0,0,0,.5)) drop-shadow(0 0 7px " + t.accent + "90)",
-          animation: "mascot-3d-tilt 5s ease-in-out infinite",
+          animation: hover ? "mascot-notice .5s ease-out 1" : "mascot-3d-tilt 5s ease-in-out infinite",
         }}>
           <defs>
             <radialGradient id="assistantBody" cx="35%" cy="25%" r="85%">
@@ -1549,7 +1583,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
               in Zuper's own real brand orange with chrome jaw tips, expressive
               wire-thin arms for gesture (Clippy's signature trait, reimplemented
               from scratch as our own shapes), and classic white-sclera cartoon eyes. */}
-          <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: thinking ? "dog-think-tilt 1.6s ease-in-out infinite" : "none" }}>
+          <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: thinking ? "dog-think-tilt 1.6s ease-in-out infinite" : fidget ? "mascot-fidget .9s ease-in-out 1" : "none" }}>
             <ellipse cx="40" cy="30" rx="20" ry="18" fill="url(#assistantBody)" />
             <path d="M22 24 A20 18 0 0 1 58 24" fill="none" stroke={shade(ACCENT, 0.55)} strokeWidth="2" strokeLinecap="round" opacity="0.7" />
             <path d="M30 20 L23 15 Q20 13 22 17 L28 24 Z" fill="none" />
@@ -1569,14 +1603,16 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
           <rect x="32" y="60" width="4" height="44" rx="2" fill={shade(ACCENT, 0.4)} opacity="0.55" />
 
           {/* wire-thin arms — Clippy's signature expressive trait, our own shapes.
-              One raised in a wave gesture (wiggles on open / on a fresh reply), one
-              resting. */}
+              One raised in a wave gesture, one resting. The wave wiggles on
+              open/close, on a fresh reply, on hover, and on a random idle fidget —
+              the same "always a little alive" reactivity classic assistant
+              characters have, just built from scratch on this character. */}
           <path d="M49 66 Q66 70 70 88" fill="none" stroke="url(#assistantMetal)" strokeWidth="3" strokeLinecap="round" />
           <circle cx="70.5" cy="90" r="4.5" fill="url(#assistantMetal)" />
           <path d="M31 66 Q13 62 8 44" fill="none" stroke="url(#assistantMetal)" strokeWidth="3" strokeLinecap="round"
-            style={{ transformBox: "fill-box", transformOrigin: "31px 66px", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
+            style={{ transformBox: "fill-box", transformOrigin: "31px 66px", animation: (greet || bye || excited || hover || fidget) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
           <circle cx="7.5" cy="41" r="4.5" fill="url(#assistantMetal)"
-            style={{ transformBox: "fill-box", transformOrigin: "31px 66px", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
+            style={{ transformBox: "fill-box", transformOrigin: "31px 66px", animation: (greet || bye || excited || hover || fidget) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
 
           {/* open-end jaw — the wrench's business end, doubling as "feet" */}
           <path d="M28 112 L28 142 Q28 148 22 148 L18 148 Q14 148 14 152 L14 156 L30 156 L30 130 L34 130 L34 156 L46 156 L46 130 L50 130 L50 156 L66 156 L66 152 Q66 148 62 148 L58 148 Q52 148 52 142 L52 112 Z" fill="url(#assistantMetal)" />

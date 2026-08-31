@@ -125,12 +125,16 @@ manually drag it, then stays where you put it.
 
 **Animation states.** Classic assistant-character libraries like
 `@react95/clippy` expose a named set of animations (`Wave`, `Greeting`,
-`Thinking`, `GetAttention`, idle variants, ...) — that naming convention
-was used as design reference (interaction-design vocabulary, not code or
-assets), reimplemented from scratch as CSS/SVG transforms on this original
-character: an idle blink, a wire-arm wiggle both when the panel opens and
-right after a fresh reply, and a head-tilt while a question is being
-answered. `@react95/clippy` itself was **not used** — inspecting
+`Thinking`, `GetAttention`, idle variants, ...) and are reactive to touch,
+click, and idle time, not just clicks — that interaction-design vocabulary
+was used as design reference (not code or assets), reimplemented from
+scratch as CSS/SVG transforms on this original character: an idle blink;
+a wire-arm wave on opening the panel and a wave goodbye on closing it; a
+wire-arm wiggle right after a fresh reply; a hover-notice "perk up" on
+pointer-enter; a small randomized idle fidget every ~12-22s so the
+character stays alive even when nobody's touching it; and a head-tilt
+while a question is being answered. `@react95/clippy` itself was **not
+used** — inspecting
 the published npm package confirmed it ships ~16.6MB of actual extracted
 Microsoft Office character sprites/sounds (Clippy, Merlin, Bonzi, Rover,
 etc.), with upstream docs stating outright those assets "remain property

@@ -72,6 +72,12 @@
        3D depth on a flat drawing, a much lighter-weight way to get visible
        dimensionality than a full WebGL/Three.js rewrite. */
     @keyframes mascot-3d-tilt { 0%, 100% { transform: perspective(420px) rotateY(0deg); } 50% { transform: perspective(420px) rotateY(16deg); } }
+    /* Hover-notice (a quick "perk up" perspective bump on pointer-enter) and idle
+       fidget (a small unprompted head wobble on a randomized timer) — the extra
+       always-alive touch/idle reactivity classic assistant characters have, built
+       from scratch as CSS transforms on this original character. */
+    @keyframes mascot-notice { 0% { transform: perspective(420px) rotateY(0deg) scale(1); } 35% { transform: perspective(420px) rotateY(-10deg) scale(1.08); } 65% { transform: perspective(420px) rotateY(6deg) scale(1.03); } 100% { transform: perspective(420px) rotateY(0deg) scale(1); } }
+    @keyframes mascot-fidget { 0%, 100% { transform: rotate(0deg); } 20% { transform: rotate(-4deg); } 40% { transform: rotate(3deg); } 60% { transform: rotate(-2deg); } 80% { transform: rotate(1deg); } }
     .assistant-eye { transform-box: fill-box; transform-origin: center; animation: dog-blink 4.5s ease-in-out infinite; }
     @keyframes crt-sweep { 0% { transform: translateY(-160px); } 100% { transform: translateY(100vh); } }
     @keyframes crt-flicker { 0%, 100% { opacity: .015; } 50% { opacity: .035; } 92% { opacity: .06; } }
