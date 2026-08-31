@@ -1462,25 +1462,34 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}
         className="w-16 h-16 rounded-full flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
         style={{
-          background: "radial-gradient(circle at 35% 30%, #f7dba0, #e0ab5c 55%, #b8823f 100%)",
-          border: "2px solid " + t.accent,
-          boxShadow: "0 10px 24px rgba(0,0,0,.5), 0 0 14px " + t.accent + "80, inset 0 2px 3px rgba(255,255,255,.5), inset 0 -3px 6px rgba(0,0,0,.25)",
+          boxShadow: "0 8px 20px rgba(0,0,0,.4), 0 0 16px " + t.accent + "70",
           animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible",
         }}
         aria-label="Zuper OS assistant — real platform data, Claude when configured">
-        <svg width={64} height={80} viewBox="0 0 64 80" style={{ position: "absolute", left: 0, top: -4, overflow: "visible", pointerEvents: "none" }}>
-          <path d="M9 18 Q0 34 8 51 Q17 47 15 30 Q15 20 9 18 Z" fill="#cf9354" stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
-          <path d="M55 18 Q64 34 56 51 Q47 47 49 30 Q49 20 55 18 Z" fill="#cf9354" stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
-          <ellipse cx="24" cy="34" rx="5.4" ry="6.4" fill="#2c1c10" />
-          <ellipse cx="40" cy="34" rx="5.4" ry="6.4" fill="#2c1c10" />
-          <circle cx="22.2" cy="31.2" r="1.5" fill="#fff5e6" />
-          <circle cx="38.2" cy="31.2" r="1.5" fill="#fff5e6" />
-          <ellipse cx="32" cy="48" rx="11" ry="8.5" fill="#f7e2bb" stroke="#0a0a0a" strokeWidth="1.6" />
-          <ellipse cx="32" cy="43.5" rx="4" ry="2.8" fill="#2c1c10" />
-          <path d="M32 46 Q32 52 26 54" fill="none" stroke="#0a0a0a" strokeWidth="1.4" strokeLinecap="round" />
-          <path d="M32 46 Q32 52 38 54" fill="none" stroke="#0a0a0a" strokeWidth="1.4" strokeLinecap="round" />
-          <path d="M9 62 Q32 73 55 62 L55 68 Q32 79 9 68 Z" fill={t.accent} stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
-          <circle cx="32" cy="70.5" r="3" fill="#e0c060" stroke="#0a0a0a" strokeWidth="1.2" />
+        {/* The head is drawn here as an actual oval-with-snout silhouette, not a flat
+            circle with a face painted on top — the button itself has no fill/border of
+            its own, just a soft ambient glow (boxShadow above) around the drawn shape. */}
+        <svg width={72} height={88} viewBox="0 0 72 88" style={{ position: "absolute", left: -4, top: -4, overflow: "visible", pointerEvents: "none" }}>
+          <defs>
+            <radialGradient id="assistantFur" cx="35%" cy="30%" r="75%">
+              <stop offset="0%" stopColor="#f7dba0" />
+              <stop offset="55%" stopColor="#e0ab5c" />
+              <stop offset="100%" stopColor="#b8823f" />
+            </radialGradient>
+          </defs>
+          <path d="M12 20 Q2 38 10 58 Q20 53 18 34 Q18 22 12 20 Z" fill="#cf9354" stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M60 20 Q70 38 62 58 Q52 53 54 34 Q54 22 60 20 Z" fill="#cf9354" stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
+          <ellipse cx="36" cy="36" rx="25" ry="21" fill="url(#assistantFur)" stroke="#0a0a0a" strokeWidth="2" />
+          <ellipse cx="27" cy="34" rx="5.6" ry="6.6" fill="#2c1c10" />
+          <ellipse cx="45" cy="34" rx="5.6" ry="6.6" fill="#2c1c10" />
+          <circle cx="25.2" cy="31.2" r="1.6" fill="#fff5e6" />
+          <circle cx="43.2" cy="31.2" r="1.6" fill="#fff5e6" />
+          <ellipse cx="36" cy="50" rx="13" ry="10" fill="#f7e2bb" stroke="#0a0a0a" strokeWidth="1.6" />
+          <ellipse cx="36" cy="45" rx="4.2" ry="3" fill="#2c1c10" />
+          <path d="M36 48 Q36 54 29 56" fill="none" stroke="#0a0a0a" strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M36 48 Q36 54 43 56" fill="none" stroke="#0a0a0a" strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M10 66 Q36 78 62 66 L62 73 Q36 85 10 73 Z" fill={t.accent} stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
+          <circle cx="36" cy="76" r="3.2" fill="#e0c060" stroke="#0a0a0a" strokeWidth="1.2" />
         </svg>
       </button>
     </div>
