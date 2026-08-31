@@ -98,6 +98,19 @@ replaced before landing here; the collar, not a ring border, is what ties
 this one to the mono-CRT green chrome. It docks near the currently
 focused window until you manually drag it, then stays where you put it.
 
+**Animation states.** Classic assistant-character libraries like
+`@react95/clippy` expose a named set of animations (`Wave`, `Greeting`,
+`Thinking`, `GetAttention`, idle variants, ...) — that naming convention
+was used as design reference (interaction-design vocabulary, not code or
+assets), reimplemented from scratch as CSS/SVG transforms on this original
+character: an idle blink, an ear-wiggle when the panel opens, a head-tilt
+while a question is being answered, and a tail-wag that speeds up right
+after a fresh reply. `@react95/clippy` itself was **not used** — inspecting
+the published npm package confirmed it ships ~16.6MB of actual extracted
+Microsoft Office character sprites/sounds (Clippy, Merlin, Bonzi, Rover,
+etc.), with upstream docs stating outright those assets "remain property
+of Microsoft." Same reasoning as rejecting `@react95/icons` earlier.
+
 Click it to open a small chat panel: type any question and it tries a real
 Claude model first, falling back to deterministic local keyword search over
 `zuper-world-data.json` if Claude isn't configured or the call fails.

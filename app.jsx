@@ -1272,7 +1272,15 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
    — every part is a gradient fill plus a soft translucent under-jaw shadow, which is
    what actually reads as "soft 3D" rather than a flat outlined icon; an earlier pass
    with black outlines on every shape read as a helmet visor + suit collar instead of
-   fur. Tries a real Claude call first (via
+   fur. Has its own small set of original animation "states" — idle blink, an
+   ear-wiggle greeting when opened, a head-tilt while thinking, a tail-wag that speeds
+   up on a fresh answer — in the same interaction-design vocabulary classic assistant
+   characters use (a named greeting/thinking/idle animation set, the kind
+   @react95/clippy exposes), but hand-built as CSS/SVG transforms on this original
+   character, not any borrowed sprite frames — @react95/clippy ships actual extracted
+   Microsoft Office character assets (confirmed by inspecting the published package),
+   so it and @react95/icons were both ruled out earlier this session. Tries a real
+   Claude call first (via
    api/ask.js) grounded in the REAL labs.zuper.co cluster/entity/flow data, falling back
    to deterministic local keyword search if Claude isn't configured — every answer is
    tagged with its actual source. Docks near the focused window until manually dragged,
@@ -1352,6 +1360,32 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
   const logRef = useRef(null);
   const dragRef = useRef({ dragging: false, moved: false, startX: 0, startY: 0, startLeft: 0, startTop: 0 });
   const t = theme || THEME;
+
+  /* Original animation "states" for the mascot — same interaction vocabulary classic
+     assistant characters use (a greeting gesture on open, a thinking pose while
+     waiting, an excited response) but hand-built here as CSS/SVG transforms on our own
+     original character, not any borrowed sprite frames. */
+  const [greet, setGreet] = useState(false);
+  const prevOpenRef = useRef(false);
+  useEffect(() => {
+    if (open && !prevOpenRef.current) {
+      setGreet(true);
+      const id = setTimeout(() => setGreet(false), 700);
+      prevOpenRef.current = open;
+      return () => clearTimeout(id);
+    }
+    prevOpenRef.current = open;
+  }, [open]);
+
+  const [excited, setExcited] = useState(false);
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (last && last.role === "assistant") {
+      setExcited(true);
+      const id = setTimeout(() => setExcited(false), 1400);
+      return () => clearTimeout(id);
+    }
+  }, [messages]);
 
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [messages, open, thinking]);
 
@@ -1493,18 +1527,24 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
               <stop offset="100%" stopColor={shade(t.accent, -0.25)} />
             </linearGradient>
           </defs>
-          <path d="M12 20 Q2 38 10 58 Q20 53 18 34 Q18 22 12 20 Z" fill="url(#assistantEar)" />
-          <path d="M60 20 Q70 38 62 58 Q52 53 54 34 Q54 22 60 20 Z" fill="url(#assistantEar)" />
-          <ellipse cx="36" cy="36" rx="25" ry="21" fill="url(#assistantFur)" />
-          <ellipse cx="36" cy="52" rx="20" ry="9" fill="#8a5f2e" opacity="0.18" />
-          <ellipse cx="27" cy="34" rx="5.4" ry="6.2" fill="#3a2415" />
-          <ellipse cx="45" cy="34" rx="5.4" ry="6.2" fill="#3a2415" />
-          <circle cx="25.3" cy="31.4" r="1.6" fill="#fff8ec" />
-          <circle cx="43.3" cy="31.4" r="1.6" fill="#fff8ec" />
-          <ellipse cx="36" cy="50" rx="12.5" ry="9.5" fill="url(#assistantSnout)" />
-          <ellipse cx="36" cy="45" rx="3.8" ry="2.6" fill="#3a2415" />
-          <path d="M36 47.5 Q36 53 29.5 55" fill="none" stroke="#a8763c" strokeWidth="1.3" strokeLinecap="round" />
-          <path d="M36 47.5 Q36 53 42.5 55" fill="none" stroke="#a8763c" strokeWidth="1.3" strokeLinecap="round" />
+          <path d="M60 58 Q73 55 71 40 Q68 49 60 52 Z" fill="url(#assistantEar)"
+            style={{ transformBox: "fill-box", transformOrigin: "center", animation: (excited ? "dog-tail-wag .3s ease-in-out infinite" : thinking ? "dog-tail-wag .8s ease-in-out infinite" : "dog-tail-wag 2.4s ease-in-out infinite") }} />
+          <path d="M12 20 Q2 38 10 58 Q20 53 18 34 Q18 22 12 20 Z" fill="url(#assistantEar)"
+            style={{ transformBox: "fill-box", transformOrigin: "top center", animation: greet ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
+          <path d="M60 20 Q70 38 62 58 Q52 53 54 34 Q54 22 60 20 Z" fill="url(#assistantEar)"
+            style={{ transformBox: "fill-box", transformOrigin: "top center", animation: greet ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
+          <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: thinking ? "dog-think-tilt 1.6s ease-in-out infinite" : "none" }}>
+            <ellipse cx="36" cy="36" rx="25" ry="21" fill="url(#assistantFur)" />
+            <ellipse cx="36" cy="52" rx="20" ry="9" fill="#8a5f2e" opacity="0.18" />
+            <ellipse className="assistant-eye" cx="27" cy="34" rx="5.4" ry="6.2" fill="#3a2415" />
+            <ellipse className="assistant-eye" cx="45" cy="34" rx="5.4" ry="6.2" fill="#3a2415" />
+            <circle cx="25.3" cy="31.4" r="1.6" fill="#fff8ec" />
+            <circle cx="43.3" cy="31.4" r="1.6" fill="#fff8ec" />
+            <ellipse cx="36" cy="50" rx="12.5" ry="9.5" fill="url(#assistantSnout)" />
+            <ellipse cx="36" cy="45" rx="3.8" ry="2.6" fill="#3a2415" />
+            <path d="M36 47.5 Q36 53 29.5 55" fill="none" stroke="#a8763c" strokeWidth="1.3" strokeLinecap="round" />
+            <path d="M36 47.5 Q36 53 42.5 55" fill="none" stroke="#a8763c" strokeWidth="1.3" strokeLinecap="round" />
+          </g>
           <path d="M12 64 Q36 74 60 64 L60 69 Q36 79 12 69 Z" fill="url(#assistantCollar)" />
           <circle cx="36" cy="72.5" r="2.6" fill="#f2d98a" />
         </svg>

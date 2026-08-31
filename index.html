@@ -61,6 +61,15 @@
     .overflow-y-auto { overflow-y: auto !important; }
     .overflow-x-hidden { overflow-x: hidden !important; }
     @keyframes zuper-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    /* Assistant mascot animation states — original, hand-built states (idle blink,
+       greeting ear-wiggle, thinking head-tilt, tail-wag) in the same spirit as a
+       classic assistant character's named animations, but our own transforms on our
+       own drawn shapes, not borrowed sprite frames. */
+    @keyframes dog-blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.12); } }
+    @keyframes dog-ear-wiggle { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-10deg); } }
+    @keyframes dog-think-tilt { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-5deg); } }
+    @keyframes dog-tail-wag { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(14deg); } }
+    .assistant-eye { transform-box: fill-box; transform-origin: center; animation: dog-blink 4.5s ease-in-out infinite; }
     @keyframes crt-sweep { 0% { transform: translateY(-160px); } 100% { transform: translateY(100vh); } }
     @keyframes crt-flicker { 0%, 100% { opacity: .015; } 50% { opacity: .035; } 92% { opacity: .06; } }
     /* watermark-breathe/-glitch-a share the CRTOverlay scanline sweep's 7s period, timed
