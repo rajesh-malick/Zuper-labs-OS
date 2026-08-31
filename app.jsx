@@ -1826,7 +1826,7 @@ function App({ worldData, onReboot }) {
           const s = wm.state[w.id];
           if (!s.open) return null;
           return (
-            <Window key={w.id} id={w.id} title={w.title} x={s.x} y={s.y} w={s.w} h={s.h} z={s.z} color={theme.accent} theme={theme}
+            <Window key={w.id} id={w.id} title={iconNames[w.id] || w.title} x={s.x} y={s.y} w={s.w} h={s.h} z={s.z} color={theme.accent} theme={theme}
               isFocused={wm.focusedId === w.id} isMaximized={s.maximized} minimized={s.minimized}
               onFocus={wm.focus} onMove={wm.move} onResize={wm.resize} onClose={wm.close} onMinimize={wm.minimize} onToggleMaximize={wm.toggleMaximize} stageRef={stageRef}>
               {w.kind === "folder" && <FolderWindow clusterId={w.id} worldData={worldData} onOpenFile={openFile} />}
@@ -1875,7 +1875,8 @@ function App({ worldData, onReboot }) {
         )}
       </div>
 
-      <StartMenu open={startOpen} onClose={() => setStartOpen(false)} onOpen={openFromIconOrMenu} topApps={desktopIcons} theme={theme}
+      <StartMenu open={startOpen} onClose={() => setStartOpen(false)} onOpen={openFromIconOrMenu}
+        topApps={desktopIcons.map((a) => (iconNames[a.id] ? Object.assign({}, a, { title: iconNames[a.id] }) : a))} theme={theme}
         onFullscreen={handleFullscreen}
         onFind={() => setLauncher({ title: "Find", placeholder: "Search apps…" })}
         onRun={() => setLauncher({ title: "Run", placeholder: "Type the name of an app to open…" })}
@@ -1883,7 +1884,7 @@ function App({ worldData, onReboot }) {
         onSession={closeAllWindows} />
 
       <Taskbar onStartClick={() => setStartOpen((o) => !o)} theme={theme}
-        running={runningWindows.map((a) => ({ id: a.id, title: winDefById[a.id].title, focused: wm.focusedId === a.id }))}
+        running={runningWindows.map((a) => ({ id: a.id, title: iconNames[a.id] || winDefById[a.id].title, focused: wm.focusedId === a.id }))}
         onRunningClick={toggleFromTaskbar} />
     </React.Fragment>
   );
