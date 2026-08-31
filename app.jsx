@@ -35,6 +35,57 @@ function shade(hex, percent) {
   return "rgb(" + nr + "," + ng + "," + nb + ")";
 }
 
+/* ---------- Assistant mascot sound effects — synthesized entirely from scratch with
+   the Web Audio API (oscillator pitch-glides through a GainNode envelope), not a
+   single sampled/recorded audio clip, so there's nothing to license: soft sine/triangle
+   tones tuned for a cute, curious-little-robot character rather than harsh alarm beeps.
+   A lazily-created singleton AudioContext (browsers require a user gesture before audio
+   can play — the mascot's own click-to-open is always the first one). */
+let assistantAudioCtx = null;
+function getAssistantAudioCtx() {
+  if (typeof window === "undefined") return null;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return null;
+  if (!assistantAudioCtx) assistantAudioCtx = new Ctx();
+  if (assistantAudioCtx.state === "suspended") assistantAudioCtx.resume();
+  return assistantAudioCtx;
+}
+function assistantChirp(ctx, fromFreq, toFreq, startTime, duration, gainPeak, type) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type || "sine";
+  osc.frequency.setValueAtTime(fromFreq, startTime);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(toFreq, 1), startTime + duration * 0.85);
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(gainPeak, startTime + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration + 0.02);
+}
+function playAssistantGreetSound() {
+  const ctx = getAssistantAudioCtx();
+  if (!ctx) return;
+  const t0 = ctx.currentTime;
+  assistantChirp(ctx, 480, 760, t0, 0.11, 0.05, "sine");
+  assistantChirp(ctx, 640, 980, t0 + 0.1, 0.13, 0.05, "sine");
+}
+function playAssistantByeSound() {
+  const ctx = getAssistantAudioCtx();
+  if (!ctx) return;
+  const t0 = ctx.currentTime;
+  assistantChirp(ctx, 820, 560, t0, 0.12, 0.045, "sine");
+  assistantChirp(ctx, 560, 340, t0 + 0.12, 0.18, 0.04, "sine");
+}
+function playAssistantGlitchSound() {
+  const ctx = getAssistantAudioCtx();
+  if (!ctx) return;
+  const t0 = ctx.currentTime;
+  const notes = [660, 740, 880, 990, 740];
+  notes.forEach((f, i) => assistantChirp(ctx, f, f * 1.08, t0 + i * 0.05, 0.05, 0.035, "triangle"));
+}
+
 /* ---------- Win9x-style bevel texture — technique inspired by 1j01/os-gui's
    .inset-deep/.outset-deep utility classes (MIT licensed), re-implemented here as
    original layered box-shadow CSS in our own CRT green/black palette — not that
@@ -1305,7 +1356,11 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
    touch/click/idle" interaction-design vocabulary classic assistant characters use (a
    named greeting/thinking/idle animation set, the kind @react95/clippy exposes), but
    hand-built as CSS/SVG
-   transforms on this original character, not any borrowed sprite frames —
+   transforms on this original character, not any borrowed sprite frames. Sound
+   effects for greet/goodbye/hover follow the same rule — synthesized from scratch
+   with the Web Audio API (getAssistantAudioCtx/assistantChirp helpers, top of this
+   file), soft sine/triangle pitch-glides tuned to sound like a cute curious robot
+   rather than harsh alarm beeps, so there's no sampled audio clip to license either —
    @react95/clippy ships actual extracted Microsoft Office character assets (confirmed
    by inspecting the published package), so it and @react95/icons were both ruled out
    earlier this session. Tries a real
@@ -1401,12 +1456,14 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
   useEffect(() => {
     if (open && !prevOpenRef.current) {
       setGreet(true);
+      playAssistantGreetSound();
       const id = setTimeout(() => setGreet(false), 700);
       prevOpenRef.current = open;
       return () => clearTimeout(id);
     }
     if (!open && prevOpenRef.current) {
       setBye(true);
+      playAssistantByeSound();
       const id = setTimeout(() => setBye(false), 700);
       prevOpenRef.current = open;
       return () => clearTimeout(id);
@@ -1554,7 +1611,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
         </div>
       )}
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}
-        onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+        onMouseEnter={() => { setHover(true); playAssistantGlitchSound(); }} onMouseLeave={() => setHover(false)}
         className="flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
         style={{ width: 80, height: 160, animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible" }}
         aria-label="Zuper OS assistant — real platform data, Claude when configured">

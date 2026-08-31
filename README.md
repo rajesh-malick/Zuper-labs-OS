@@ -167,6 +167,13 @@ standalone `Clippy.exe` Electron build inspected still later — its
 (`Greeting`, `GoodBye`, `GetAttention`, `Idle1_1`, etc.) instead of a
 sprite sheet, same underlying asset, same answer.
 
+**Sound effects.** Greet, goodbye, and hover each have a matching sound
+cue — synthesized from scratch with the Web Audio API (an oscillator
+pitch-glide through a gain envelope, no sampled/recorded clip at all, so
+there's nothing to license here either), tuned as soft sine/triangle
+tones for a cute, curious-little-robot character rather than harsh
+alarm beeps.
+
 Click it to open a small chat panel: type any question and it tries a real
 Claude model first, falling back to deterministic local keyword search over
 `zuper-world-data.json` if Claude isn't configured or the call fails.
