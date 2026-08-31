@@ -1605,32 +1605,32 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
               <path d="M50 126 L50 142" /><path d="M55 126 L55 142" /><path d="M60 126 L60 142" /><path d="M65 128 L65 140" />
             </g>
           </g>
-          <rect x="33" y="104" width="14" height="18" rx="3" fill="url(#assistantCase)" />
+          <rect x="33" y="84" width="14" height="36" rx="3" fill="url(#assistantCase)" />
 
           {/* Monitor head — tilts while thinking, glances side to side on an idle
               fidget (reusing the same mechanisms the wrench used for its own head
-              tilt). Casing now has a proper CRT silhouette instead of a plain
-              rectangle: a thicker bottom "chin" with control-style dots and the
-              power LED, corner screws, and a diagonal glass-glare highlight on the
-              screen for real curvature cues. */}
+              tilt). Casing is squared-off now (64 wide x 66 tall, close to 1:1)
+              instead of the taller rectangle it was, with a control-panel "chin"
+              (two dummy buttons + power LED), corner screws, and a diagonal
+              glass-glare highlight on the screen for real curvature cues. */}
           <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: thinking ? "dog-think-tilt 1.6s ease-in-out infinite" : fidget ? "mascot-fidget .9s ease-in-out 1" : "none" }}>
-            <rect x="8" y="16" width="64" height="92" rx="14" fill="url(#assistantCase)" />
-            <circle cx="14" cy="22" r="1.6" fill="#0a0c0c" opacity="0.7" />
-            <circle cx="66" cy="22" r="1.6" fill="#0a0c0c" opacity="0.7" />
-            <circle cx="14" cy="102" r="1.6" fill="#0a0c0c" opacity="0.7" />
-            <circle cx="66" cy="102" r="1.6" fill="#0a0c0c" opacity="0.7" />
-            <rect x="11" y="34" width="3" height="14" rx="1.5" fill="#0a0c0c" opacity="0.6" />
-            <rect x="66" y="34" width="3" height="14" rx="1.5" fill="#0a0c0c" opacity="0.6" />
+            <rect x="8" y="20" width="64" height="66" rx="14" fill="url(#assistantCase)" />
+            <circle cx="14" cy="26" r="1.6" fill="#0a0c0c" opacity="0.7" />
+            <circle cx="66" cy="26" r="1.6" fill="#0a0c0c" opacity="0.7" />
+            <circle cx="14" cy="80" r="1.6" fill="#0a0c0c" opacity="0.7" />
+            <circle cx="66" cy="80" r="1.6" fill="#0a0c0c" opacity="0.7" />
+            <rect x="11" y="34" width="3" height="10" rx="1.5" fill="#0a0c0c" opacity="0.6" />
+            <rect x="66" y="34" width="3" height="10" rx="1.5" fill="#0a0c0c" opacity="0.6" />
 
-            <rect x="17" y="26" width="46" height="54" rx="8" fill="url(#assistantScreen)" />
-            <path d="M20 29 L33 29 L23 48 L20 48 Z" fill="#ffffff" opacity="0.05" />
+            <rect x="17" y="28" width="46" height="40" rx="8" fill="url(#assistantScreen)" />
+            <path d="M20 31 L33 31 L23 46 L20 46 Z" fill="#ffffff" opacity="0.05" />
 
             {/* faint scanlines, ambient-flickering like the rest of the OS's CRT chrome */}
             <g fill={t.accent} opacity="0.1" style={{ animation: "crt-flicker 3s ease-in-out infinite" }}>
-              <rect x="19" y="32" width="42" height="1.2" /><rect x="19" y="38" width="42" height="1.2" />
-              <rect x="19" y="44" width="42" height="1.2" /><rect x="19" y="50" width="42" height="1.2" />
-              <rect x="19" y="56" width="42" height="1.2" /><rect x="19" y="62" width="42" height="1.2" />
-              <rect x="19" y="68" width="42" height="1.2" /><rect x="19" y="74" width="42" height="1.2" />
+              <rect x="19" y="33" width="42" height="1.2" /><rect x="19" y="38" width="42" height="1.2" />
+              <rect x="19" y="43" width="42" height="1.2" /><rect x="19" y="48" width="42" height="1.2" />
+              <rect x="19" y="53" width="42" height="1.2" /><rect x="19" y="58" width="42" height="1.2" />
+              <rect x="19" y="63" width="42" height="1.2" />
             </g>
 
             {/* blinking >_ cursor glyph, upper-left of the screen — a real terminal
@@ -1638,8 +1638,8 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
                 own keyframe rather than reusing dog-blink. Stays up in this corner
                 across every screen state below, like an always-on terminal prompt. */}
             <g style={{ animation: "term-cursor-blink 1s steps(1) infinite" }}>
-              <path d="M24 43.5 L27.5 46 L24 48.5" fill="none" stroke={t.accent} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              <rect x="29" y="47.5" width="4" height="1.6" fill={t.accent} />
+              <path d="M24 33.5 L27.5 36 L24 38.5" fill="none" stroke={t.accent} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              <rect x="29" y="37.5" width="4" height="1.6" fill={t.accent} />
             </g>
 
             {/* Screen content — swaps by animation state, in the same spirit as
@@ -1648,42 +1648,42 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
                 graphics on the screen itself rather than character sprite frames. */}
             {thinking ? (
               <g>
-                <rect x="32" y="64" width="4" height="4" fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite" }} />
-                <rect x="38" y="64" width="4" height="4" fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite", animationDelay: "0.15s" }} />
-                <rect x="44" y="64" width="4" height="4" fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite", animationDelay: "0.3s" }} />
+                <rect x="32" y="50" width="4" height="4" fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite" }} />
+                <rect x="38" y="50" width="4" height="4" fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite", animationDelay: "0.15s" }} />
+                <rect x="44" y="50" width="4" height="4" fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite", animationDelay: "0.3s" }} />
               </g>
             ) : bye ? (
-              <text x="40" y="58" textAnchor="middle" fill={t.accent} fontFamily="'VT323', monospace" fontSize="8"
-                style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")" }}>
+              <text x="40" y="47" textAnchor="middle" fill={t.accent} fontFamily="'VT323', monospace" fontSize="11.5"
+                style={{ filter: "drop-shadow(0 0 3px " + t.accent + ")" }}>
                 <tspan x="40" dy="0">GOODBYE</tspan>
-                <tspan x="40" dy="10">!!!</tspan>
+                <tspan x="40" dy="13">!!!</tspan>
               </text>
             ) : greet ? (
-              <g fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")", transformBox: "fill-box", transformOrigin: "40px 68px", animation: "dog-ear-wiggle .3s ease-in-out 3" }}>
-                <rect x="30" y="52" width="4" height="8" /><rect x="35" y="48" width="4" height="12" />
-                <rect x="40" y="48" width="4" height="12" /><rect x="45" y="50" width="4" height="10" />
-                <rect x="30" y="60" width="19" height="10" rx="2" />
+              <g fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")", transformBox: "fill-box", transformOrigin: "40px 54px", animation: "dog-ear-wiggle .3s ease-in-out 3" }}>
+                <rect x="30" y="38" width="4" height="8" /><rect x="35" y="34" width="4" height="12" />
+                <rect x="40" y="34" width="4" height="12" /><rect x="45" y="36" width="4" height="10" />
+                <rect x="30" y="46" width="19" height="10" rx="2" />
               </g>
             ) : (
               <React.Fragment>
-                <rect className="assistant-eye" x="28" y="54" width="6" height="6" fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")" }} />
-                <rect className="assistant-eye" x="46" y="54" width="6" height="6" fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")" }} />
+                <rect className="assistant-eye" x="28" y="40" width="6" height="6" fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")" }} />
+                <rect className="assistant-eye" x="46" y="40" width="6" height="6" fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")" }} />
                 <g fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")" }}>
-                  <rect x="23" y="66" width="4" height="4" /><rect x="29" y="70" width="4" height="4" />
-                  <rect x="35" y="73" width="4" height="4" /><rect x="41" y="73" width="4" height="4" />
-                  <rect x="47" y="70" width="4" height="4" /><rect x="53" y="66" width="4" height="4" />
+                  <rect x="23" y="52" width="4" height="4" /><rect x="29" y="56" width="4" height="4" />
+                  <rect x="35" y="59" width="4" height="4" /><rect x="41" y="59" width="4" height="4" />
+                  <rect x="47" y="56" width="4" height="4" /><rect x="53" y="52" width="4" height="4" />
                 </g>
                 {hover && (
-                  <rect x="17" y="26" width="46" height="9" fill={t.accent} opacity="0.5"
+                  <rect x="17" y="28" width="46" height="8" fill={t.accent} opacity="0.5"
                     style={{ transformBox: "fill-box", animation: "screen-scan-sweep .7s ease-in-out 1" }} />
                 )}
               </React.Fragment>
             )}
 
-            <rect x="17" y="84" width="46" height="14" rx="5" fill="#171b1b" />
-            <circle cx="27" cy="91" r="2" fill="#0a0c0c" />
-            <circle cx="34" cy="91" r="2" fill="#0a0c0c" />
-            <circle cx="54" cy="91" r="2.4" fill={ACCENT} style={{ filter: "drop-shadow(0 0 3px " + ACCENT + ")" }} />
+            <rect x="17" y="72" width="46" height="10" rx="4" fill="#171b1b" />
+            <circle cx="27" cy="77" r="1.8" fill="#0a0c0c" />
+            <circle cx="34" cy="77" r="1.8" fill="#0a0c0c" />
+            <circle cx="54" cy="77" r="2.2" fill={ACCENT} style={{ filter: "drop-shadow(0 0 3px " + ACCENT + ")" }} />
           </g>
         </svg>
       </button>
