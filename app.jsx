@@ -1550,6 +1550,11 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
           </defs>
           <ellipse cx="40" cy="21" rx="23" ry="16" fill="url(#assistantCap)" />
           <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: thinking ? "dog-think-tilt 1.6s ease-in-out infinite" : "none" }}>
+            {/* Neck — bridges the head ellipse (bottom ~y60) down into the collar
+                (top ~y60 too, overlapping here) so there's no gap/seam between head
+                and body; that gap was exactly what read as "the head is split from
+                the body" before. */}
+            <ellipse cx="40" cy="58" rx="10" ry="13" fill="url(#assistantFur)" />
             <ellipse cx="40" cy="41" rx="24" ry="19" fill="url(#assistantFur)" />
             <path d="M16 29 Q40 20 64 29 L64 25 Q40 17 16 25 Z" fill={shade(ACCENT, -0.3)} />
             <ellipse cx="40" cy="55" rx="18" ry="8" fill="#5c4626" opacity="0.16" />
@@ -1571,18 +1576,22 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
           <circle cx="64" cy="38" r="7.5" fill="url(#assistantEar)"
             style={{ transformBox: "fill-box", transformOrigin: "center", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
 
-          {/* neck + torso (overalls bib) */}
-          <path d="M22 68 Q40 76 58 68 L58 72 Q40 80 22 72 Z" fill="url(#assistantOveralls)" />
-          <path d="M23 74 Q20 98 25 120 Q40 126 55 120 Q60 98 57 74 Q40 82 23 74 Z" fill="url(#assistantOveralls)" />
-          <path d="M27 76 L33 118" stroke={shade(ACCENT, -0.15)} strokeWidth="2.2" strokeLinecap="round" />
-          <path d="M53 76 L47 118" stroke={shade(ACCENT, -0.15)} strokeWidth="2.2" strokeLinecap="round" />
+          {/* neck collar + torso (overalls bib) — top edge starts at y60, overlapping
+              the neck ellipse above (which spans ~45-71), so head and body connect
+              with no visible seam. */}
+          <path d="M22 60 Q40 68 58 60 L58 65 Q40 73 22 65 Z" fill="url(#assistantOveralls)" />
+          <path d="M23 65 Q20 96 25 120 Q40 126 55 120 Q60 96 57 65 Q40 74 23 65 Z" fill="url(#assistantOveralls)" />
+          <path d="M27 67 L33 118" stroke={shade(ACCENT, -0.15)} strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M53 67 L47 118" stroke={shade(ACCENT, -0.15)} strokeWidth="2.2" strokeLinecap="round" />
           <rect x="34" y="90" width="12" height="10" rx="1.5" fill={shade(t.accent, -0.15)} opacity="0.5" />
 
-          {/* arms */}
-          <path d="M24 80 Q9 88 8 106 Q8 116 15 118 Q21 116 20 105 Q21 90 28 82 Z" fill="url(#assistantFur)" />
-          <path d="M56 80 Q71 88 72 106 Q72 116 65 118 Q59 116 60 105 Q59 90 52 82 Z" fill="url(#assistantFur)" />
-          <circle cx="12.5" cy="116" r="5.5" fill="url(#assistantFur)" />
-          <circle cx="67.5" cy="116" r="5.5" fill="url(#assistantFur)" />
+          {/* arms — one raised in a wave (breaks the perfectly symmetrical "stiff toy"
+              look and adds a friendly greeting gesture), one resting normally. */}
+          <path d="M56 72 Q71 80 72 98 Q72 108 65 110 Q59 108 60 97 Q59 82 52 74 Z" fill="url(#assistantFur)" />
+          <circle cx="67.5" cy="108" r="5.5" fill="url(#assistantFur)" />
+          <path d="M24 72 Q7 68 5 51 Q4 43 11 41 Q17 43 16 51 Q16 61 27 67 Z" fill="url(#assistantFur)"
+            style={{ transformBox: "fill-box", transformOrigin: "24px 72px", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
+          <circle cx="9" cy="44" r="5.5" fill="url(#assistantFur)" />
 
           {/* tool belt */}
           <path d="M24 119 Q40 125 56 119 L56 124 Q40 130 24 124 Z" fill="#8a6c44" />
