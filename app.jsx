@@ -1266,12 +1266,13 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
 }
 
 /* ================= Desktop assistant — an original golden-dog mascot (own design:
-   floppy ears, big warm eyes, a snout, and a green collar with a tag — own colors/
-   proportions, loosely inspired by the friendly-soft-3D-dog *vibe* of ryOS's "Rover"
-   assistant, not a copy of that character's actual design/render). Replaced an
-   earlier humanoid-face pass whose flat CRT-green "skin" read as alien/uncanny — the
-   collar (not a ring border) is what ties this one to the mono-CRT green chrome now.
-   Tries a real Claude call first (via
+   floppy ears, big warm eyes, a snout, and a green collar — own colors/proportions,
+   loosely inspired by the friendly-soft-3D-dog *vibe* of ryOS's "Rover" assistant, not
+   a copy of that character's actual design/render). No hard cartoon outlines anywhere
+   — every part is a gradient fill plus a soft translucent under-jaw shadow, which is
+   what actually reads as "soft 3D" rather than a flat outlined icon; an earlier pass
+   with black outlines on every shape read as a helmet visor + suit collar instead of
+   fur. Tries a real Claude call first (via
    api/ask.js) grounded in the REAL labs.zuper.co cluster/entity/flow data, falling back
    to deterministic local keyword search if Claude isn't configured — every answer is
    tagged with its actual source. Docks near the focused window until manually dragged,
@@ -1466,30 +1467,46 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
           animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible",
         }}
         aria-label="Zuper OS assistant — real platform data, Claude when configured">
-        {/* The head is drawn here as an actual oval-with-snout silhouette, not a flat
-            circle with a face painted on top — the button itself has no fill/border of
-            its own, just a soft ambient glow (boxShadow above) around the drawn shape. */}
+        {/* Soft-3D look: no hard cartoon outlines anywhere — every shape is a gradient
+            fill (highlight → shadow), plus a translucent under-jaw shadow blob for
+            gentle volume, the way a rendered/plush character reads "3D" without a
+            literal 3D engine. Earlier passes had a black outline around every shape
+            (ears, snout, collar+tag) which read as a helmet visor and suit-collar
+            instead of fur — that's what this fixes. */}
         <svg width={72} height={88} viewBox="0 0 72 88" style={{ position: "absolute", left: -4, top: -4, overflow: "visible", pointerEvents: "none" }}>
           <defs>
-            <radialGradient id="assistantFur" cx="35%" cy="30%" r="75%">
-              <stop offset="0%" stopColor="#f7dba0" />
-              <stop offset="55%" stopColor="#e0ab5c" />
-              <stop offset="100%" stopColor="#b8823f" />
+            <radialGradient id="assistantFur" cx="35%" cy="28%" r="80%">
+              <stop offset="0%" stopColor="#fbe6bd" />
+              <stop offset="50%" stopColor="#e0ab5c" />
+              <stop offset="100%" stopColor="#a8763c" />
             </radialGradient>
+            <radialGradient id="assistantEar" cx="40%" cy="20%" r="90%">
+              <stop offset="0%" stopColor="#e0ab5c" />
+              <stop offset="100%" stopColor="#a8763c" />
+            </radialGradient>
+            <radialGradient id="assistantSnout" cx="40%" cy="25%" r="85%">
+              <stop offset="0%" stopColor="#fbead0" />
+              <stop offset="100%" stopColor="#e6c58a" />
+            </radialGradient>
+            <linearGradient id="assistantCollar" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={shade(t.accent, 0.35)} />
+              <stop offset="100%" stopColor={shade(t.accent, -0.25)} />
+            </linearGradient>
           </defs>
-          <path d="M12 20 Q2 38 10 58 Q20 53 18 34 Q18 22 12 20 Z" fill="#cf9354" stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
-          <path d="M60 20 Q70 38 62 58 Q52 53 54 34 Q54 22 60 20 Z" fill="#cf9354" stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
-          <ellipse cx="36" cy="36" rx="25" ry="21" fill="url(#assistantFur)" stroke="#0a0a0a" strokeWidth="2" />
-          <ellipse cx="27" cy="34" rx="5.6" ry="6.6" fill="#2c1c10" />
-          <ellipse cx="45" cy="34" rx="5.6" ry="6.6" fill="#2c1c10" />
-          <circle cx="25.2" cy="31.2" r="1.6" fill="#fff5e6" />
-          <circle cx="43.2" cy="31.2" r="1.6" fill="#fff5e6" />
-          <ellipse cx="36" cy="50" rx="13" ry="10" fill="#f7e2bb" stroke="#0a0a0a" strokeWidth="1.6" />
-          <ellipse cx="36" cy="45" rx="4.2" ry="3" fill="#2c1c10" />
-          <path d="M36 48 Q36 54 29 56" fill="none" stroke="#0a0a0a" strokeWidth="1.4" strokeLinecap="round" />
-          <path d="M36 48 Q36 54 43 56" fill="none" stroke="#0a0a0a" strokeWidth="1.4" strokeLinecap="round" />
-          <path d="M10 66 Q36 78 62 66 L62 73 Q36 85 10 73 Z" fill={t.accent} stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
-          <circle cx="36" cy="76" r="3.2" fill="#e0c060" stroke="#0a0a0a" strokeWidth="1.2" />
+          <path d="M12 20 Q2 38 10 58 Q20 53 18 34 Q18 22 12 20 Z" fill="url(#assistantEar)" />
+          <path d="M60 20 Q70 38 62 58 Q52 53 54 34 Q54 22 60 20 Z" fill="url(#assistantEar)" />
+          <ellipse cx="36" cy="36" rx="25" ry="21" fill="url(#assistantFur)" />
+          <ellipse cx="36" cy="52" rx="20" ry="9" fill="#8a5f2e" opacity="0.18" />
+          <ellipse cx="27" cy="34" rx="5.4" ry="6.2" fill="#3a2415" />
+          <ellipse cx="45" cy="34" rx="5.4" ry="6.2" fill="#3a2415" />
+          <circle cx="25.3" cy="31.4" r="1.6" fill="#fff8ec" />
+          <circle cx="43.3" cy="31.4" r="1.6" fill="#fff8ec" />
+          <ellipse cx="36" cy="50" rx="12.5" ry="9.5" fill="url(#assistantSnout)" />
+          <ellipse cx="36" cy="45" rx="3.8" ry="2.6" fill="#3a2415" />
+          <path d="M36 47.5 Q36 53 29.5 55" fill="none" stroke="#a8763c" strokeWidth="1.3" strokeLinecap="round" />
+          <path d="M36 47.5 Q36 53 42.5 55" fill="none" stroke="#a8763c" strokeWidth="1.3" strokeLinecap="round" />
+          <path d="M12 64 Q36 74 60 64 L60 69 Q36 79 12 69 Z" fill="url(#assistantCollar)" />
+          <circle cx="36" cy="72.5" r="2.6" fill="#f2d98a" />
         </svg>
       </button>
     </div>
