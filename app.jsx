@@ -1265,14 +1265,20 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
   );
 }
 
-/* ================= Desktop assistant — an original full-body otter mascot in
-   roofer/field-tech workwear (own design: wide/flat face, small round ears, whiskers,
-   a cap in Zuper's real brand orange (ACCENT), green overalls with straps, arms, legs,
-   boots, a tool belt — own proportions/colors, not a trace of any reference image;
-   earlier passes were an alien-cat, a humanoid, then a head-only golden-dog and
-   head-only otter, replaced in turn per direction). No hard cartoon outlines anywhere
-   — every part is a gradient fill plus soft translucent shadows, which is what
-   actually reads as "soft 3D" rather than a flat outlined icon. The outer <button>
+/* ================= Desktop assistant — an original Zuper-branded wrench mascot
+   (own design: a wrench head with cartoon eyes, coated in Zuper's real brand orange
+   ACCENT with chrome/silver jaw-tip and wire-arm accents — own proportions/colors,
+   not a trace of any reference image; earlier passes were an alien-cat, a humanoid,
+   a head-only golden-dog, a head-only otter, then a full-body otter, replaced in
+   turn per direction). Chosen deliberately as "an object with a personality" in the
+   spirit of a classic desktop-assistant character, WITHOUT using that character:
+   Microsoft's actual Clippy asset/sprite (investigated via felixrieseberg/clippy,
+   whose own LICENSE.md admits the bundled Office Assistant spritesheet has no real
+   grant, only a self-asserted fair-use claim) can't be reused here regardless of
+   internal risk-tolerance — so instead of an office paperclip, this is a genuinely
+   different, on-brand field-service tool. No hard cartoon outlines anywhere — every
+   part is a gradient fill plus soft translucent shadows, which is what actually
+   reads as "soft 3D" rather than a flat outlined icon. The outer <button>
    used to visually BE a 64x64 circular badge (background+border+boxShadow all
    circle-shaped) — that's why only a head ever fit and why it always read as "a face
    in a circular badge"; the button is now just an invisible hit-box, and every visible
@@ -1282,8 +1288,8 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
    transform (perspective + rotateY, real 3D, not just shading) as an idle animation —
    visible dimensionality without the cost/complexity of a full WebGL rewrite, which is
    what got reverted earlier when tried for the whole Zuper Quest town. Has its own
-   small set of original animation "states" — idle blink, an ear-wiggle on opening or
-   on a fresh reply, a head-tilt while thinking — in the same interaction-design
+   small set of original animation "states" — idle blink, a wire-arm wiggle on opening
+   or on a fresh reply, a head-tilt while thinking — in the same interaction-design
    vocabulary classic assistant characters use (a named greeting/thinking/idle
    animation set, the kind @react95/clippy exposes), but hand-built as CSS/SVG
    transforms on this original character, not any borrowed sprite frames —
@@ -1526,82 +1532,54 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
           animation: "mascot-3d-tilt 5s ease-in-out infinite",
         }}>
           <defs>
-            <radialGradient id="assistantFur" cx="35%" cy="30%" r="85%">
-              <stop offset="0%" stopColor="#e6d6b3" />
-              <stop offset="50%" stopColor="#bd9c6c" />
-              <stop offset="100%" stopColor="#8a6c44" />
+            <radialGradient id="assistantBody" cx="35%" cy="25%" r="85%">
+              <stop offset="0%" stopColor={shade(ACCENT, 0.5)} />
+              <stop offset="50%" stopColor={ACCENT} />
+              <stop offset="100%" stopColor={shade(ACCENT, -0.35)} />
             </radialGradient>
-            <radialGradient id="assistantEar" cx="35%" cy="20%" r="95%">
-              <stop offset="0%" stopColor="#c9aa78" />
-              <stop offset="100%" stopColor="#8a6c44" />
-            </radialGradient>
-            <radialGradient id="assistantSnout" cx="40%" cy="25%" r="85%">
-              <stop offset="0%" stopColor="#f5ecd8" />
-              <stop offset="100%" stopColor="#dcc8a0" />
-            </radialGradient>
-            <radialGradient id="assistantCap" cx="35%" cy="20%" r="90%">
-              <stop offset="0%" stopColor={shade(ACCENT, 0.35)} />
-              <stop offset="100%" stopColor={shade(ACCENT, -0.25)} />
-            </radialGradient>
-            <linearGradient id="assistantOveralls" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor={shade(t.accent, 0.3)} />
-              <stop offset="100%" stopColor={shade(t.accent, -0.3)} />
+            <linearGradient id="assistantMetal" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#eef2f5" />
+              <stop offset="50%" stopColor="#b9c2c9" />
+              <stop offset="100%" stopColor="#7c868d" />
             </linearGradient>
           </defs>
-          <ellipse cx="40" cy="21" rx="23" ry="16" fill="url(#assistantCap)" />
+          {/* An original Zuper-branded wrench mascot — the "object with a face"
+              charm that made Clippy iconic, without touching Microsoft's actual
+              character: a real field-service tool (not an office paperclip), coated
+              in Zuper's own real brand orange with chrome jaw tips, expressive
+              wire-thin arms for gesture (Clippy's signature trait, reimplemented
+              from scratch as our own shapes), and classic white-sclera cartoon eyes. */}
           <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: thinking ? "dog-think-tilt 1.6s ease-in-out infinite" : "none" }}>
-            {/* Neck — bridges the head ellipse (bottom ~y60) down into the collar
-                (top ~y60 too, overlapping here) so there's no gap/seam between head
-                and body; that gap was exactly what read as "the head is split from
-                the body" before. */}
-            <ellipse cx="40" cy="58" rx="10" ry="13" fill="url(#assistantFur)" />
-            <ellipse cx="40" cy="41" rx="24" ry="19" fill="url(#assistantFur)" />
-            <path d="M16 29 Q40 20 64 29 L64 25 Q40 17 16 25 Z" fill={shade(ACCENT, -0.3)} />
-            <ellipse cx="40" cy="55" rx="18" ry="8" fill="#5c4626" opacity="0.16" />
-            <ellipse className="assistant-eye" cx="30" cy="39" rx="5" ry="5.6" fill="#3a2a18" />
-            <ellipse className="assistant-eye" cx="50" cy="39" rx="5" ry="5.6" fill="#3a2a18" />
-            <circle cx="28.3" cy="36.6" r="1.5" fill="#fff8ec" />
-            <circle cx="48.3" cy="36.6" r="1.5" fill="#fff8ec" />
-            <ellipse cx="40" cy="54" rx="13.5" ry="9.5" fill="url(#assistantSnout)" />
-            <ellipse cx="40" cy="49" rx="3.6" ry="2.5" fill="#3a2a18" />
-            <path d="M40 51.5 Q40 56.5 34 58" fill="none" stroke="#a88c5e" strokeWidth="1.2" strokeLinecap="round" />
-            <path d="M40 51.5 Q40 56.5 46 58" fill="none" stroke="#a88c5e" strokeWidth="1.2" strokeLinecap="round" />
-            <g stroke="#c9aa78" strokeWidth="1" strokeLinecap="round" opacity="0.85">
-              <path d="M27 52 L14 49" /><path d="M27 55 L13 55" /><path d="M27 58 L14 61" />
-              <path d="M53 52 L66 49" /><path d="M53 55 L67 55" /><path d="M53 58 L66 61" />
-            </g>
+            <ellipse cx="40" cy="30" rx="20" ry="18" fill="url(#assistantBody)" />
+            <path d="M22 24 A20 18 0 0 1 58 24" fill="none" stroke={shade(ACCENT, 0.55)} strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+            <path d="M30 20 L23 15 Q20 13 22 17 L28 24 Z" fill="none" />
+            <path d="M25 26 Q22 20 27 18" fill="none" stroke="#7a2c0d" strokeWidth="1.6" strokeLinecap="round" />
+            <path d="M55 26 Q58 20 53 18" fill="none" stroke="#7a2c0d" strokeWidth="1.6" strokeLinecap="round" />
+            <ellipse className="assistant-eye" cx="31" cy="30" rx="6" ry="7" fill="#fdfaf4" />
+            <ellipse className="assistant-eye" cx="49" cy="30" rx="6" ry="7" fill="#fdfaf4" />
+            <circle cx="32.5" cy="31.5" r="3" fill="#241a10" />
+            <circle cx="50.5" cy="31.5" r="3" fill="#241a10" />
+            <circle cx="31" cy="29.5" r="1" fill="#ffffff" />
+            <circle cx="49" cy="29.5" r="1" fill="#ffffff" />
+            <path d="M32 42 Q40 47 48 42" fill="none" stroke="#7a2c0d" strokeWidth="1.8" strokeLinecap="round" />
           </g>
-          <circle cx="16" cy="38" r="7.5" fill="url(#assistantEar)"
-            style={{ transformBox: "fill-box", transformOrigin: "center", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
-          <circle cx="64" cy="38" r="7.5" fill="url(#assistantEar)"
-            style={{ transformBox: "fill-box", transformOrigin: "center", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
 
-          {/* neck collar + torso (overalls bib) — top edge starts at y60, overlapping
-              the neck ellipse above (which spans ~45-71), so head and body connect
-              with no visible seam. */}
-          <path d="M22 60 Q40 68 58 60 L58 65 Q40 73 22 65 Z" fill="url(#assistantOveralls)" />
-          <path d="M23 65 Q20 96 25 120 Q40 126 55 120 Q60 96 57 65 Q40 74 23 65 Z" fill="url(#assistantOveralls)" />
-          <path d="M27 67 L33 118" stroke={shade(ACCENT, -0.15)} strokeWidth="2.2" strokeLinecap="round" />
-          <path d="M53 67 L47 118" stroke={shade(ACCENT, -0.15)} strokeWidth="2.2" strokeLinecap="round" />
-          <rect x="34" y="90" width="12" height="10" rx="1.5" fill={shade(t.accent, -0.15)} opacity="0.5" />
+          {/* shaft */}
+          <path d="M31 46 L31 108 Q31 112 35 112 L45 112 Q49 112 49 108 L49 46 Z" fill="url(#assistantBody)" />
+          <rect x="32" y="60" width="4" height="44" rx="2" fill={shade(ACCENT, 0.4)} opacity="0.55" />
 
-          {/* arms — one raised in a wave (breaks the perfectly symmetrical "stiff toy"
-              look and adds a friendly greeting gesture), one resting normally. */}
-          <path d="M56 72 Q71 80 72 98 Q72 108 65 110 Q59 108 60 97 Q59 82 52 74 Z" fill="url(#assistantFur)" />
-          <circle cx="67.5" cy="108" r="5.5" fill="url(#assistantFur)" />
-          <path d="M24 72 Q7 68 5 51 Q4 43 11 41 Q17 43 16 51 Q16 61 27 67 Z" fill="url(#assistantFur)"
-            style={{ transformBox: "fill-box", transformOrigin: "24px 72px", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
-          <circle cx="9" cy="44" r="5.5" fill="url(#assistantFur)" />
+          {/* wire-thin arms — Clippy's signature expressive trait, our own shapes.
+              One raised in a wave gesture (wiggles on open / on a fresh reply), one
+              resting. */}
+          <path d="M49 66 Q66 70 70 88" fill="none" stroke="url(#assistantMetal)" strokeWidth="3" strokeLinecap="round" />
+          <circle cx="70.5" cy="90" r="4.5" fill="url(#assistantMetal)" />
+          <path d="M31 66 Q13 62 8 44" fill="none" stroke="url(#assistantMetal)" strokeWidth="3" strokeLinecap="round"
+            style={{ transformBox: "fill-box", transformOrigin: "31px 66px", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
+          <circle cx="7.5" cy="41" r="4.5" fill="url(#assistantMetal)"
+            style={{ transformBox: "fill-box", transformOrigin: "31px 66px", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
 
-          {/* tool belt */}
-          <path d="M24 119 Q40 125 56 119 L56 124 Q40 130 24 124 Z" fill="#8a6c44" />
-          <rect x="35.5" y="119.5" width="9" height="8" rx="1.5" fill="#e0c060" />
-
-          {/* legs + boots */}
-          <path d="M27 122 Q25 140 26 152 L36 152 Q37 140 36 122 Z" fill="url(#assistantOveralls)" />
-          <path d="M53 122 Q55 140 54 152 L44 152 Q43 140 44 122 Z" fill="url(#assistantOveralls)" />
-          <ellipse cx="31" cy="154" rx="7" ry="5" fill="#3a2a18" />
-          <ellipse cx="49" cy="154" rx="7" ry="5" fill="#3a2a18" />
+          {/* open-end jaw — the wrench's business end, doubling as "feet" */}
+          <path d="M28 112 L28 142 Q28 148 22 148 L18 148 Q14 148 14 152 L14 156 L30 156 L30 130 L34 130 L34 156 L46 156 L46 130 L50 130 L50 156 L66 156 L66 152 Q66 148 62 148 L58 148 Q52 148 52 142 L52 112 Z" fill="url(#assistantMetal)" />
         </svg>
       </button>
     </div>

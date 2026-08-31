@@ -88,15 +88,26 @@ assistant's chat input (sunken) and buttons, and the scrollbar thumb/track.
 
 ## Desktop assistant
 
-An original full-body otter mascot in roofer/field-tech workwear — a
-wide/flat face, small round ears, whiskers, a cap in Zuper's real brand
-orange, green overalls with straps, arms, legs, boots, and a tool belt
-(own hand-drawn SVG design, own proportions and colors — not a trace of
-any reference image). The cap is the first time the mascot actually ties
-to Zuper's real brand color (`#ff4919`), not just the CRT green.
+An original Zuper-branded wrench mascot — a wrench head with classic
+cartoon eyes (white sclera + dark pupil), coated in Zuper's real brand
+orange (`#ff4919`), with chrome/silver jaw tips and thin wire-arms for
+gesture (own hand-drawn SVG design, own proportions and colors — not a
+trace of any reference image).
+
+This design exists because internal feedback pushed hard for "a
+Clippy-like character" — Microsoft's actual Clippy asset can't be used
+regardless of internal risk-tolerance (that's a fixed constraint, not a
+judgment call anyone here can waive), but the underlying idea — a small
+object with a face and personality, popping up to help — is genuinely
+good UX and fully achievable as an original character. Rather than an
+office paperclip, the mascot is a real field-service tool: on-brand for
+a field-service SaaS company, and unmistakably not a copy of anything
+Microsoft owns. The wire-arms deliberately echo Clippy's signature
+animated-limb charm, reimplemented here as our own shapes and our own
+CSS transforms.
 
 Earlier passes (alien-cat → humanoid → head-only golden-dog → head-only
-otter) were all clipped to a small circular badge, because the `<button>`
+otter → full-body otter) were all clipped to a small circular badge, because the `<button>`
 itself visually *was* a 64x64 circle (background + border + boxShadow all
 circle-shaped) — that's the actual reason only a head ever fit, and why
 it kept reading as "a face inside a circular icon." The button is now
@@ -117,13 +128,16 @@ manually drag it, then stays where you put it.
 `Thinking`, `GetAttention`, idle variants, ...) — that naming convention
 was used as design reference (interaction-design vocabulary, not code or
 assets), reimplemented from scratch as CSS/SVG transforms on this original
-character: an idle blink, an ear-wiggle both when the panel opens and
+character: an idle blink, a wire-arm wiggle both when the panel opens and
 right after a fresh reply, and a head-tilt while a question is being
 answered. `@react95/clippy` itself was **not used** — inspecting
 the published npm package confirmed it ships ~16.6MB of actual extracted
 Microsoft Office character sprites/sounds (Clippy, Merlin, Bonzi, Rover,
 etc.), with upstream docs stating outright those assets "remain property
-of Microsoft." Same reasoning as rejecting `@react95/icons` earlier.
+of Microsoft." Same reasoning as rejecting `@react95/icons` earlier, and
+as rejecting `felixrieseberg/clippy` (its own `LICENSE.md` admits the
+bundled Clippy spritesheet has no real grant, only a self-asserted
+fair-use claim) when it came up again later.
 
 Click it to open a small chat panel: type any question and it tries a real
 Claude model first, falling back to deterministic local keyword search over
