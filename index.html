@@ -78,6 +78,9 @@
        from scratch as CSS transforms on this original character. */
     @keyframes mascot-notice { 0% { transform: perspective(420px) rotateY(0deg) scale(1); } 35% { transform: perspective(420px) rotateY(-10deg) scale(1.08); } 65% { transform: perspective(420px) rotateY(6deg) scale(1.03); } 100% { transform: perspective(420px) rotateY(0deg) scale(1); } }
     @keyframes mascot-fidget { 0%, 100% { transform: rotate(0deg); } 20% { transform: rotate(-4deg); } 40% { transform: rotate(3deg); } 60% { transform: rotate(-2deg); } 80% { transform: rotate(1deg); } }
+    /* A hard on/off opacity toggle — how a real terminal cursor blinks — for the
+       CRT-robot mascot's >_ glyph, distinct from dog-blink's eyelid squash. */
+    @keyframes term-cursor-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
     .assistant-eye { transform-box: fill-box; transform-origin: center; animation: dog-blink 4.5s ease-in-out infinite; }
     @keyframes crt-sweep { 0% { transform: translateY(-160px); } 100% { transform: translateY(100vh); } }
     @keyframes crt-flicker { 0%, 100% { opacity: .015; } 50% { opacity: .035; } 92% { opacity: .06; } }

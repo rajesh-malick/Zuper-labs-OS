@@ -1265,20 +1265,26 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
   );
 }
 
-/* ================= Desktop assistant — an original Zuper-branded wrench mascot
-   (own design: a wrench head with cartoon eyes, coated in Zuper's real brand orange
-   ACCENT with chrome/silver jaw-tip and wire-arm accents — own proportions/colors,
-   not a trace of any reference image; earlier passes were an alien-cat, a humanoid,
-   a head-only golden-dog, a head-only otter, then a full-body otter, replaced in
-   turn per direction). Chosen deliberately as "an object with a personality" in the
-   spirit of a classic desktop-assistant character, WITHOUT using that character:
-   Microsoft's actual Clippy asset/sprite (investigated via felixrieseberg/clippy,
-   whose own LICENSE.md admits the bundled Office Assistant spritesheet has no real
-   grant, only a self-asserted fair-use claim) can't be reused here regardless of
-   internal risk-tolerance — so instead of an office paperclip, this is a genuinely
-   different, on-brand field-service tool. No hard cartoon outlines anywhere — every
-   part is a gradient fill plus soft translucent shadows, which is what actually
-   reads as "soft 3D" rather than a flat outlined icon. The outer <button>
+/* ================= Desktop assistant — an original CRT-terminal-robot mascot: a
+   boxy retro monitor head on tank treads, its screen glowing in the OS's own CRT
+   accent color (t.accent — ties to whatever CRT color theme is active, not a fixed
+   hex) with a pixel-block smiley and a blinking >_ cursor, a small power LED in
+   Zuper's real brand orange (ACCENT) as the one brand-color touch (own design, own
+   proportions; earlier passes were an alien-cat, a humanoid, a head-only golden-dog,
+   a head-only otter, a full-body otter, then an orange wrench, replaced in turn per
+   direction — the wrench in particular didn't tie into the OS's own mono-CRT theme at
+   all, which is exactly what this redesign fixes). Chosen deliberately as "an object
+   with a personality" in the spirit of a classic desktop-assistant character, WITHOUT
+   using that character: Microsoft's actual Clippy asset/sprite (investigated twice —
+   via felixrieseberg/clippy's npm package, and again via a standalone Clippy.exe
+   Electron build, both confirmed to bundle the real Office Assistant artwork with no
+   valid grant, only self-asserted fair-use) can't be reused here regardless of
+   internal risk-tolerance or how many times it's asked for. A reference screenshot of
+   a different retro-CRT-robot character (a third party's own branded product mascot)
+   was used the same way — style/vibe inspiration only, no traced shapes, no borrowed
+   name or branding. No hard cartoon outlines anywhere — every part is a gradient fill
+   plus soft translucent shadows, which is what actually reads as "soft 3D" rather
+   than a flat outlined icon. The outer <button>
    used to visually BE a 64x64 circular badge (background+border+boxShadow all
    circle-shaped) — that's why only a head ever fit and why it always read as "a face
    in a circular badge"; the button is now just an invisible hit-box, and every visible
@@ -1288,9 +1294,10 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
    transform (perspective + rotateY, real 3D, not just shading) as an idle animation —
    visible dimensionality without the cost/complexity of a full WebGL rewrite, which is
    what got reverted earlier when tried for the whole Zuper Quest town. Has its own
-   set of original animation "states" — idle blink, a wire-arm wave on opening and a
-   wave goodbye on closing, a hover-notice perk-up, a randomized idle fidget every
-   ~12-22s so it stays alive even untouched, a wire-arm wiggle on a fresh reply, and a
+   set of original animation "states" — idle eye-blink, a real terminal-style hard-cut
+   cursor blink, ambient CRT scanline flicker, a tread-rock wave on opening and a wave
+   goodbye on closing, a hover-notice perk-up, a randomized idle fidget (a head glance)
+   every ~12-22s so it stays alive even untouched, a tread-rock on a fresh reply, and a
    head-tilt while thinking — in the same "always a little alive, reacts to
    touch/click/idle" interaction-design vocabulary classic assistant characters use (a
    named greeting/thinking/idle animation set, the kind @react95/clippy exposes), but
@@ -1548,74 +1555,93 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
         className="flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
         style={{ width: 80, height: 160, animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible" }}
         aria-label="Zuper OS assistant — real platform data, Claude when configured">
-        {/* An original full-body otter mascot in roofer/field-tech workwear — head as
-            before (wide/flat face, small round ears, whiskers, a cap in Zuper's real
-            brand orange), now with a body: overalls, arms, legs, boots, a tool belt.
-            Own proportions/design, not a trace of any reference image. The outer
-            <button> used to BE the 64x64 circular badge (background+border+boxShadow
-            all shaped like a circle), which is why showing more than a head felt
-            impossible — it's now just an invisible hit-box; every visible pixel is
-            drawn by this SVG, sized to fit the full figure, not clipped to a small
-            round icon. Genuine CSS 3D (perspective + rotateY, real 3D transforms, not
-            just flat shading) gives it visible depth as it idles — a lighter-weight
-            way to get real dimensionality than a full WebGL rewrite, which is what got
-            reverted earlier when tried for the whole Zuper Quest town. */}
+        {/* An original CRT-terminal-robot mascot — a boxy retro monitor head on tank
+            treads, screen glowing in the OS's own CRT accent color with a pixel-block
+            smiley and a blinking >_ cursor. Own hand-drawn SVG design, own proportions;
+            style (not likeness) inspired by a "retro terminal on treads" concept
+            reference the user shared — no traced shapes, no third-party branding or
+            names carried over. The outer <button> used to BE the 64x64 circular badge
+            (background+border+boxShadow all shaped like a circle), which is why showing
+            more than a small icon felt impossible — it's now just an invisible hit-box;
+            every visible pixel is drawn by this SVG, sized to fit the full figure, not
+            clipped to a small round icon. Genuine CSS 3D (perspective + rotateY, real 3D
+            transforms, not just flat shading) gives it visible depth as it idles — a
+            lighter-weight way to get real dimensionality than a full WebGL rewrite,
+            which is what got reverted earlier when tried for the whole Zuper Quest
+            town. */}
         <svg width={80} height={160} viewBox="0 0 80 160" style={{
           position: "absolute", left: 0, top: 0, overflow: "visible", pointerEvents: "none",
           filter: "drop-shadow(0 10px 14px rgba(0,0,0,.5)) drop-shadow(0 0 7px " + t.accent + "90)",
           animation: hover ? "mascot-notice .5s ease-out 1" : "mascot-3d-tilt 5s ease-in-out infinite",
         }}>
           <defs>
-            <radialGradient id="assistantBody" cx="35%" cy="25%" r="85%">
-              <stop offset="0%" stopColor={shade(ACCENT, 0.5)} />
-              <stop offset="50%" stopColor={ACCENT} />
-              <stop offset="100%" stopColor={shade(ACCENT, -0.35)} />
+            <radialGradient id="assistantCase" cx="35%" cy="22%" r="90%">
+              <stop offset="0%" stopColor="#565f5f" />
+              <stop offset="55%" stopColor="#2c3232" />
+              <stop offset="100%" stopColor="#131616" />
             </radialGradient>
-            <linearGradient id="assistantMetal" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#eef2f5" />
-              <stop offset="50%" stopColor="#b9c2c9" />
-              <stop offset="100%" stopColor="#7c868d" />
+            <radialGradient id="assistantScreen" cx="45%" cy="35%" r="80%">
+              <stop offset="0%" stopColor={shade(t.accent, -0.55)} />
+              <stop offset="60%" stopColor="#081a0d" />
+              <stop offset="100%" stopColor="#020a04" />
+            </radialGradient>
+            <linearGradient id="assistantTread" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#3c4040" />
+              <stop offset="100%" stopColor="#131515" />
             </linearGradient>
           </defs>
-          {/* An original Zuper-branded wrench mascot — the "object with a face"
-              charm that made Clippy iconic, without touching Microsoft's actual
-              character: a real field-service tool (not an office paperclip), coated
-              in Zuper's own real brand orange with chrome jaw tips, expressive
-              wire-thin arms for gesture (Clippy's signature trait, reimplemented
-              from scratch as our own shapes), and classic white-sclera cartoon eyes. */}
-          <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: thinking ? "dog-think-tilt 1.6s ease-in-out infinite" : fidget ? "mascot-fidget .9s ease-in-out 1" : "none" }}>
-            <ellipse cx="40" cy="30" rx="20" ry="18" fill="url(#assistantBody)" />
-            <path d="M22 24 A20 18 0 0 1 58 24" fill="none" stroke={shade(ACCENT, 0.55)} strokeWidth="2" strokeLinecap="round" opacity="0.7" />
-            <path d="M30 20 L23 15 Q20 13 22 17 L28 24 Z" fill="none" />
-            <path d="M25 26 Q22 20 27 18" fill="none" stroke="#7a2c0d" strokeWidth="1.6" strokeLinecap="round" />
-            <path d="M55 26 Q58 20 53 18" fill="none" stroke="#7a2c0d" strokeWidth="1.6" strokeLinecap="round" />
-            <ellipse className="assistant-eye" cx="31" cy="30" rx="6" ry="7" fill="#fdfaf4" />
-            <ellipse className="assistant-eye" cx="49" cy="30" rx="6" ry="7" fill="#fdfaf4" />
-            <circle cx="32.5" cy="31.5" r="3" fill="#241a10" />
-            <circle cx="50.5" cy="31.5" r="3" fill="#241a10" />
-            <circle cx="31" cy="29.5" r="1" fill="#ffffff" />
-            <circle cx="49" cy="29.5" r="1" fill="#ffffff" />
-            <path d="M32 42 Q40 47 48 42" fill="none" stroke="#7a2c0d" strokeWidth="1.8" strokeLinecap="round" />
+          {/* Tank-tread base — doubles as "feet", rocks side to side (reusing the same
+              wiggle trigger the wrench used for its arms) on greet/goodbye/a fresh
+              reply/hover/idle fidget, like it's rolling in place. */}
+          <g style={{ transformBox: "fill-box", transformOrigin: "40px 134px", animation: (greet || bye || excited || hover || fidget) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }}>
+            <rect x="22" y="118" width="36" height="14" rx="4" fill="url(#assistantCase)" />
+            <rect x="8" y="124" width="26" height="20" rx="8" fill="url(#assistantTread)" />
+            <rect x="46" y="124" width="26" height="20" rx="8" fill="url(#assistantTread)" />
+            <g stroke="#0a0c0c" strokeWidth="1.4" opacity="0.6" strokeLinecap="round">
+              <path d="M12 128 L12 140" /><path d="M17 126 L17 142" /><path d="M22 126 L22 142" /><path d="M27 126 L27 142" />
+              <path d="M50 126 L50 142" /><path d="M55 126 L55 142" /><path d="M60 126 L60 142" /><path d="M65 128 L65 140" />
+            </g>
           </g>
+          <rect x="33" y="100" width="14" height="20" rx="3" fill="url(#assistantCase)" />
 
-          {/* shaft */}
-          <path d="M31 46 L31 108 Q31 112 35 112 L45 112 Q49 112 49 108 L49 46 Z" fill="url(#assistantBody)" />
-          <rect x="32" y="60" width="4" height="44" rx="2" fill={shade(ACCENT, 0.4)} opacity="0.55" />
+          {/* Monitor head — tilts while thinking, glances side to side on an idle
+              fidget (reusing the same mechanisms the wrench used for its own head
+              tilt). */}
+          <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: thinking ? "dog-think-tilt 1.6s ease-in-out infinite" : fidget ? "mascot-fidget .9s ease-in-out 1" : "none" }}>
+            <rect x="10" y="18" width="60" height="84" rx="12" fill="url(#assistantCase)" />
+            <rect x="12" y="32" width="3" height="12" rx="1.5" fill="#0a0c0c" opacity="0.6" />
+            <rect x="65" y="32" width="3" height="12" rx="1.5" fill="#0a0c0c" opacity="0.6" />
+            <rect x="19" y="28" width="42" height="56" rx="7" fill="url(#assistantScreen)" />
 
-          {/* wire-thin arms — Clippy's signature expressive trait, our own shapes.
-              One raised in a wave gesture, one resting. The wave wiggles on
-              open/close, on a fresh reply, on hover, and on a random idle fidget —
-              the same "always a little alive" reactivity classic assistant
-              characters have, just built from scratch on this character. */}
-          <path d="M49 66 Q66 70 70 88" fill="none" stroke="url(#assistantMetal)" strokeWidth="3" strokeLinecap="round" />
-          <circle cx="70.5" cy="90" r="4.5" fill="url(#assistantMetal)" />
-          <path d="M31 66 Q13 62 8 44" fill="none" stroke="url(#assistantMetal)" strokeWidth="3" strokeLinecap="round"
-            style={{ transformBox: "fill-box", transformOrigin: "31px 66px", animation: (greet || bye || excited || hover || fidget) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
-          <circle cx="7.5" cy="41" r="4.5" fill="url(#assistantMetal)"
-            style={{ transformBox: "fill-box", transformOrigin: "31px 66px", animation: (greet || bye || excited || hover || fidget) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
+            {/* faint scanlines, ambient-flickering like the rest of the OS's CRT chrome */}
+            <g fill={t.accent} opacity="0.1" style={{ animation: "crt-flicker 3s ease-in-out infinite" }}>
+              <rect x="21" y="34" width="38" height="1.2" /><rect x="21" y="40" width="38" height="1.2" />
+              <rect x="21" y="46" width="38" height="1.2" /><rect x="21" y="52" width="38" height="1.2" />
+              <rect x="21" y="58" width="38" height="1.2" /><rect x="21" y="64" width="38" height="1.2" />
+              <rect x="21" y="70" width="38" height="1.2" /><rect x="21" y="76" width="38" height="1.2" />
+            </g>
 
-          {/* open-end jaw — the wrench's business end, doubling as "feet" */}
-          <path d="M28 112 L28 142 Q28 148 22 148 L18 148 Q14 148 14 152 L14 156 L30 156 L30 130 L34 130 L34 156 L46 156 L46 130 L50 130 L50 156 L66 156 L66 152 Q66 148 62 148 L58 148 Q52 148 52 142 L52 112 Z" fill="url(#assistantMetal)" />
+            {/* blinking >_ cursor glyph, upper-left of the screen — a real terminal
+                cursor blinks via a hard opacity toggle, not a squash, so this gets its
+                own keyframe rather than reusing dog-blink. */}
+            <g style={{ animation: "term-cursor-blink 1s steps(1) infinite" }}>
+              <path d="M24 43.5 L27.5 46 L24 48.5" fill="none" stroke={t.accent} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              <rect x="29" y="47.5" width="4" height="1.6" fill={t.accent} />
+            </g>
+
+            {/* pixel-block smiley — eyes blink on the idle cycle, mouth is a fixed
+                stepped grin built from the same square pixel unit. */}
+            <rect className="assistant-eye" x="28" y="54" width="6" height="6" fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")" }} />
+            <rect className="assistant-eye" x="46" y="54" width="6" height="6" fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")" }} />
+            <g fill={t.accent} style={{ filter: "drop-shadow(0 0 2px " + t.accent + ")" }}>
+              <rect x="23" y="66" width="4" height="4" /><rect x="29" y="70" width="4" height="4" />
+              <rect x="35" y="73" width="4" height="4" /><rect x="41" y="73" width="4" height="4" />
+              <rect x="47" y="70" width="4" height="4" /><rect x="53" y="66" width="4" height="4" />
+            </g>
+
+            <rect x="19" y="88" width="42" height="5" rx="2" fill="#0a0c0c" opacity="0.5" />
+            <circle cx="55" cy="90.5" r="2.4" fill={ACCENT} style={{ filter: "drop-shadow(0 0 3px " + ACCENT + ")" }} />
+          </g>
         </svg>
       </button>
     </div>
