@@ -1272,14 +1272,19 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
    — every part is a gradient fill plus a soft translucent under-jaw shadow, which is
    what actually reads as "soft 3D" rather than a flat outlined icon; an earlier pass
    with black outlines on every shape read as a helmet visor + suit collar instead of
-   fur. Has its own small set of original animation "states" — idle blink, an
-   ear-wiggle greeting when opened, a head-tilt while thinking, a tail-wag that speeds
-   up on a fresh answer — in the same interaction-design vocabulary classic assistant
-   characters use (a named greeting/thinking/idle animation set, the kind
-   @react95/clippy exposes), but hand-built as CSS/SVG transforms on this original
-   character, not any borrowed sprite frames — @react95/clippy ships actual extracted
-   Microsoft Office character assets (confirmed by inspecting the published package),
-   so it and @react95/icons were both ruled out earlier this session. Tries a real
+   fur; a boxShadow-ring glow on the button was another pass's mistake — a boxShadow
+   always follows the button's own circular hit-box, which is what made the whole
+   thing read as "a dog face inside a circular badge." The glow here is a drop-shadow
+   filter on the SVG instead, which hugs the actual drawn silhouette, and the ears are
+   sized/positioned to stay clearly visible past the head ellipse's edge rather than
+   mostly hidden behind it. Has its own small set of original animation "states" — idle
+   blink, an ear-wiggle on opening or on a fresh reply, a head-tilt while thinking — in
+   the same interaction-design vocabulary classic assistant characters use (a named
+   greeting/thinking/idle animation set, the kind @react95/clippy exposes), but
+   hand-built as CSS/SVG transforms on this original character, not any borrowed sprite
+   frames — @react95/clippy ships actual extracted Microsoft Office character assets
+   (confirmed by inspecting the published package), so it and @react95/icons were both
+   ruled out earlier this session. Tries a real
    Claude call first (via
    api/ask.js) grounded in the REAL labs.zuper.co cluster/entity/flow data, falling back
    to deterministic local keyword search if Claude isn't configured — every answer is
@@ -1495,28 +1500,30 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
         </div>
       )}
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}
-        className="w-16 h-16 rounded-full flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
-        style={{
-          boxShadow: "0 8px 20px rgba(0,0,0,.4), 0 0 16px " + t.accent + "70",
-          animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible",
-        }}
+        className="w-16 h-16 flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
+        style={{ animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible" }}
         aria-label="Zuper OS assistant — real platform data, Claude when configured">
         {/* Soft-3D look: no hard cartoon outlines anywhere — every shape is a gradient
             fill (highlight → shadow), plus a translucent under-jaw shadow blob for
-            gentle volume, the way a rendered/plush character reads "3D" without a
-            literal 3D engine. Earlier passes had a black outline around every shape
-            (ears, snout, collar+tag) which read as a helmet visor and suit-collar
-            instead of fur — that's what this fixes. */}
-        <svg width={72} height={88} viewBox="0 0 72 88" style={{ position: "absolute", left: -4, top: -4, overflow: "visible", pointerEvents: "none" }}>
+            gentle volume. The glow is a drop-shadow filter (follows the actual drawn
+            silhouette) rather than a boxShadow on the button — a boxShadow always
+            follows the button's own rectangle/circle, which was exactly why this used
+            to read as "a dog face inside a circular badge" instead of a dog. Ears are
+            drawn big enough, and attached far enough outside the head ellipse, to stay
+            clearly visible past the head's edge instead of mostly tucked behind it. */}
+        <svg width={80} height={92} viewBox="0 0 80 92" style={{
+          position: "absolute", left: -8, top: -4, overflow: "visible", pointerEvents: "none",
+          filter: "drop-shadow(0 6px 10px rgba(0,0,0,.45)) drop-shadow(0 0 7px " + t.accent + "90)",
+        }}>
           <defs>
             <radialGradient id="assistantFur" cx="35%" cy="28%" r="80%">
               <stop offset="0%" stopColor="#fbe6bd" />
               <stop offset="50%" stopColor="#e0ab5c" />
               <stop offset="100%" stopColor="#a8763c" />
             </radialGradient>
-            <radialGradient id="assistantEar" cx="40%" cy="20%" r="90%">
-              <stop offset="0%" stopColor="#e0ab5c" />
-              <stop offset="100%" stopColor="#a8763c" />
+            <radialGradient id="assistantEar" cx="35%" cy="15%" r="95%">
+              <stop offset="0%" stopColor="#e6b567" />
+              <stop offset="100%" stopColor="#9c6c34" />
             </radialGradient>
             <radialGradient id="assistantSnout" cx="40%" cy="25%" r="85%">
               <stop offset="0%" stopColor="#fbead0" />
@@ -1527,26 +1534,24 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
               <stop offset="100%" stopColor={shade(t.accent, -0.25)} />
             </linearGradient>
           </defs>
-          <path d="M60 58 Q73 55 71 40 Q68 49 60 52 Z" fill="url(#assistantEar)"
-            style={{ transformBox: "fill-box", transformOrigin: "center", animation: (excited ? "dog-tail-wag .3s ease-in-out infinite" : thinking ? "dog-tail-wag .8s ease-in-out infinite" : "dog-tail-wag 2.4s ease-in-out infinite") }} />
-          <path d="M12 20 Q2 38 10 58 Q20 53 18 34 Q18 22 12 20 Z" fill="url(#assistantEar)"
-            style={{ transformBox: "fill-box", transformOrigin: "top center", animation: greet ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
-          <path d="M60 20 Q70 38 62 58 Q52 53 54 34 Q54 22 60 20 Z" fill="url(#assistantEar)"
-            style={{ transformBox: "fill-box", transformOrigin: "top center", animation: greet ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
+          <path d="M14 16 C -6 22, -8 48, 6 66 C 15 61, 21 54, 19 34 C 19 26, 17 19, 14 16 Z" fill="url(#assistantEar)"
+            style={{ transformBox: "fill-box", transformOrigin: "top center", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
+          <path d="M66 16 C 86 22, 88 48, 74 66 C 65 61, 59 54, 61 34 C 61 26, 63 19, 66 16 Z" fill="url(#assistantEar)"
+            style={{ transformBox: "fill-box", transformOrigin: "top center", animation: (greet || excited) ? "dog-ear-wiggle .35s ease-in-out 2" : "none" }} />
           <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: thinking ? "dog-think-tilt 1.6s ease-in-out infinite" : "none" }}>
-            <ellipse cx="36" cy="36" rx="25" ry="21" fill="url(#assistantFur)" />
-            <ellipse cx="36" cy="52" rx="20" ry="9" fill="#8a5f2e" opacity="0.18" />
-            <ellipse className="assistant-eye" cx="27" cy="34" rx="5.4" ry="6.2" fill="#3a2415" />
-            <ellipse className="assistant-eye" cx="45" cy="34" rx="5.4" ry="6.2" fill="#3a2415" />
-            <circle cx="25.3" cy="31.4" r="1.6" fill="#fff8ec" />
-            <circle cx="43.3" cy="31.4" r="1.6" fill="#fff8ec" />
-            <ellipse cx="36" cy="50" rx="12.5" ry="9.5" fill="url(#assistantSnout)" />
-            <ellipse cx="36" cy="45" rx="3.8" ry="2.6" fill="#3a2415" />
-            <path d="M36 47.5 Q36 53 29.5 55" fill="none" stroke="#a8763c" strokeWidth="1.3" strokeLinecap="round" />
-            <path d="M36 47.5 Q36 53 42.5 55" fill="none" stroke="#a8763c" strokeWidth="1.3" strokeLinecap="round" />
+            <ellipse cx="40" cy="38" rx="22" ry="19" fill="url(#assistantFur)" />
+            <ellipse cx="40" cy="53" rx="17" ry="8" fill="#8a5f2e" opacity="0.18" />
+            <ellipse className="assistant-eye" cx="31.5" cy="36" rx="5.2" ry="6" fill="#3a2415" />
+            <ellipse className="assistant-eye" cx="48.5" cy="36" rx="5.2" ry="6" fill="#3a2415" />
+            <circle cx="29.8" cy="33.4" r="1.5" fill="#fff8ec" />
+            <circle cx="46.8" cy="33.4" r="1.5" fill="#fff8ec" />
+            <ellipse cx="40" cy="51" rx="12" ry="9" fill="url(#assistantSnout)" />
+            <ellipse cx="40" cy="46.5" rx="3.6" ry="2.5" fill="#3a2415" />
+            <path d="M40 49 Q40 54.5 34 56.5" fill="none" stroke="#a8763c" strokeWidth="1.3" strokeLinecap="round" />
+            <path d="M40 49 Q40 54.5 46 56.5" fill="none" stroke="#a8763c" strokeWidth="1.3" strokeLinecap="round" />
           </g>
-          <path d="M12 64 Q36 74 60 64 L60 69 Q36 79 12 69 Z" fill="url(#assistantCollar)" />
-          <circle cx="36" cy="72.5" r="2.6" fill="#f2d98a" />
+          <path d="M16 65 Q40 75 64 65 L64 70 Q40 80 16 70 Z" fill="url(#assistantCollar)" />
+          <circle cx="40" cy="73.5" r="2.6" fill="#f2d98a" />
         </svg>
       </button>
     </div>

@@ -103,9 +103,9 @@ focused window until you manually drag it, then stays where you put it.
 `Thinking`, `GetAttention`, idle variants, ...) — that naming convention
 was used as design reference (interaction-design vocabulary, not code or
 assets), reimplemented from scratch as CSS/SVG transforms on this original
-character: an idle blink, an ear-wiggle when the panel opens, a head-tilt
-while a question is being answered, and a tail-wag that speeds up right
-after a fresh reply. `@react95/clippy` itself was **not used** — inspecting
+character: an idle blink, an ear-wiggle both when the panel opens and
+right after a fresh reply, and a head-tilt while a question is being
+answered. `@react95/clippy` itself was **not used** — inspecting
 the published npm package confirmed it ships ~16.6MB of actual extracted
 Microsoft Office character sprites/sounds (Clippy, Merlin, Bonzi, Rover,
 etc.), with upstream docs stating outright those assets "remain property
