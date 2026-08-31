@@ -1265,13 +1265,13 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
   );
 }
 
-/* ================= Desktop assistant — an original humanoid mascot (own design: a
-   friendly round head with eyebrows/eyes/nose/smile, warm natural skin tones (not
-   green — flat CRT-green "skin" on a humanoid face was reading as alien/uncanny), a
-   green ring/glow frame and a green shirt/collar so it still visually belongs to the
-   mono-CRT chrome, loosely inspired by the *warm-toned portrait avatar* style of
-   Zuper's real "Zuper AI" agent personas on zuper.co — not a copy of any specific
-   agent's illustration). Tries a real Claude call first (via
+/* ================= Desktop assistant — an original golden-dog mascot (own design:
+   floppy ears, big warm eyes, a snout, and a green collar with a tag — own colors/
+   proportions, loosely inspired by the friendly-soft-3D-dog *vibe* of ryOS's "Rover"
+   assistant, not a copy of that character's actual design/render). Replaced an
+   earlier humanoid-face pass whose flat CRT-green "skin" read as alien/uncanny — the
+   collar (not a ring border) is what ties this one to the mono-CRT green chrome now.
+   Tries a real Claude call first (via
    api/ask.js) grounded in the REAL labs.zuper.co cluster/entity/flow data, falling back
    to deterministic local keyword search if Claude isn't configured — every answer is
    tagged with its actual source. Docks near the focused window until manually dragged,
@@ -1462,22 +1462,25 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}
         className="w-16 h-16 rounded-full flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
         style={{
-          background: "radial-gradient(circle at 35% 30%, #f6d5a8, #dfae78 55%, #b98653 100%)",
-          border: "3px solid " + t.accent,
+          background: "radial-gradient(circle at 35% 30%, #f7dba0, #e0ab5c 55%, #b8823f 100%)",
+          border: "2px solid " + t.accent,
           boxShadow: "0 10px 24px rgba(0,0,0,.5), 0 0 14px " + t.accent + "80, inset 0 2px 3px rgba(255,255,255,.5), inset 0 -3px 6px rgba(0,0,0,.25)",
           animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible",
         }}
         aria-label="Zuper OS assistant — real platform data, Claude when configured">
-        <svg width={64} height={76} viewBox="0 0 64 76" style={{ position: "absolute", left: 0, top: 0, overflow: "visible", pointerEvents: "none" }}>
-          <line x1="20" y1="26" x2="28" y2="23" stroke="#4a3222" strokeWidth="2.2" strokeLinecap="round" />
-          <line x1="44" y1="26" x2="36" y2="23" stroke="#4a3222" strokeWidth="2.2" strokeLinecap="round" />
-          <ellipse cx="25" cy="34" rx="4.6" ry="5.6" fill="#3a2a1c" />
-          <ellipse cx="39" cy="34" rx="4.6" ry="5.6" fill="#3a2a1c" />
-          <circle cx="23.5" cy="31.5" r="1.3" fill="#fff5e6" />
-          <circle cx="37.5" cy="31.5" r="1.3" fill="#fff5e6" />
-          <path d="M32 38 q1.5 4 0 6" fill="none" stroke="#a06840" strokeWidth="1.3" strokeLinecap="round" />
-          <path d="M23 48 Q32 55 41 48" fill="none" stroke="#7a4a2c" strokeWidth="2" strokeLinecap="round" />
-          <path d="M12 64 L52 64 L60 76 L4 76 Z" fill={t.accent} stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
+        <svg width={64} height={80} viewBox="0 0 64 80" style={{ position: "absolute", left: 0, top: -4, overflow: "visible", pointerEvents: "none" }}>
+          <path d="M9 18 Q0 34 8 51 Q17 47 15 30 Q15 20 9 18 Z" fill="#cf9354" stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M55 18 Q64 34 56 51 Q47 47 49 30 Q49 20 55 18 Z" fill="#cf9354" stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
+          <ellipse cx="24" cy="34" rx="5.4" ry="6.4" fill="#2c1c10" />
+          <ellipse cx="40" cy="34" rx="5.4" ry="6.4" fill="#2c1c10" />
+          <circle cx="22.2" cy="31.2" r="1.5" fill="#fff5e6" />
+          <circle cx="38.2" cy="31.2" r="1.5" fill="#fff5e6" />
+          <ellipse cx="32" cy="48" rx="11" ry="8.5" fill="#f7e2bb" stroke="#0a0a0a" strokeWidth="1.6" />
+          <ellipse cx="32" cy="43.5" rx="4" ry="2.8" fill="#2c1c10" />
+          <path d="M32 46 Q32 52 26 54" fill="none" stroke="#0a0a0a" strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M32 46 Q32 52 38 54" fill="none" stroke="#0a0a0a" strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M9 62 Q32 73 55 62 L55 68 Q32 79 9 68 Z" fill={t.accent} stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" />
+          <circle cx="32" cy="70.5" r="3" fill="#e0c060" stroke="#0a0a0a" strokeWidth="1.2" />
         </svg>
       </button>
     </div>
