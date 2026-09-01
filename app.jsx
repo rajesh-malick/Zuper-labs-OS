@@ -326,11 +326,16 @@ function GlitchWatermark({ color }) {
 }
 
 /* ================= CRT overlay: moving scanline sweep + screen curvature vignette +
-   subtle flicker, layered on top of everything (pointer-events-none so it never blocks
-   interaction). Pure CSS/keyframe animation, no canvas. ================= */
+   subtle flicker (pointer-events-none so it never blocks interaction). Pure CSS/keyframe
+   animation, no canvas. Sits just above the plain wallpaper background (z-index 1, above
+   ScanlineBackground/GlitchWatermark's z:0) but well below open app windows (z:10+) and
+   the assistant mascot (z:500) — it used to sit at z:1990, "on top of everything,"
+   which visually darkened/shadowed both of those; a real CRT's screen curvature dims
+   everything uniformly, but that reads as a bug here since the whole point of opening a
+   window is to see it clearly. ================= */
 function CRTOverlay({ color }) {
   return (
-    <div className="fixed inset-0 pointer-events-none z-[1990]" aria-hidden="true">
+    <div className="fixed inset-0 pointer-events-none z-[1]" aria-hidden="true">
       <div className="absolute inset-0" style={{
         background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.35) 78%, rgba(0,0,0,.8) 100%)",
       }} />
