@@ -2293,16 +2293,19 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
         onDoubleClick={() => onOpen(id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(id); } }}>
         {/* Just the icon itself now — no bordered/background tile behind it (that
             square "window" frame was the actual ask to remove; the icon's own
-            drop-shadow glow still ties it into the CRT theme). The icon box and the
-            label box are deliberately separate, each with an explicit width/height
-            (not flexbox shrink-to-fit) so text wrapping is predictable regardless of
-            font metrics, and neither one can ever visually overflow into the other. */}
+            drop-shadow glow still ties it into the CRT theme). The icon box has an
+            explicit width/height so it can never be squeezed by the label. The label
+            deliberately does NOT get a forced width: shrink-to-fit sizing is what lets
+            it wrap at natural word boundaries ("AI intelligence" -> "AI" / "intelligence")
+            instead of force-breaking mid-word — a forced width narrower than a single
+            long word (tried once, reverted) makes overflow-wrap break the word itself
+            ("intellige" / "nce"), which is worse than the problem it was meant to fix. */}
         <span className="relative flex items-center justify-center flex-shrink-0" style={{ width: tile, height: tile, fontSize: glyphSize, overflow: "visible" }}>
           <span className="relative" style={{ color: color, animation: !pressed ? "crt-icon-glow 2.4s ease-in-out infinite" : "none" }}>
             <IconImg icon={icon} size={typeof icon === "string" ? glyphSize : Math.round(tile * (icon && icon.img ? 0.88 : 0.66))} color={color} />
           </span>
         </span>
-        <span className="text-center leading-tight font-mono font-semibold break-words" style={{ width: "100%", minWidth: 0, fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 0 6px " + color + "80", overflow: "visible", whiteSpace: "normal" }}>{title}</span>
+        <span className="text-center leading-tight font-mono font-semibold break-words" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 0 6px " + color + "80" }}>{title}</span>
       </button>
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} theme={t} items={[
