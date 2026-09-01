@@ -242,6 +242,15 @@ the desktop) still renders the original mono pixel-art vectors, and any
 future cluster added without matching PNG art automatically falls back to
 the vector/emoji chain the same way it always did.
 
+The first crop pass left each PNG with its source sheet's own white
+card background and a lot of dead padding around the actual glyph, so
+inside the tile it read as a small floating picture instead of a
+compact icon. Fixed by chroma-keying the near-white background to real
+alpha transparency, auto-cropping tight to the remaining artwork's
+bounding box, and re-centering on a square canvas — `IconImg` also
+renders PNG icons at 88% of the tile now (up from 66%, which was tuned
+for the vector icons' own internal padding, not these).
+
 ## OS mechanics (added after a "make it more lively" pass, refs: windows93.net, dustinbrett.com/daedalOS, posthog.com)
 
 - **Draggable desktop icons** — free-position, persisted to `localStorage`
@@ -257,14 +266,16 @@ the vector/emoji chain the same way it always did.
 - **Per-cluster accent colors** — each of the 14 real clusters gets a
   distinct color for its icon tile and window glow, purely for visual
   variety; not a real Zuper brand system.
-- **Two-tier typography**: window titles, desktop icon labels, badges, and
-  the taskbar use a clean readable mono (Inconsolata) with a drop shadow for
-  contrast against the animated background. Only genuine terminal/shell
-  surfaces — the boot screen, `Terminal.app`, `status.sh`, and
-  `connections.sh` output — use VT323, the same pixel-terminal font
-  windows93.net's terminal uses. (An earlier pass applied VT323 everywhere,
-  including small icon labels, which made them illegible — that's what
-  prompted this split.)
+- **Platform-wide typography**: every piece of UI text — window titles,
+  desktop icon labels, badges, the taskbar, body copy, and the terminal —
+  now uses [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (OFL
+  licensed, freely usable), per direct reference. The one deliberate
+  exception is the "ZUPER LABS" background watermark (`GlitchWatermark`
+  in app.jsx), which keeps its own VT323 treatment. This replaced an
+  earlier two-tier split (Inconsolata for chrome, VT323 for genuine
+  terminal/shell surfaces) that itself replaced an even earlier pass
+  where VT323 was applied everywhere, including small icon labels, which
+  made them illegible.
 
 ## Important correction from an earlier version of this README
 

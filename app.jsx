@@ -292,7 +292,7 @@ const THEME = {
   titlebar: () => "linear-gradient(180deg, rgba(47,191,95,.18), transparent)",
   accent: CRT_GREEN, chromeText: "#8fffb0", chromeTextDim: "#4fbf7a",
   taskbarBg: "#020402", panelBg: "rgba(2,8,4,.97)", panelBlur: "none",
-  fontChrome: "'VT323','Inconsolata',monospace",
+  fontChrome: "'JetBrains Mono','Inconsolata',monospace",
 };
 /* ================= CRT desktop background: static scanlines + green vignette ================= */
 function ScanlineBackground({ color }) {
@@ -1821,7 +1821,7 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
             boxShadow: v.boxShadow,
           }}>
           <span className="relative" style={{ color: color, animation: v.glow ? "crt-icon-glow 2.4s ease-in-out infinite" : "none" }}>
-            <IconImg icon={icon} size={typeof icon === "string" ? glyphSize : Math.round(tile * 0.66)} color={color} />
+            <IconImg icon={icon} size={typeof icon === "string" ? glyphSize : Math.round(tile * (icon && icon.img ? 0.88 : 0.66))} color={color} />
           </span>
         </span>
         <span className="text-center leading-tight font-mono break-words" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 0 6px " + color + "80" }}>{title}</span>
