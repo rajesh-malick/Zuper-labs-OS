@@ -226,6 +226,22 @@ upgraded to the current pixel-art/bevel treatment per direct reference.
 LICENSE file explicitly excludes "Windows and all associated images...
 property of Microsoft Corp" from its MIT grant.
 
+**Update:** the 16 cluster/app desktop icons (`command-center`,
+`customer-portal`, `core-platform`, `data-pipeline`, `ai-intelligence`,
+`payment-processing`, `workflows-cluster`, `inventory-management`,
+`field-operations`, `integration-hub`, `careers`, `blog`,
+`security-compliance`, `zuper-arcade`, `terminal`, `predictive-analytics`)
+now render as full-color pixel-art PNGs (`icons/*.png`) instead of the
+mono-CRT vector glyphs above — a user-supplied, AI-generated reference
+sheet made specifically for this project's own 16 cluster names (each
+labeled and branded with Zuper's "Z", not sourced from any existing icon
+pack or franchise), cropped and downscaled per-icon into this folder. The
+`vintage()`/`IconImg`/`PixelIcon` system stays in place underneath as the
+fallback path — `ENTITY_ICONS` (used inside cluster detail views, not on
+the desktop) still renders the original mono pixel-art vectors, and any
+future cluster added without matching PNG art automatically falls back to
+the vector/emoji chain the same way it always did.
+
 ## OS mechanics (added after a "make it more lively" pass, refs: windows93.net, dustinbrett.com/daedalOS, posthog.com)
 
 - **Draggable desktop icons** — free-position, persisted to `localStorage`

@@ -127,25 +127,31 @@ const CLUSTER_APPS = {
    resolution and upscaled with crisp/pixelated edges to get a chunky "Win95 icon
    pack"-style beveled look — same construction convention as those references, but
    kept strictly mono CRT-green (no borrowed artwork, no new colors). ---------- */
-function vintage(shape, fallback) { return { shape: shape, fallback: fallback }; }
+function vintage(shape, fallback, img) { return { shape: shape, fallback: fallback, img: img }; }
 
+/* Desktop/app icons now use a hand-picked full-color pixel-art PNG set (user-supplied,
+   one image per cluster/app, cropped from a single AI-generated reference sheet made
+   specifically for this project's exact cluster names — not any third-party character
+   or franchise art) instead of the mono-CRT vector glyphs below. The vintage/PixelIcon
+   shape system stays wired up as the fallback for anything without a PNG (ENTITY_ICONS,
+   and any future cluster added without matching art). */
 const CLUSTER_ICONS = {
-  "command-center": vintage("desktop", "\u{1F5A5}️"),
-  "core-platform": vintage("chip", "\u{1F9E0}"),
-  "ai-intelligence": vintage("robot", "\u{1F916}"),
-  "workflows-cluster": vintage("cycle", "\u{1F501}"),
-  "field-operations": vintage("satellite", "\u{1F6F0}️"),
-  "security-compliance": vintage("lock", "\u{1F512}"),
-  "careers": vintage("briefcase", "\u{1F4BC}"),
-  "blog": vintage("memo", "\u{1F4DD}"),
-  "customer-portal": vintage("person", "\u{1F464}"),
-  "data-pipeline": vintage("bars", "\u{1F4CA}"),
-  "payment-processing": vintage("card", "\u{1F4B3}"),
-  "inventory-management": vintage("box", "\u{1F4E6}"),
-  "integration-hub": vintage("link", "\u{1F517}"),
-  "predictive-analytics": vintage("orb", "\u{1F52E}"),
-  "zuper-arcade": vintage("joystick", "\u{1F3AE}"),
-  "terminal": vintage("prompt", "⌨️"),
+  "command-center": vintage("desktop", "\u{1F5A5}️", "icons/command-center.png"),
+  "core-platform": vintage("chip", "\u{1F9E0}", "icons/core-platform.png"),
+  "ai-intelligence": vintage("robot", "\u{1F916}", "icons/ai-intelligence.png"),
+  "workflows-cluster": vintage("cycle", "\u{1F501}", "icons/workflows-cluster.png"),
+  "field-operations": vintage("satellite", "\u{1F6F0}️", "icons/field-operations.png"),
+  "security-compliance": vintage("lock", "\u{1F512}", "icons/security-compliance.png"),
+  "careers": vintage("briefcase", "\u{1F4BC}", "icons/careers.png"),
+  "blog": vintage("memo", "\u{1F4DD}", "icons/blog.png"),
+  "customer-portal": vintage("person", "\u{1F464}", "icons/customer-portal.png"),
+  "data-pipeline": vintage("bars", "\u{1F4CA}", "icons/data-pipeline.png"),
+  "payment-processing": vintage("card", "\u{1F4B3}", "icons/payment-processing.png"),
+  "inventory-management": vintage("box", "\u{1F4E6}", "icons/inventory-management.png"),
+  "integration-hub": vintage("link", "\u{1F517}", "icons/integration-hub.png"),
+  "predictive-analytics": vintage("orb", "\u{1F52E}", "icons/predictive-analytics.png"),
+  "zuper-arcade": vintage("joystick", "\u{1F3AE}", "icons/zuper-arcade.png"),
+  "terminal": vintage("prompt", "⌨️", "icons/terminal.png"),
 };
 const ENTITY_ICONS = {
   server: vintage("server", "\u{1F5A5}️"),
@@ -245,9 +251,11 @@ function PixelIcon({ shape, size, className, color }) {
   );
 }
 
-/* Renders a vintage pixel-art icon (or a plain emoji glyph fallback for stray strings). */
+/* Renders a full-color pixel-art PNG icon if one's set, else a mono-CRT vintage
+   vector icon, else a plain emoji glyph fallback for stray strings. */
 function IconImg({ icon, size, className, color }) {
   if (!icon || typeof icon === "string") return <span className={className} style={{ fontSize: size }}>{icon}</span>;
+  if (icon.img) return <img src={icon.img} alt="" draggable={false} className={className} style={{ width: size, height: size, objectFit: "contain", imageRendering: "pixelated", flexShrink: 0 }} />;
   if (!icon.shape || !VINTAGE_ICON_SHAPES[icon.shape]) return <span className={className} style={{ fontSize: size, color: color || CRT_GREEN }}>{icon.fallback}</span>;
   return <PixelIcon shape={icon.shape} size={size} className={className} color={color} />;
 }
