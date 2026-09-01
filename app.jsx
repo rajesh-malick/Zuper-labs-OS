@@ -44,16 +44,16 @@ function shade(hex, percent) {
    (think R2-D2-style trills) rather than a UI chime. A lazily-created singleton
    AudioContext (browsers require a user gesture before audio can play — the mascot's
    own click-to-open is always the first one). */
-let assistantAudioCtx = null;
-function getAssistantAudioCtx() {
+let sharedAudioCtx = null;
+function getSharedAudioCtx() {
   if (typeof window === "undefined") return null;
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx) return null;
-  if (!assistantAudioCtx) assistantAudioCtx = new Ctx();
-  if (assistantAudioCtx.state === "suspended") assistantAudioCtx.resume();
-  return assistantAudioCtx;
+  if (!sharedAudioCtx) sharedAudioCtx = new Ctx();
+  if (sharedAudioCtx.state === "suspended") sharedAudioCtx.resume();
+  return sharedAudioCtx;
 }
-function assistantNote(ctx, freq, startTime, duration, gainPeak, type) {
+function synthNote(ctx, freq, startTime, duration, gainPeak, type) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.type = type || "triangle";
@@ -78,28 +78,60 @@ function assistantNote(ctx, freq, startTime, duration, gainPeak, type) {
   lfo.stop(startTime + duration + 0.02);
   osc.stop(startTime + duration + 0.02);
 }
+/* A flat tone (no vibrato) for arcade feedback — punchier/more "8-bit" than the
+   assistant's cute wobble, appropriate for quick win/lose game cues. */
+function synthBeep(ctx, freq, startTime, duration, gainPeak, type) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type || "square";
+  osc.frequency.setValueAtTime(freq, startTime);
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(gainPeak, startTime + 0.008);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration + 0.02);
+}
 function playAssistantGreetSound() {
-  const ctx = getAssistantAudioCtx();
+  const ctx = getSharedAudioCtx();
   if (!ctx) return;
   const t0 = ctx.currentTime;
-  assistantNote(ctx, 587, t0, 0.1, 0.055, "triangle");
-  assistantNote(ctx, 740, t0 + 0.09, 0.1, 0.055, "triangle");
-  assistantNote(ctx, 880, t0 + 0.18, 0.15, 0.055, "triangle");
+  synthNote(ctx, 587, t0, 0.1, 0.055, "triangle");
+  synthNote(ctx, 740, t0 + 0.09, 0.1, 0.055, "triangle");
+  synthNote(ctx, 880, t0 + 0.18, 0.15, 0.055, "triangle");
 }
 function playAssistantByeSound() {
-  const ctx = getAssistantAudioCtx();
+  const ctx = getSharedAudioCtx();
   if (!ctx) return;
   const t0 = ctx.currentTime;
-  assistantNote(ctx, 784, t0, 0.1, 0.05, "triangle");
-  assistantNote(ctx, 587, t0 + 0.1, 0.1, 0.05, "triangle");
-  assistantNote(ctx, 392, t0 + 0.2, 0.22, 0.045, "triangle");
+  synthNote(ctx, 784, t0, 0.1, 0.05, "triangle");
+  synthNote(ctx, 587, t0 + 0.1, 0.1, 0.05, "triangle");
+  synthNote(ctx, 392, t0 + 0.2, 0.22, 0.045, "triangle");
 }
 function playAssistantGlitchSound() {
-  const ctx = getAssistantAudioCtx();
+  const ctx = getSharedAudioCtx();
   if (!ctx) return;
   const t0 = ctx.currentTime;
   const notes = [660, 740, 880, 990, 740];
-  notes.forEach((f, i) => assistantNote(ctx, f, t0 + i * 0.05, 0.05, 0.035, "triangle"));
+  notes.forEach((f, i) => synthNote(ctx, f, t0 + i * 0.05, 0.05, 0.035, "triangle"));
+}
+/* Arcade game feedback sounds — same synthesis discipline (Web Audio only, nothing
+   sampled), but square/sawtooth flat tones for a punchier 8-bit arcade feel, distinct
+   from the assistant's cute vibrato chirps. */
+function playArcadeSuccessSound() {
+  const ctx = getSharedAudioCtx();
+  if (!ctx) return;
+  const t0 = ctx.currentTime;
+  synthBeep(ctx, 660, t0, 0.07, 0.05, "square");
+  synthBeep(ctx, 990, t0 + 0.06, 0.11, 0.05, "square");
+}
+function playArcadeFailSound() {
+  const ctx = getSharedAudioCtx();
+  if (!ctx) return;
+  const t0 = ctx.currentTime;
+  synthBeep(ctx, 220, t0, 0.16, 0.05, "sawtooth");
+  synthBeep(ctx, 160, t0 + 0.09, 0.18, 0.045, "sawtooth");
 }
 
 /* ---------- Win9x-style bevel texture — technique inspired by 1j01/os-gui's
@@ -1384,7 +1416,7 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
    hand-built as CSS/SVG
    transforms on this original character, not any borrowed sprite frames. Sound
    effects for greet/goodbye/hover follow the same rule — synthesized from scratch
-   with the Web Audio API (getAssistantAudioCtx/assistantNote helpers, top of this
+   with the Web Audio API (getSharedAudioCtx/synthNote helpers, top of this
    file), short vibrato-wobbled triangle-wave note runs tuned to sound like a cute
    chirpy little robot (an LFO wobbling each note's own pitch, R2-D2-style, rather
    than a flat pitch-glide, which read as a plain notification "ping" instead of a
@@ -1823,13 +1855,16 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
         onDoubleClick={() => onOpen(id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(id); } }}>
         {/* Just the icon itself now — no bordered/background tile behind it (that
             square "window" frame was the actual ask to remove; the icon's own
-            drop-shadow glow still ties it into the CRT theme). */}
-        <span className="relative flex items-center justify-center" style={{ width: tile, height: tile, fontSize: glyphSize }}>
+            drop-shadow glow still ties it into the CRT theme). The icon box and the
+            label box are deliberately separate, each with an explicit width/height
+            (not flexbox shrink-to-fit) so text wrapping is predictable regardless of
+            font metrics, and neither one can ever visually overflow into the other. */}
+        <span className="relative flex items-center justify-center flex-shrink-0" style={{ width: tile, height: tile, fontSize: glyphSize, overflow: "visible" }}>
           <span className="relative" style={{ color: color, animation: !pressed ? "crt-icon-glow 2.4s ease-in-out infinite" : "none" }}>
             <IconImg icon={icon} size={typeof icon === "string" ? glyphSize : Math.round(tile * (icon && icon.img ? 0.88 : 0.66))} color={color} />
           </span>
         </span>
-        <span className="text-center leading-tight font-mono font-semibold break-words" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 0 6px " + color + "80" }}>{title}</span>
+        <span className="text-center leading-tight font-mono font-semibold break-words" style={{ width: "100%", minWidth: 0, fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 0 6px " + color + "80", overflow: "visible", whiteSpace: "normal" }}>{title}</span>
       </button>
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} theme={t} items={[
