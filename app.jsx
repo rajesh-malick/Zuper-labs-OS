@@ -36,11 +36,14 @@ function shade(hex, percent) {
 }
 
 /* ---------- Assistant mascot sound effects — synthesized entirely from scratch with
-   the Web Audio API (oscillator pitch-glides through a GainNode envelope), not a
-   single sampled/recorded audio clip, so there's nothing to license: soft sine/triangle
-   tones tuned for a cute, curious-little-robot character rather than harsh alarm beeps.
-   A lazily-created singleton AudioContext (browsers require a user gesture before audio
-   can play — the mascot's own click-to-open is always the first one). */
+   the Web Audio API, not a single sampled/recorded audio clip, so there's nothing to
+   license. A flat pitch-glide (the first version of this) read as a plain notification
+   "ping," not a character — fixed by giving every note a fast vibrato wobble (a low-
+   frequency oscillator modulating the note's own pitch) and playing short multi-note
+   runs instead of one glide, which is what actually reads as a cute chirpy little robot
+   (think R2-D2-style trills) rather than a UI chime. A lazily-created singleton
+   AudioContext (browsers require a user gesture before audio can play — the mascot's
+   own click-to-open is always the first one). */
 let assistantAudioCtx = null;
 function getAssistantAudioCtx() {
   if (typeof window === "undefined") return null;
@@ -50,40 +53,53 @@ function getAssistantAudioCtx() {
   if (assistantAudioCtx.state === "suspended") assistantAudioCtx.resume();
   return assistantAudioCtx;
 }
-function assistantChirp(ctx, fromFreq, toFreq, startTime, duration, gainPeak, type) {
+function assistantNote(ctx, freq, startTime, duration, gainPeak, type) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-  osc.type = type || "sine";
-  osc.frequency.setValueAtTime(fromFreq, startTime);
-  osc.frequency.exponentialRampToValueAtTime(Math.max(toFreq, 1), startTime + duration * 0.85);
+  osc.type = type || "triangle";
+  osc.frequency.setValueAtTime(freq, startTime);
+
+  const lfo = ctx.createOscillator();
+  const lfoGain = ctx.createGain();
+  lfo.type = "sine";
+  lfo.frequency.setValueAtTime(30, startTime);
+  lfoGain.gain.setValueAtTime(freq * 0.07, startTime);
+  lfo.connect(lfoGain);
+  lfoGain.connect(osc.frequency);
+
   gain.gain.setValueAtTime(0, startTime);
-  gain.gain.linearRampToValueAtTime(gainPeak, startTime + 0.012);
+  gain.gain.linearRampToValueAtTime(gainPeak, startTime + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
   osc.connect(gain);
   gain.connect(ctx.destination);
+  lfo.start(startTime);
   osc.start(startTime);
+  lfo.stop(startTime + duration + 0.02);
   osc.stop(startTime + duration + 0.02);
 }
 function playAssistantGreetSound() {
   const ctx = getAssistantAudioCtx();
   if (!ctx) return;
   const t0 = ctx.currentTime;
-  assistantChirp(ctx, 480, 760, t0, 0.11, 0.05, "sine");
-  assistantChirp(ctx, 640, 980, t0 + 0.1, 0.13, 0.05, "sine");
+  assistantNote(ctx, 587, t0, 0.1, 0.055, "triangle");
+  assistantNote(ctx, 740, t0 + 0.09, 0.1, 0.055, "triangle");
+  assistantNote(ctx, 880, t0 + 0.18, 0.15, 0.055, "triangle");
 }
 function playAssistantByeSound() {
   const ctx = getAssistantAudioCtx();
   if (!ctx) return;
   const t0 = ctx.currentTime;
-  assistantChirp(ctx, 820, 560, t0, 0.12, 0.045, "sine");
-  assistantChirp(ctx, 560, 340, t0 + 0.12, 0.18, 0.04, "sine");
+  assistantNote(ctx, 784, t0, 0.1, 0.05, "triangle");
+  assistantNote(ctx, 587, t0 + 0.1, 0.1, 0.05, "triangle");
+  assistantNote(ctx, 392, t0 + 0.2, 0.22, 0.045, "triangle");
 }
 function playAssistantGlitchSound() {
   const ctx = getAssistantAudioCtx();
   if (!ctx) return;
   const t0 = ctx.currentTime;
   const notes = [660, 740, 880, 990, 740];
-  notes.forEach((f, i) => assistantChirp(ctx, f, f * 1.08, t0 + i * 0.05, 0.05, 0.035, "triangle"));
+  notes.forEach((f, i) => assistantNote(ctx, f, t0 + i * 0.05, 0.05, 0.035, "triangle"));
 }
 
 /* ---------- Win9x-style bevel texture — technique inspired by 1j01/os-gui's
@@ -258,16 +274,6 @@ function IconImg({ icon, size, className, color }) {
   if (icon.img) return <img src={icon.img} alt="" draggable={false} className={className} style={{ width: size, height: size, objectFit: "contain", imageRendering: "pixelated", flexShrink: 0 }} />;
   if (!icon.shape || !VINTAGE_ICON_SHAPES[icon.shape]) return <span className={className} style={{ fontSize: size, color: color || CRT_GREEN }}>{icon.fallback}</span>;
   return <PixelIcon shape={icon.shape} size={size} className={className} color={color} />;
-}
-
-/* ---------- Mono-CRT icon tile visuals ---------- */
-function iconTileVisuals(color, pressed) {
-  return {
-    background: "rgba(0,20,8,.55)", borderRadius: "0px", overlay: false,
-    border: "1px solid " + color,
-    boxShadow: bevel(pressed ? "in-shallow" : "out-shallow", color) + (pressed ? "" : ", 0 0 12px " + color + "55"),
-    glow: !pressed,
-  };
 }
 
 /* ---------- Per-cluster accent color — purely cosmetic variety, not real Zuper branding ---------- */
@@ -1378,9 +1384,11 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
    hand-built as CSS/SVG
    transforms on this original character, not any borrowed sprite frames. Sound
    effects for greet/goodbye/hover follow the same rule — synthesized from scratch
-   with the Web Audio API (getAssistantAudioCtx/assistantChirp helpers, top of this
-   file), soft sine/triangle pitch-glides tuned to sound like a cute curious robot
-   rather than harsh alarm beeps, so there's no sampled audio clip to license either —
+   with the Web Audio API (getAssistantAudioCtx/assistantNote helpers, top of this
+   file), short vibrato-wobbled triangle-wave note runs tuned to sound like a cute
+   chirpy little robot (an LFO wobbling each note's own pitch, R2-D2-style, rather
+   than a flat pitch-glide, which read as a plain notification "ping" instead of a
+   character), so there's no sampled audio clip to license either —
    @react95/clippy ships actual extracted Microsoft Office character assets (confirmed
    by inspecting the published package), so it and @react95/icons were both ruled out
    earlier this session. Tries a real
@@ -1804,7 +1812,6 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
   const glyphSize = ICON_GLYPH_REM[iconSize] || ICON_GLYPH_REM.md;
   const labelSize = ICON_LABEL_REM[textSize] || ICON_LABEL_REM.md;
   const t = theme || THEME;
-  const v = iconTileVisuals(color, pressed);
 
   return (
     <div className="absolute pointer-events-auto" style={{ left: pos.x, top: pos.y, width: Math.max(92, tile + 24) }}
@@ -1812,15 +1819,13 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenu({ x: e.clientX, y: e.clientY }); }}>
       <button type="button" onClickCapture={onClickCapture}
         className="flex flex-col items-center gap-1.5 p-2 hover:bg-white/10 transition-transform focus-visible:outline focus-visible:outline-2"
-        style={{ width: Math.max(92, tile + 24), outlineColor: color, transform: pressed ? "scale(.93)" : "scale(1)", borderRadius: v.borderRadius }}
+        style={{ width: Math.max(92, tile + 24), outlineColor: color, transform: pressed ? "scale(.93)" : "scale(1)" }}
         onDoubleClick={() => onOpen(id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(id); } }}>
-        <span className="relative flex items-center justify-center overflow-hidden transition-transform"
-          style={{
-            width: tile, height: tile, fontSize: glyphSize, background: v.background, borderRadius: v.borderRadius,
-            border: v.border,
-            boxShadow: v.boxShadow,
-          }}>
-          <span className="relative" style={{ color: color, animation: v.glow ? "crt-icon-glow 2.4s ease-in-out infinite" : "none" }}>
+        {/* Just the icon itself now — no bordered/background tile behind it (that
+            square "window" frame was the actual ask to remove; the icon's own
+            drop-shadow glow still ties it into the CRT theme). */}
+        <span className="relative flex items-center justify-center" style={{ width: tile, height: tile, fontSize: glyphSize }}>
+          <span className="relative" style={{ color: color, animation: !pressed ? "crt-icon-glow 2.4s ease-in-out infinite" : "none" }}>
             <IconImg icon={icon} size={typeof icon === "string" ? glyphSize : Math.round(tile * (icon && icon.img ? 0.88 : 0.66))} color={color} />
           </span>
         </span>

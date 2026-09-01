@@ -168,11 +168,14 @@ standalone `Clippy.exe` Electron build inspected still later — its
 sprite sheet, same underlying asset, same answer.
 
 **Sound effects.** Greet, goodbye, and hover each have a matching sound
-cue — synthesized from scratch with the Web Audio API (an oscillator
-pitch-glide through a gain envelope, no sampled/recorded clip at all, so
-there's nothing to license here either), tuned as soft sine/triangle
-tones for a cute, curious-little-robot character rather than harsh
-alarm beeps.
+cue — synthesized from scratch with the Web Audio API, no sampled/
+recorded clip at all, so there's nothing to license here either. The
+first version was a flat oscillator pitch-glide, which read as a plain
+notification "ping" rather than a character; fixed by giving each note
+a fast vibrato wobble (an LFO modulating its own pitch) and playing
+short multi-note runs instead of one glide — that's what actually reads
+as a cute, chirpy little robot (R2-D2-style trills) instead of a UI
+chime.
 
 Click it to open a small chat panel: type any question and it tries a real
 Claude model first, falling back to deterministic local keyword search over
@@ -250,6 +253,13 @@ alpha transparency, auto-cropping tight to the remaining artwork's
 bounding box, and re-centering on a square canvas — `IconImg` also
 renders PNG icons at 88% of the tile now (up from 66%, which was tuned
 for the vector icons' own internal padding, not these).
+
+Desktop icons also dropped the bordered/background square tile
+(`iconTileVisuals`, removed) that used to sit behind every icon —
+direct feedback that it read as "a window/frame around the icon,"
+rather than just an icon. `DesktopIcon` now renders the bare icon
+image plus its own green `crt-icon-glow` drop-shadow, with the label
+underneath — no card, no border, no bevel box.
 
 ## OS mechanics (added after a "make it more lively" pass, refs: windows93.net, dustinbrett.com/daedalOS, posthog.com)
 
