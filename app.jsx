@@ -16,7 +16,14 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 const ACCENT = "#ff4919";
 const CONCEPT = "#7ecbff";
 const REAL = "#7ee6a3";
-const CRT_GREEN = "#3fe676";
+/* The OS shell's own mono-CRT accent — was green (#3fe676), now a classic amber-
+   phosphor terminal color, per direct request. Kept as its own constant (distinct
+   hex from ACCENT) rather than reusing ACCENT directly: ACCENT ties to Zuper's real
+   brand orange, CRT_GREEN ties to the OS's internal chrome theme — two different
+   concepts that happen to both be orange-family now, same as before when one was
+   orange and the other was green. The variable name stays CRT_GREEN to avoid a
+   much larger rename across every component that imports it. */
+const CRT_GREEN = "#ffb000";
 
 function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
 function hexToRgb(hex) {
@@ -141,7 +148,7 @@ function playArcadeFailSound() {
    (top-left) / dark (bottom-right) edges fake a raised or sunken 3D edge; "deep" stacks
    two rings for chunkier chrome (windows), "shallow" is one ring for small controls. */
 function bevel(kind, accentHex) {
-  const hi2 = "#eafff0", hi = shade(accentHex, 0.2), lo = shade(accentHex, -0.6), lo2 = "#020402";
+  const hi2 = "#fff3e0", hi = shade(accentHex, 0.2), lo = shade(accentHex, -0.6), lo2 = "#040200";
   if (kind === "out-deep") return "inset 1px 1px 0 " + hi2 + ", inset -1px -1px 0 " + lo2 + ", inset 2px 2px 0 " + hi + ", inset -2px -2px 0 " + lo;
   if (kind === "in-deep") return "inset 1px 1px 0 " + lo2 + ", inset -1px -1px 0 " + hi2 + ", inset 2px 2px 0 " + lo + ", inset -2px -2px 0 " + hi;
   if (kind === "out-shallow") return "inset 1px 1px 0 " + hi2 + ", inset -1px -1px 0 " + lo2;
@@ -206,7 +213,7 @@ const CLUSTER_APPS = {
    copied from any icon pack/marketplace/artist), rendered at native 24x24 canvas
    resolution and upscaled with crisp/pixelated edges to get a chunky "Win95 icon
    pack"-style beveled look — same construction convention as those references, but
-   kept strictly mono CRT-green (no borrowed artwork, no new colors). ---------- */
+   kept strictly mono CRT-accent (currently amber; no borrowed artwork, no new colors). ---------- */
 function vintage(shape, fallback, img) { return { shape: shape, fallback: fallback, img: img }; }
 
 /* Desktop/app icons now use a hand-picked full-color pixel-art PNG set (user-supplied,
@@ -269,8 +276,8 @@ const VINTAGE_ICON_SHAPES = {
 };
 
 const PIXEL_GRID = 24;
-const PIXEL_SHADOW = "#04180b";
-const PIXEL_HIGHLIGHT = "#c9ffe0";
+const PIXEL_SHADOW = "#1a0f02";
+const PIXEL_HIGHLIGHT = "#ffe3b3";
 
 /* Traces one shape entry from VINTAGE_ICON_SHAPES onto a 2D canvas context, then
    strokes (or fills, for the small solid "dot" accents) it with whatever
@@ -299,7 +306,7 @@ function paintVintageShape(ctx, shapeDef) {
 
 /* Renders a vintage shape as a small native-resolution canvas, upscaled with
    image-rendering:pixelated — three offset passes (shadow / highlight / main) fake
-   the classic embossed icon-pack bevel, all in mono CRT green. */
+   the classic embossed icon-pack bevel, all in the mono CRT accent color. */
 function PixelIcon({ shape, size, className, color }) {
   const ref = useRef(null);
   const c = color || CRT_GREEN;
@@ -352,19 +359,19 @@ const SIZE_OPTIONS = [{ value: "sm", label: "Small" }, { value: "md", label: "Me
 /* ---------- Mono CRT theme — the OS shell's only look. Reskins desktop bg, window
    chrome, taskbar, start menu, context menus, and icon tiles. Window CONTENT (readme/
    dashboard/game text) stays on a dark panel — full re-theming of every content pane
-   was out of scope. Original green/black CRT palette, not copied from any specific
-   trademarked terminal product. ---------- */
+   was out of scope. Original amber/black CRT palette (was green/black — retinted per
+   direct request), not copied from any specific trademarked terminal product. ---------- */
 const THEME = {
-  label: "Mono CRT", osBg: "#020402", winBg: "rgba(2,8,4,.94)",
-  winBorder: "#2fbf5f", winBorderFocused: "#6dffa0",
-  winRadius: "0px", winShadowFocused: () => "0 0 0 1px #6dffa0, 0 0 24px rgba(109,255,160,.35)",
-  winShadow: "0 0 0 1px rgba(47,191,95,.5)", winBlur: "none",
-  titlebar: () => "linear-gradient(180deg, rgba(47,191,95,.18), transparent)",
-  accent: CRT_GREEN, chromeText: "#8fffb0", chromeTextDim: "#4fbf7a",
-  taskbarBg: "#020402", panelBg: "rgba(2,8,4,.97)", panelBlur: "none",
+  label: "Mono CRT", osBg: "#040200", winBg: "rgba(8,4,0,.94)",
+  winBorder: "#cc8400", winBorderFocused: "#ffd166",
+  winRadius: "0px", winShadowFocused: () => "0 0 0 1px #ffd166, 0 0 24px rgba(255,209,102,.35)",
+  winShadow: "0 0 0 1px rgba(204,132,0,.5)", winBlur: "none",
+  titlebar: () => "linear-gradient(180deg, rgba(204,132,0,.18), transparent)",
+  accent: CRT_GREEN, chromeText: "#ffd98a", chromeTextDim: "#c98a2e",
+  taskbarBg: "#040200", panelBg: "rgba(8,4,0,.97)", panelBlur: "none",
   fontChrome: "'JetBrains Mono','Inconsolata',monospace",
 };
-/* ================= CRT desktop background: static scanlines + green vignette ================= */
+/* ================= CRT desktop background: static scanlines + accent-color vignette ================= */
 function ScanlineBackground({ color }) {
   return (
     <div className="absolute inset-0 pointer-events-none" aria-hidden="true" style={{
@@ -374,51 +381,20 @@ function ScanlineBackground({ color }) {
   );
 }
 
-/* ================= Background watermark imprint — "ZUPER LABS" faintly stamped behind
-   the icons, with an occasional glitch pop (position-jittered, clipped-band copies that
-   flash in and cut out). Stays strictly mono green/black — no RGB channel-split, since
-   that would break the "mono CRT only" rule; the glitch reads through jitter + clipping
-   + brightness instead of color separation. ================= */
+/* ================= Background watermark imprint — "ZUPER LABS" faintly stamped
+   behind the icons. Plain static text, no glitch/breathe animation — direct
+   request after the animated jitter version read as noise rather than a subtle
+   watermark. ================= */
 function GlitchWatermark({ color }) {
   const text = "ZUPER LABS";
-  const common = {
-    position: "absolute", left: "50%", top: "50%",
-    fontFamily: "'VT323','Inconsolata',monospace", fontWeight: 700,
-    fontSize: "min(15vw, 200px)", letterSpacing: "0.04em", whiteSpace: "nowrap", lineHeight: 1,
-  };
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true" style={{ zIndex: 0 }}>
-      <span style={{ ...common, color: color, transform: "translate(-50%,-50%)", animation: "watermark-breathe 7s ease-in-out infinite" }}>{text}</span>
-      <span style={{ ...common, color: "#eafff0", clipPath: "inset(38% 0 42% 0)", animation: "watermark-glitch-a 7s linear infinite" }}>{text}</span>
-      <span style={{ ...common, color: color, clipPath: "inset(8% 0 78% 0)", animation: "watermark-glitch-b 3.3s linear infinite" }}>{text}</span>
-    </div>
-  );
-}
-
-/* ================= CRT overlay: moving scanline sweep + screen curvature vignette +
-   subtle flicker (pointer-events-none so it never blocks interaction). Pure CSS/keyframe
-   animation, no canvas. Sits just above the plain wallpaper background (z-index 1, above
-   ScanlineBackground/GlitchWatermark's z:0) but well below open app windows (z:10+) and
-   the assistant mascot (z:500) — it used to sit at z:1990, "on top of everything,"
-   which visually darkened/shadowed both of those; a real CRT's screen curvature dims
-   everything uniformly, but that reads as a bug here since the whole point of opening a
-   window is to see it clearly. ================= */
-function CRTOverlay({ color }) {
-  return (
-    <div className="fixed inset-0 pointer-events-none z-[1]" aria-hidden="true">
-      <div className="absolute inset-0" style={{
-        background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.35) 78%, rgba(0,0,0,.8) 100%)",
-      }} />
-      <div className="absolute inset-0" style={{
-        boxShadow: "inset 0 0 140px 40px rgba(0,0,0,.75)",
-      }} />
-      <div className="absolute inset-x-0" style={{
-        top: 0, height: "140px", left: 0, right: 0,
-        background: "linear-gradient(180deg, transparent, " + color + "1c 45%, " + color + "0d 55%, transparent)",
-        animation: "crt-sweep 7s linear infinite",
-        mixBlendMode: "screen",
-      }} />
-      <div className="absolute inset-0" style={{ background: color, opacity: 0.02, animation: "crt-flicker 6.5s ease-in-out infinite", mixBlendMode: "overlay" }} />
+      <span style={{
+        position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
+        fontFamily: "'VT323','Inconsolata',monospace", fontWeight: 700,
+        fontSize: "min(15vw, 200px)", letterSpacing: "0.04em", whiteSpace: "nowrap", lineHeight: 1,
+        color: color,
+      }}>{text}</span>
     </div>
   );
 }
@@ -725,9 +701,9 @@ function Window({ id, title, x, y, w, h, z, color, theme, isFocused, isMaximized
         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c }}></span>
         <span className="flex-1 truncate font-mono font-semibold text-[13px] tracking-wide" style={{ color: t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{title}</span>
         <div className="flex gap-1">
-          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onMinimize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&#8211;</button>
-          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onToggleMaximize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&#9723;</button>
-          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onClose(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&times;</button>
+          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onMinimize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&#8211;</button>
+          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onToggleMaximize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&#9723;</button>
+          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onClose(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&times;</button>
         </div>
       </div>
       <div className="relative flex-1 min-h-0 overflow-y-auto touch-pan-y bg-zinc-900/90">{children}</div>
@@ -978,13 +954,13 @@ function RouteRacerGame({ onComplete }) {
     const canvas = canvasRef.current; if (!canvas) return;
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#020402"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = "rgba(63,230,118,0.14)";
+    ctx.fillStyle = "#040200"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "rgba(255,176,0,0.14)";
     for (let i = 0; i <= GRID; i++) { ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, GRID * CELL); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, i * CELL); ctx.lineTo(GRID * CELL, i * CELL); ctx.stroke(); }
-    ctx.fillStyle = "rgba(2,20,10,0.9)"; ctx.strokeStyle = "rgba(63,230,118,0.4)";
+    ctx.fillStyle = "rgba(20,10,2,0.9)"; ctx.strokeStyle = "rgba(255,176,0,0.4)";
     state.blocked.forEach((b) => { ctx.fillRect(b.x * CELL + 3, b.y * CELL + 3, CELL - 6, CELL - 6); ctx.strokeRect(b.x * CELL + 3, b.y * CELL + 3, CELL - 6, CELL - 6); });
-    state.jobs.forEach((j) => { ctx.fillStyle = j.visited ? "rgba(63,230,118,0.3)" : CRT_GREEN; ctx.beginPath(); ctx.arc(j.x * CELL + CELL / 2, j.y * CELL + CELL / 2, 10, 0, Math.PI * 2); ctx.fill(); });
-    ctx.fillStyle = "#eafff0"; ctx.beginPath(); ctx.arc(state.pos.x * CELL + CELL / 2, state.pos.y * CELL + CELL / 2, 8, 0, Math.PI * 2); ctx.fill();
+    state.jobs.forEach((j) => { ctx.fillStyle = j.visited ? "rgba(255,176,0,0.3)" : CRT_GREEN; ctx.beginPath(); ctx.arc(j.x * CELL + CELL / 2, j.y * CELL + CELL / 2, 10, 0, Math.PI * 2); ctx.fill(); });
+    ctx.fillStyle = "#fff3e0"; ctx.beginPath(); ctx.arc(state.pos.x * CELL + CELL / 2, state.pos.y * CELL + CELL / 2, 8, 0, Math.PI * 2); ctx.fill();
   }, [state]);
   useEffect(() => {
     function onKey(e) { const map = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" }; if (map[e.key]) { e.preventDefault(); move(map[e.key]); } }
@@ -995,20 +971,20 @@ function RouteRacerGame({ onComplete }) {
   const remaining = state.jobs.filter((j) => !j.visited).length;
   return (
     <div className="flex flex-col items-center gap-3 p-4">
-      <div className="w-full flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
+      <div className="w-full flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
         <span>Moves: {state.moves} / {MOVE_LIMIT}</span><span>Jobs remaining: {remaining}</span>
-        <button type="button" className="px-2 py-1" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => setState(makeState())}>Restart</button>
+        <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => setState(makeState())}>Restart</button>
       </div>
       <canvas ref={canvasRef} tabIndex={0} width={GRID * CELL} height={GRID * CELL} className="outline-none" style={{ boxShadow: bevel("in-deep", CRT_GREEN) }} aria-label="Route Racer grid. Use arrow keys to move."></canvas>
       <div className="flex flex-col items-center gap-1">
-        <button type="button" className="w-8 h-8" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => move("up")} aria-label="Move up">&#8593;</button>
+        <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => move("up")} aria-label="Move up">&#8593;</button>
         <div className="flex gap-1">
-          <button type="button" className="w-8 h-8" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => move("left")} aria-label="Move left">&#8592;</button>
-          <button type="button" className="w-8 h-8" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => move("down")} aria-label="Move down">&#8595;</button>
-          <button type="button" className="w-8 h-8" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => move("right")} aria-label="Move right">&#8594;</button>
+          <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => move("left")} aria-label="Move left">&#8592;</button>
+          <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => move("down")} aria-label="Move down">&#8595;</button>
+          <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => move("right")} aria-label="Move right">&#8594;</button>
         </div>
       </div>
-      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{state.message}</p>
+      <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{state.message}</p>
     </div>
   );
 }
@@ -1044,18 +1020,18 @@ function DispatchTetrisGame({ onComplete }) {
   function restart() { setSchedule(TECHS.map(() => new Array(SLOTS).fill(false))); setQueue(makeQueue()); setScore(0); setMisses(0); setTimeLeft(TIME_LIMIT); setDone(false); setMessage("Click a slot to place the current job into that many consecutive open hours."); }
   return (
     <div className="p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
+      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
         <span>Placed: {score}</span><span>Skipped: {misses}</span><span>Time: {timeLeft}s</span>
-        <button type="button" className="px-2 py-1" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={restart}>Restart</button>
+        <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={restart}>Restart</button>
       </div>
       <div>
-        <div className="text-[11px] font-medium mb-1.5 font-mono" style={{ color: "#4fbf7a" }}>Next job:</div>
-        {queue.length > 0 && <div className="w-11 h-[34px] flex items-center justify-center font-mono font-semibold text-[13px]" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }}>{queue[0]}h</div>}
+        <div className="text-[11px] font-medium mb-1.5 font-mono" style={{ color: "#c98a2e" }}>Next job:</div>
+        {queue.length > 0 && <div className="w-11 h-[34px] flex items-center justify-center font-mono font-semibold text-[13px]" style={{ background: CRT_GREEN, color: "#040200", boxShadow: bevel("out-shallow", CRT_GREEN) }}>{queue[0]}h</div>}
       </div>
       <div className="flex flex-col gap-1.5">
         {TECHS.map((name, t) => (
           <div key={name} className="flex items-center gap-1.5">
-            <div className="w-14 text-[11px] font-medium font-mono" style={{ color: "#4fbf7a" }}>{name}</div>
+            <div className="w-14 text-[11px] font-medium font-mono" style={{ color: "#c98a2e" }}>{name}</div>
             <div className="flex gap-1">
               {Array.from({ length: SLOTS }).map((_, s) => {
                 const isInvalid = invalidCell === t + "," + s;
@@ -1063,7 +1039,7 @@ function DispatchTetrisGame({ onComplete }) {
                   <button key={s} type="button" aria-label={name + " hour " + (s + 1) + (schedule[t][s] ? " (booked)" : " (open)")} onClick={() => place(t, s)}
                     className="w-8 h-8"
                     style={{
-                      background: isInvalid ? CRT_GREEN : schedule[t][s] ? "rgba(63,230,118,.25)" : "rgba(0,20,8,.4)",
+                      background: isInvalid ? CRT_GREEN : schedule[t][s] ? "rgba(255,176,0,.25)" : "rgba(20,10,0,.4)",
                       boxShadow: bevel(isInvalid || schedule[t][s] ? "in-shallow" : "out-shallow", CRT_GREEN),
                     }}></button>
                 );
@@ -1072,7 +1048,7 @@ function DispatchTetrisGame({ onComplete }) {
           </div>
         ))}
       </div>
-      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{message}</p>
+      <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{message}</p>
     </div>
   );
 }
@@ -1113,23 +1089,23 @@ function WorkflowWiringGame({ onComplete }) {
   const allWired = Object.keys(wired).length === pairsRef.current.length;
   return (
     <div className="p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
+      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
         <span>Wired: {Object.keys(wired).length} / {pairsRef.current.length}</span><span>Mistakes: {mistakes}</span>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
-          <div className="text-[11px] font-semibold uppercase tracking-wide font-mono" style={{ color: "#4fbf7a" }}>Triggers</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide font-mono" style={{ color: "#c98a2e" }}>Triggers</div>
           {pairsRef.current.map((p) => (
             <button key={p.trigger} type="button" disabled={!!wired[p.trigger]} onClick={() => pickTrigger(p.trigger)}
               className="text-left text-[12px] font-semibold px-2.5 py-2 disabled:opacity-40"
               style={{
-                background: "rgba(0,20,8,.4)", color: "#8fffb0",
+                background: "rgba(20,10,0,.4)", color: "#ffd98a",
                 boxShadow: bevel(wired[p.trigger] || selected === p.trigger ? "in-shallow" : "out-shallow", CRT_GREEN),
               }}>{p.trigger}</button>
           ))}
         </div>
         <div className="flex flex-col gap-2">
-          <div className="text-[11px] font-semibold uppercase tracking-wide font-mono" style={{ color: "#4fbf7a" }}>Actions</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide font-mono" style={{ color: "#c98a2e" }}>Actions</div>
           {actionsRef.current.map((a) => {
             const isWiredAction = Object.values(wired).includes(a);
             const isWrong = flashWrong === a;
@@ -1137,14 +1113,14 @@ function WorkflowWiringGame({ onComplete }) {
               <button key={a} type="button" disabled={isWiredAction} onClick={() => pickAction(a)}
                 className="text-left text-[12px] font-semibold px-2.5 py-2 disabled:opacity-40"
                 style={{
-                  background: isWrong ? CRT_GREEN : "rgba(0,20,8,.4)", color: isWrong ? "#020402" : "#8fffb0",
+                  background: isWrong ? CRT_GREEN : "rgba(20,10,0,.4)", color: isWrong ? "#040200" : "#ffd98a",
                   boxShadow: bevel(isWiredAction || isWrong ? "in-shallow" : "out-shallow", CRT_GREEN),
                 }}>{a}</button>
             );
           })}
         </div>
       </div>
-      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{message}</p>
+      <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{message}</p>
       {allWired && <p className="text-center text-[12px] font-semibold font-mono" style={{ color: CONCEPT }}>Done — see the achievement note below.</p>}
     </div>
   );
@@ -1175,27 +1151,27 @@ function SystemStabilizerGame({ onComplete }) {
   function restart() { setValues({ CPU: 50, Memory: 50, "API Load": 50 }); setTimeLeft(DURATION); setDone(false); setMessage("Keep every meter between 25–75 until time runs out."); }
   return (
     <div className="p-4 flex flex-col gap-4">
-      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
+      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
         <span>Time: {timeLeft}s</span>
-        <button type="button" className="px-2 py-1" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={restart}>Restart</button>
+        <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={restart}>Restart</button>
       </div>
       <div className="flex flex-col gap-3">
         {METERS.map((m) => {
           const v = values[m]; const safe = v > 25 && v < 75;
-          const meterColor = safe ? CRT_GREEN : "#eafff0";
+          const meterColor = safe ? CRT_GREEN : "#fff3e0";
           return (
             <div key={m} className="flex items-center gap-3">
-              <div className="w-20 text-[11px] font-medium font-mono" style={{ color: "#4fbf7a" }}>{m}</div>
-              <div className="flex-1 h-3 overflow-hidden" style={{ boxShadow: bevel("in-shallow", CRT_GREEN), background: "rgba(0,20,8,.5)" }}>
+              <div className="w-20 text-[11px] font-medium font-mono" style={{ color: "#c98a2e" }}>{m}</div>
+              <div className="flex-1 h-3 overflow-hidden" style={{ boxShadow: bevel("in-shallow", CRT_GREEN), background: "rgba(20,10,0,.5)" }}>
                 <div className="h-full transition-[width]" style={{ width: v + "%", background: meterColor, opacity: safe ? 0.8 : 1, animation: safe ? "none" : "crt-icon-glow 1s ease-in-out infinite" }}></div>
               </div>
-              <button type="button" className="w-7 h-7" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => nudge(m, -1)}>&#8722;</button>
-              <button type="button" className="w-7 h-7" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => nudge(m, 1)}>+</button>
+              <button type="button" className="w-7 h-7" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => nudge(m, -1)}>&#8722;</button>
+              <button type="button" className="w-7 h-7" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => nudge(m, 1)}>+</button>
             </div>
           );
         })}
       </div>
-      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{message}</p>
+      <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{message}</p>
     </div>
   );
 }
@@ -1266,15 +1242,15 @@ function pipeIsSolved(grid, rows, cols) {
 function PipeCell({ cell, size, solved }) {
   if (cell.type === "empty") return <div style={{ width: size, height: size }} />;
   const mid = size / 2, thick = size * 0.24;
-  const color = solved ? "#c9ffe0" : (cell.type === "source" || cell.type === "dest") ? CONCEPT : CRT_GREEN;
+  const color = solved ? "#ffe3b3" : (cell.type === "source" || cell.type === "dest") ? CONCEPT : CRT_GREEN;
   return (
-    <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} style={{ filter: solved ? "drop-shadow(0 0 4px #c9ffe0)" : "none" }}>
+    <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} style={{ filter: solved ? "drop-shadow(0 0 4px #ffe3b3)" : "none" }}>
       {cell.connections.N && <rect x={mid - thick / 2} y={0} width={thick} height={mid + thick / 2} fill={color} />}
       {cell.connections.S && <rect x={mid - thick / 2} y={mid - thick / 2} width={thick} height={mid + thick / 2} fill={color} />}
       {cell.connections.W && <rect x={0} y={mid - thick / 2} width={mid + thick / 2} height={thick} fill={color} />}
       {cell.connections.E && <rect x={mid - thick / 2} y={mid - thick / 2} width={mid + thick / 2} height={thick} fill={color} />}
       <circle cx={mid} cy={mid} r={thick * 0.62} fill={color} />
-      {(cell.type === "source" || cell.type === "dest") && <circle cx={mid} cy={mid} r={thick * 0.28} fill="#020402" />}
+      {(cell.type === "source" || cell.type === "dest") && <circle cx={mid} cy={mid} r={thick * 0.28} fill="#040200" />}
     </svg>
   );
 }
@@ -1356,20 +1332,20 @@ function PipeFlowGame({ onComplete }) {
   return (
     <div className="p-4 flex flex-col gap-3 items-center relative">
       <FloatPops pops={pops} />
-      <div className="w-full flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
+      <div className="w-full flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
         <span>Level {levelIndex + 1}/{PIPE_LEVELS.length}</span><span>Time: {timeLeft}s</span><span>Score: {score}</span><span>Best: {best}</span>
       </div>
       <div className="inline-grid gap-0.5" style={{ gridTemplateColumns: "repeat(" + cols + ", " + cellSize + "px)" }}>
         {grid.map((row, r) => row.map((cell, c) => (
           <button key={r + "-" + c} type="button" onClick={() => clickCell(r, c)} disabled={cell.fixed || cell.type !== "pipe"}
             className="flex items-center justify-center p-0"
-            style={{ width: cellSize, height: cellSize, background: cell.type === "empty" ? "transparent" : "rgba(0,20,8,.4)", boxShadow: cell.type === "empty" ? "none" : bevel("out-shallow", CRT_GREEN), cursor: cell.fixed || cell.type !== "pipe" ? "default" : "pointer" }}>
+            style={{ width: cellSize, height: cellSize, background: cell.type === "empty" ? "transparent" : "rgba(20,10,0,.4)", boxShadow: cell.type === "empty" ? "none" : bevel("out-shallow", CRT_GREEN), cursor: cell.fixed || cell.type !== "pipe" ? "default" : "pointer" }}>
             <PipeCell cell={cell} size={cellSize - 8} solved={solved} />
           </button>
         )))}
       </div>
-      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{message}</p>
-      {done && <button type="button" className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={restart}>Restart</button>}
+      <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{message}</p>
+      {done && <button type="button" className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#040200", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={restart}>Restart</button>}
     </div>
   );
 }
@@ -1379,9 +1355,9 @@ function PipeFlowGame({ onComplete }) {
    to ping/refill it. A new gauge comes online every 15s survived (up to 6). Pinging a
    gauge that was already in its pulsing critical zone counts as a clutch "save" for
    bonus score — the tension is deliberately different from the arcade's other,
-   turn-based puzzles. Critical state reads via a bright near-white pulse (`#eafff0`,
+   turn-based puzzles. Critical state reads via a bright near-white pulse (`#fff3e0`,
    same value SystemStabilizerGame already uses for unsafe meters), never red — this
-   arcade stays strictly mono-CRT-green, no red/yellow/blue state colors anywhere. */
+   arcade stays strictly mono-CRT-accent, no red/yellow/blue state colors anywhere. */
 const PLATE_NAMES = ["API Gateway", "Auth Service", "Job Queue", "Notifications", "Billing Sync", "Search Index"];
 function SpinningPlatesGame({ onComplete }) {
   const [plates, setPlates] = useState(() => PLATE_NAMES.slice(0, 3).map((n) => ({ name: n, value: 100 })));
@@ -1452,7 +1428,7 @@ function SpinningPlatesGame({ onComplete }) {
   return (
     <div className="p-4 flex flex-col gap-3 relative" style={{ animation: done ? "arcade-shake .4s ease-in-out" : "none" }}>
       <FloatPops pops={pops} />
-      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
+      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
         <span>Time: {elapsed}s</span><span>Score: {score}</span><span>Best: {best}</span>
       </div>
       <div className="flex flex-col gap-2">
@@ -1461,17 +1437,17 @@ function SpinningPlatesGame({ onComplete }) {
           return (
             <button key={p.name} type="button" onClick={() => ping(i)} disabled={done}
               className="flex items-center gap-3 px-2 py-1.5 text-left disabled:opacity-60"
-              style={{ background: "rgba(0,20,8,.4)", boxShadow: bevel("out-shallow", CRT_GREEN) }}>
-              <span className="w-24 text-[11px] font-medium font-mono truncate" style={{ color: "#4fbf7a" }}>{p.name}</span>
-              <span className="flex-1 h-3 overflow-hidden" style={{ boxShadow: bevel("in-shallow", CRT_GREEN), background: "rgba(0,20,8,.5)" }}>
-                <span className="block h-full transition-[width]" style={{ width: p.value + "%", background: critical ? "#eafff0" : CRT_GREEN, animation: critical ? "arcade-pulse-critical .5s ease-in-out infinite" : "none" }}></span>
+              style={{ background: "rgba(20,10,0,.4)", boxShadow: bevel("out-shallow", CRT_GREEN) }}>
+              <span className="w-24 text-[11px] font-medium font-mono truncate" style={{ color: "#c98a2e" }}>{p.name}</span>
+              <span className="flex-1 h-3 overflow-hidden" style={{ boxShadow: bevel("in-shallow", CRT_GREEN), background: "rgba(20,10,0,.5)" }}>
+                <span className="block h-full transition-[width]" style={{ width: p.value + "%", background: critical ? "#fff3e0" : CRT_GREEN, animation: critical ? "arcade-pulse-critical .5s ease-in-out infinite" : "none" }}></span>
               </span>
             </button>
           );
         })}
       </div>
-      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{message}</p>
-      {done && <button type="button" className="self-center px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={restart}>Restart</button>}
+      <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{message}</p>
+      {done && <button type="button" className="self-center px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#040200", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={restart}>Restart</button>}
     </div>
   );
 }
@@ -1554,7 +1530,7 @@ function FraudOrFineGame({ onComplete }) {
       setLives((l) => l - 1);
       setCombo(0);
       setFlash("bad");
-      pushPop(action === null ? "MISSED" : "WRONG", "#eafff0");
+      pushPop(action === null ? "MISSED" : "WRONG", "#fff3e0");
       playArcadeFailSound();
       setMessage(txn.isFraud ? "That one was fraud." : "That one was legit.");
     }
@@ -1577,25 +1553,25 @@ function FraudOrFineGame({ onComplete }) {
   return (
     <div className="p-4 flex flex-col gap-3 relative" style={{ animation: flash === "bad" ? "arcade-shake .3s ease-in-out" : "none" }}>
       <FloatPops pops={pops} />
-      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
+      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
         <span>Score: {score}</span><span>Lives: {"♥".repeat(Math.max(lives, 0))}</span><span>Best: {best}</span>
       </div>
       {!done && txn && (
-        <div className="p-3.5 flex flex-col gap-1.5" style={{ background: flash === "good" ? "rgba(63,230,118,.18)" : flash === "bad" ? "rgba(234,255,240,.32)" : "rgba(0,20,8,.4)", boxShadow: bevel("out-shallow", CRT_GREEN), transition: "background .2s" }}>
+        <div className="p-3.5 flex flex-col gap-1.5" style={{ background: flash === "good" ? "rgba(255,176,0,.18)" : flash === "bad" ? "rgba(255,243,224,.32)" : "rgba(20,10,0,.4)", boxShadow: bevel("out-shallow", CRT_GREEN), transition: "background .2s" }}>
           <div className="flex items-center justify-between">
-            <span className="text-[16px] font-bold font-mono" style={{ color: "#8fffb0" }}>{txn.amount}</span>
-            <span className="text-[11px] font-semibold font-mono" style={{ color: "#4fbf7a" }}>{timeLeft}s</span>
+            <span className="text-[16px] font-bold font-mono" style={{ color: "#ffd98a" }}>{txn.amount}</span>
+            <span className="text-[11px] font-semibold font-mono" style={{ color: "#c98a2e" }}>{timeLeft}s</span>
           </div>
-          <div className="text-[11px] font-medium font-mono" style={{ color: "#4fbf7a" }}>{txn.location} · {txn.velocity}</div>
-          <div className="text-[14px] font-medium" style={{ color: "#4fbf7a" }}>{txn.note}</div>
+          <div className="text-[11px] font-medium font-mono" style={{ color: "#c98a2e" }}>{txn.location} · {txn.velocity}</div>
+          <div className="text-[14px] font-medium" style={{ color: "#c98a2e" }}>{txn.note}</div>
         </div>
       )}
       <div className="flex gap-2">
-        <button type="button" disabled={done || locked} className="flex-1 px-3 py-2 text-[13px] font-semibold disabled:opacity-40" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={() => decide("approve")}>Approve</button>
-        <button type="button" disabled={done || locked} className="flex-1 px-3 py-2 text-[13px] font-semibold disabled:opacity-40" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => decide("flag")}>Flag</button>
+        <button type="button" disabled={done || locked} className="flex-1 px-3 py-2 text-[13px] font-semibold disabled:opacity-40" style={{ background: CRT_GREEN, color: "#040200", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={() => decide("approve")}>Approve</button>
+        <button type="button" disabled={done || locked} className="flex-1 px-3 py-2 text-[13px] font-semibold disabled:opacity-40" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => decide("flag")}>Flag</button>
       </div>
-      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{message}</p>
-      {done && <button type="button" className="self-center px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={restart}>Restart</button>}
+      <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{message}</p>
+      {done && <button type="button" className="self-center px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#040200", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={restart}>Restart</button>}
     </div>
   );
 }
@@ -1623,12 +1599,12 @@ function ArcadeWindow() {
       {view === "menu" && (
         <div className="grid gap-3 mt-3">
           {GAMES.map((g) => (
-            <div key={g.id} className="p-3.5 flex flex-col gap-2" style={{ background: "rgba(0,20,8,.4)", boxShadow: bevel("out-shallow", CRT_GREEN) }}>
-              <h3 className="text-[16px] font-bold m-0 font-mono" style={{ color: "#8fffb0" }}>{g.title}{g.cluster && <span className="ml-2 text-[10px] font-medium" style={{ color: "#4fbf7a" }}>({g.cluster})</span>}</h3>
-              <p className="text-[14px] font-medium leading-relaxed m-0" style={{ color: "#4fbf7a" }}>{g.desc}</p>
+            <div key={g.id} className="p-3.5 flex flex-col gap-2" style={{ background: "rgba(20,10,0,.4)", boxShadow: bevel("out-shallow", CRT_GREEN) }}>
+              <h3 className="text-[16px] font-bold m-0 font-mono" style={{ color: "#ffd98a" }}>{g.title}{g.cluster && <span className="ml-2 text-[10px] font-medium" style={{ color: "#c98a2e" }}>({g.cluster})</span>}</h3>
+              <p className="text-[14px] font-medium leading-relaxed m-0" style={{ color: "#c98a2e" }}>{g.desc}</p>
               <div className="flex gap-2 mt-1">
-                <button type="button" className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={() => { setAchievement(null); setView(g.id); }}>Play</button>
-                <button type="button" className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => skip(g)}>Skip &amp; Read Summary</button>
+                <button type="button" className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#040200", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={() => { setAchievement(null); setView(g.id); }}>Play</button>
+                <button type="button" className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => skip(g)}>Skip &amp; Read Summary</button>
               </div>
             </div>
           ))}
@@ -1636,7 +1612,7 @@ function ArcadeWindow() {
       )}
       {view !== "menu" && (
         <div className="mt-3">
-          <button type="button" className="text-[12px] font-semibold hover:brightness-125" style={{ color: "#4fbf7a" }} onClick={backToMenu}>&larr; Back to Arcade</button>
+          <button type="button" className="text-[12px] font-semibold hover:brightness-125" style={{ color: "#c98a2e" }} onClick={backToMenu}>&larr; Back to Arcade</button>
           <div className="mt-1">
             {view === "route-racer" && <RouteRacerGame onComplete={onGameComplete} />}
             {view === "dispatch-tetris" && <DispatchTetrisGame onComplete={onGameComplete} />}
@@ -1645,14 +1621,14 @@ function ArcadeWindow() {
             {view === "pipe-flow" && <PipeFlowGame onComplete={onGameComplete} />}
             {view === "spinning-plates" && <SpinningPlatesGame onComplete={onGameComplete} />}
             {view === "fraud-or-fine" && <FraudOrFineGame onComplete={onGameComplete} />}
-            {view === "summary" && <p className="text-[14px] font-medium leading-relaxed p-4" style={{ color: "#8fffb0" }}>{summaryText}</p>}
+            {view === "summary" && <p className="text-[14px] font-medium leading-relaxed p-4" style={{ color: "#ffd98a" }}>{summaryText}</p>}
           </div>
         </div>
       )}
       {achievement && (
-        <div className="mt-4 p-3.5" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-deep", CRT_GREEN) }}>
-          <h4 className="m-0 text-[16px] font-bold font-mono" style={{ color: "#8fffb0" }}>{achievement.title}</h4>
-          <p className="m-0 mt-1 text-[14px] font-medium leading-relaxed" style={{ color: "#4fbf7a" }}>{achievement.text}</p>
+        <div className="mt-4 p-3.5" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-deep", CRT_GREEN) }}>
+          <h4 className="m-0 text-[16px] font-bold font-mono" style={{ color: "#ffd98a" }}>{achievement.title}</h4>
+          <p className="m-0 mt-1 text-[14px] font-medium leading-relaxed" style={{ color: "#c98a2e" }}>{achievement.text}</p>
         </div>
       )}
     </div>
@@ -1762,12 +1738,12 @@ function Taskbar({ onStartClick, running, onRunningClick, theme }) {
   }, []);
   return (
     <div className="fixed left-0 right-0 bottom-0 h-[52px] flex items-center gap-3 px-3 z-[800]" style={{ background: t.taskbarBg, backdropFilter: t.winBlur === "none" ? undefined : "blur(10px)", boxShadow: bevel("out-shallow", t.winBorder) + ", inset 0 1px 0 rgba(0,0,0,.4)" }}>
-      <button type="button" onClick={onStartClick} className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[13px] font-semibold" style={{ background: t.accent, color: "#020402", boxShadow: bevel("out-shallow", t.accent) }}>&#9635; Start</button>
+      <button type="button" onClick={onStartClick} className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[13px] font-semibold" style={{ background: t.accent, color: "#040200", boxShadow: bevel("out-shallow", t.accent) }}>&#9635; Start</button>
       <div className="flex-1 flex gap-1.5 overflow-x-auto">
         {running.map((r) => (
           <button key={r.id} type="button" onClick={() => onRunningClick(r.id)}
             className="px-2.5 py-1 font-mono font-semibold text-[13px] whitespace-nowrap"
-            style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel(r.focused ? "in-shallow" : "out-shallow", r.focused ? t.accent : t.winBorder), color: r.focused ? t.chromeText : t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{r.title}</button>
+            style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel(r.focused ? "in-shallow" : "out-shallow", r.focused ? t.accent : t.winBorder), color: r.focused ? t.chromeText : t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{r.title}</button>
         ))}
       </div>
       <span aria-hidden="true" className="hidden sm:inline font-mono text-[11px]" style={{ color: t.chromeTextDim, opacity: .6, fontFamily: t.fontChrome || undefined }}>{telemetry}</span>
@@ -2098,13 +2074,13 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
           </div>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {suggestions.map((s, i) => (
-              <button key={i} type="button" disabled={thinking} onClick={() => ask(s)} className="px-2 py-0.5 text-[12px] font-semibold disabled:opacity-40" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>{s}</button>
+              <button key={i} type="button" disabled={thinking} onClick={() => ask(s)} className="px-2 py-0.5 text-[12px] font-semibold disabled:opacity-40" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>{s}</button>
             ))}
           </div>
           <form onSubmit={onSubmit} className="flex gap-1.5">
             <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask a question…" autoComplete="off" disabled={thinking}
               className="flex-1 px-2 py-1 text-[13px] font-medium bg-transparent outline-none disabled:opacity-40" style={{ border: "none", boxShadow: bevel("in-shallow", t.winBorder), color: t.chromeText, caretColor: t.accent }} />
-            <button type="submit" disabled={thinking} className="px-2.5 py-1 text-[12px] font-semibold disabled:opacity-40" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeText }}>Ask</button>
+            <button type="submit" disabled={thinking} className="px-2.5 py-1 text-[12px] font-semibold disabled:opacity-40" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeText }}>Ask</button>
           </form>
         </div>
       )}
@@ -2140,8 +2116,8 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
             </radialGradient>
             <radialGradient id="assistantScreen" cx="45%" cy="35%" r="80%">
               <stop offset="0%" stopColor={shade(t.accent, -0.55)} />
-              <stop offset="60%" stopColor="#081a0d" />
-              <stop offset="100%" stopColor="#020a04" />
+              <stop offset="60%" stopColor="#1a0d02" />
+              <stop offset="100%" stopColor="#0a0402" />
             </radialGradient>
             <linearGradient id="assistantTread" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#3c4040" />
@@ -2468,7 +2444,6 @@ function App({ worldData, onReboot }) {
         onDoubleClick={(e) => { if (e.target === e.currentTarget) setCreateMenu({ x: e.clientX, y: e.clientY }); }}>
         <ScanlineBackground color={theme.accent} />
         <GlitchWatermark color={theme.accent} />
-        <CRTOverlay color={theme.accent} />
 
         {desktopIcons.map((a, i) => (
           <DesktopIcon key={a.id} id={a.id} title={iconNames[a.id] || a.title} icon={a.icon} color={theme.accent}
