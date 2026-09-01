@@ -351,20 +351,40 @@ is that extracted data (regex-parsed from the real bundle, values untouched).
   product names. Each dashboard is badged "Real data, concept dashboard UI."
 - **`status.sh` output** — streams real entity names but simulated port
   numbers/latency; badged "Simulated output" inline.
-- **Four Arcade mini-games**: Route Racer, Dispatch Tetris, Workflow Wiring,
-  System Stabilizer. Illustrative analogies only (grid navigation,
-  slot-fitting, trigger-to-action matching, meter-balancing) — **none
-  simulate or represent Zuper's real algorithms**, stated explicitly on
-  every game screen, the post-game achievement banner, and the "Skip & Read
-  Summary" copy. Restyled to match the mono-CRT look: the old orange brand
-  accent and red/yellow/blue state colors (invalid moves, warning meters,
-  visited markers) are gone, replaced by brightness/fill variation within
-  the same green — e.g. an invalid Dispatch Tetris slot flashes to a solid
-  green "invert" instead of turning red, matching how a real green-phosphor
-  terminal signals an error. Same bevel-textured buttons/panels as the rest
-  of the OS chrome.
+- **Seven Arcade mini-games**: Route Racer, Dispatch Tetris, Workflow Wiring,
+  System Stabilizer, Pipe Flow, Spinning Plates, Fraud or Fine?. Illustrative
+  analogies only (grid navigation, slot-fitting, trigger-to-action matching,
+  meter-balancing, rotate-the-pipe, real-time attention-splitting,
+  judgment-under-uncertainty) — **none simulate or represent Zuper's real
+  algorithms**, stated explicitly on every game screen, the post-game
+  achievement banner, and the "Skip & Read Summary" copy. Restyled to match
+  the mono-CRT look: the old orange brand accent and red/yellow/blue state
+  colors (invalid moves, warning meters, visited markers) are gone, replaced
+  by brightness/fill variation within the same green — e.g. an invalid
+  Dispatch Tetris slot flashes to a solid green "invert" instead of turning
+  red, and the three newer games' critical/miss states use a bright
+  near-white-green pulse (`#eafff0`, the same value System Stabilizer
+  already used for unsafe meters) rather than red, matching how a real
+  green-phosphor terminal signals an error. Same bevel-textured
+  buttons/panels as the rest of the OS chrome.
+  - **The three newer games add real scoring/juice** on top of that:
+    a per-game best score kept in this browser's `localStorage`
+    (`loadHighScore`/`saveHighScore` in app.jsx), a letter grade (S/A/B/C)
+    on the end-of-run summary, floating "+N"/"MISS" pop-up feedback
+    (`FloatPops`), a screen-shake on failure, and distinct square/sawtooth
+    "8-bit" success/fail sound cues (`playArcadeSuccessSound`/
+    `playArcadeFailSound`) — synthesized the same way as the assistant's
+    sounds (Web Audio only, nothing sampled) but flatter/punchier, on
+    purpose, to feel distinct from the assistant's cute vibrato chirps.
+    Pipe Flow (`data-pipeline`) is a rotate-the-segment puzzle that grows
+    each level; Spinning Plates (`command-center`) is a real-time
+    attention-splitting survival game where pinging a gauge already in its
+    critical zone is a bonus "save"; Fraud or Fine? (`payment-processing`)
+    is a fast approve/flag judgment call where a few transactions are
+    deliberately legit-but-unusual, baiting an over-eager flag.
 - **Achievement banner** after a win is local UI only — nothing scored,
-  stored, or transmitted; notes a VIP-demo link as an unbuilt idea.
+  stored, or transmitted anywhere off this browser; any high score shown
+  lives in `localStorage` only. Notes a VIP-demo link as an unbuilt idea.
 - **Taskbar telemetry** is decorative sine/cosine motion, not real data.
 
 ## Structure

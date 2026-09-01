@@ -79,6 +79,12 @@
     .overflow-y-auto { overflow-y: auto !important; }
     .overflow-x-hidden { overflow-x: hidden !important; }
     @keyframes zuper-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    /* Arcade game "juice" — shared across Pipe Flow / Spinning Plates / Fraud or
+       Fine?: a shake on failure, a floating score/status pop that drifts up and
+       fades, and a pulsing warning state for anything about to fail. */
+    @keyframes arcade-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+    @keyframes arcade-pop-fade { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(1.15); } }
+    @keyframes arcade-pulse-critical { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
     /* Assistant mascot animation states — original, hand-built states (idle blink,
        greeting ear-wiggle, thinking head-tilt, tail-wag) in the same spirit as a
        classic assistant character's named animations, but our own transforms on our

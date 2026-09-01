@@ -155,6 +155,38 @@ function shuffle(arr) {
   return a;
 }
 
+/* ---------- Arcade game persistence/scoring helpers — a per-game best score kept in
+   localStorage (classic "beat your own high score" hook) and a simple letter-grade
+   bucket for the end-of-run summary. ---------- */
+function loadHighScore(key) {
+  try { return parseInt(localStorage.getItem("zuper-os-arcade-hs-" + key), 10) || 0; } catch (e) { return 0; }
+}
+function saveHighScore(key, score) {
+  try {
+    const prev = loadHighScore(key);
+    if (score > prev) { localStorage.setItem("zuper-os-arcade-hs-" + key, String(score)); return true; }
+  } catch (e) {}
+  return false;
+}
+function gradeForScore(score, sMin, aMin, bMin) {
+  if (score >= sMin) return "S"; if (score >= aMin) return "A"; if (score >= bMin) return "B"; return "C";
+}
+/* Transient "+10" / "MISS"-style floating text feedback, shared across arcade games.
+   Each game owns its own `pops` array in state and pushes {id,text,color[,x,y]}; this
+   just renders and lets the CSS animation fade them out (game removes via setTimeout). */
+function FloatPops({ pops }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {pops.map((p) => (
+        <span key={p.id} className="absolute font-mono font-bold text-[14px]"
+          style={{ left: (p.x != null ? p.x : 50) + "%", top: (p.y != null ? p.y : 10) + "%", color: p.color, textShadow: "0 0 6px " + p.color, animation: "arcade-pop-fade .75s ease-out forwards" }}>
+          {p.text}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /* ---------- Concept app file per real cluster (UI convenience naming — not confirmed real Zuper product names) ---------- */
 const CLUSTER_APPS = {
   "command-center": "CommandConsole.app",
@@ -1168,18 +1200,421 @@ function SystemStabilizerGame({ onComplete }) {
   );
 }
 
+/* ================= Pipe Flow — Data Pipeline =================
+   A rotate-the-segment pipe puzzle: click a pipe piece to spin it 90°, connect the
+   glowing source to the target before the run clock hits zero. Grid grows each level.
+   The solved layout is generated first (a random monotonic right/down path from
+   corner to corner), then every middle segment is scrambled by a known rotation count
+   — so every generated puzzle is guaranteed solvable by rotating only the clickable
+   pieces, never the fixed source/target anchors. */
+const PIPE_LEVELS = [{ rows: 3, cols: 3 }, { rows: 3, cols: 4 }, { rows: 4, cols: 4 }, { rows: 4, cols: 5 }];
+const PIPE_DIRS = { N: [-1, 0], E: [0, 1], S: [1, 0], W: [0, -1] };
+const PIPE_OPP = { N: "S", S: "N", E: "W", W: "E" };
+const PIPE_ORDER = ["N", "E", "S", "W"];
+const PIPE_TOTAL_TIME = 90;
+
+function pipeRotate(conn) {
+  const next = {};
+  for (let i = 0; i < 4; i++) next[PIPE_ORDER[(i + 1) % 4]] = conn[PIPE_ORDER[i]];
+  return next;
+}
+function pipeEmptyConn() { return { N: false, E: false, S: false, W: false }; }
+function generatePipeLevel(rows, cols) {
+  const path = [{ r: 0, c: 0 }];
+  let r = 0, c = 0;
+  while (r < rows - 1 || c < cols - 1) {
+    let goRight;
+    if (r === rows - 1) goRight = true;
+    else if (c === cols - 1) goRight = false;
+    else goRight = Math.random() < 0.5;
+    if (goRight) c++; else r++;
+    path.push({ r, c });
+  }
+  const grid = [];
+  for (let i = 0; i < rows; i++) { const row = []; for (let j = 0; j < cols; j++) row.push({ type: "empty", connections: pipeEmptyConn(), fixed: true }); grid.push(row); }
+  for (let i = 0; i < path.length; i++) {
+    const cur = path[i];
+    const conn = pipeEmptyConn();
+    if (i > 0) { const prev = path[i - 1]; const inDir = prev.r < cur.r ? "N" : prev.r > cur.r ? "S" : prev.c < cur.c ? "W" : "E"; conn[inDir] = true; }
+    if (i < path.length - 1) { const nxt = path[i + 1]; const outDir = nxt.r > cur.r ? "S" : nxt.r < cur.r ? "N" : nxt.c > cur.c ? "E" : "W"; conn[outDir] = true; }
+    const isSource = i === 0, isDest = i === path.length - 1;
+    let finalConn = conn;
+    const fixed = isSource || isDest;
+    if (!fixed) { const spins = 1 + Math.floor(Math.random() * 3); for (let s = 0; s < spins; s++) finalConn = pipeRotate(finalConn); }
+    grid[cur.r][cur.c] = { type: isSource ? "source" : isDest ? "dest" : "pipe", connections: finalConn, fixed: fixed };
+  }
+  return grid;
+}
+function pipeIsSolved(grid, rows, cols) {
+  const visited = new Set(["0,0"]);
+  const stack = [[0, 0]];
+  while (stack.length) {
+    const cur = stack.pop(); const r = cur[0], c = cur[1];
+    const cell = grid[r][c];
+    for (const dir of PIPE_ORDER) {
+      if (!cell.connections[dir]) continue;
+      const d = PIPE_DIRS[dir]; const nr = r + d[0], nc = c + d[1];
+      if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+      const neighbor = grid[nr][nc];
+      if (!neighbor.connections[PIPE_OPP[dir]]) continue;
+      const key = nr + "," + nc;
+      if (!visited.has(key)) { visited.add(key); stack.push([nr, nc]); }
+    }
+  }
+  return visited.has((rows - 1) + "," + (cols - 1));
+}
+function PipeCell({ cell, size, solved }) {
+  if (cell.type === "empty") return <div style={{ width: size, height: size }} />;
+  const mid = size / 2, thick = size * 0.24;
+  const color = solved ? "#c9ffe0" : (cell.type === "source" || cell.type === "dest") ? CONCEPT : CRT_GREEN;
+  return (
+    <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} style={{ filter: solved ? "drop-shadow(0 0 4px #c9ffe0)" : "none" }}>
+      {cell.connections.N && <rect x={mid - thick / 2} y={0} width={thick} height={mid + thick / 2} fill={color} />}
+      {cell.connections.S && <rect x={mid - thick / 2} y={mid - thick / 2} width={thick} height={mid + thick / 2} fill={color} />}
+      {cell.connections.W && <rect x={0} y={mid - thick / 2} width={mid + thick / 2} height={thick} fill={color} />}
+      {cell.connections.E && <rect x={mid - thick / 2} y={mid - thick / 2} width={mid + thick / 2} height={thick} fill={color} />}
+      <circle cx={mid} cy={mid} r={thick * 0.62} fill={color} />
+      {(cell.type === "source" || cell.type === "dest") && <circle cx={mid} cy={mid} r={thick * 0.28} fill="#020402" />}
+    </svg>
+  );
+}
+function PipeFlowGame({ onComplete }) {
+  const [levelIndex, setLevelIndex] = useState(0);
+  const [grid, setGrid] = useState(() => generatePipeLevel(PIPE_LEVELS[0].rows, PIPE_LEVELS[0].cols));
+  const [solved, setSolved] = useState(false);
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(PIPE_TOTAL_TIME);
+  const [done, setDone] = useState(false);
+  const [clearedLevels, setClearedLevels] = useState(0);
+  const [message, setMessage] = useState("Click a pipe segment to rotate it. Connect the glowing source to the target.");
+  const [pops, setPops] = useState([]);
+  const popIdRef = useRef(0);
+  const [best] = useState(() => loadHighScore("pipe-flow"));
+
+  useEffect(() => {
+    if (done || solved) return;
+    const id = setInterval(() => setTimeLeft((t) => (t <= 1 ? 0 : t - 1)), 1000);
+    return () => clearInterval(id);
+  }, [done, solved]);
+  useEffect(() => {
+    if (done) return;
+    if (timeLeft === 0) { setDone(true); setMessage("Out of time."); playArcadeFailSound(); }
+    // eslint-disable-next-line
+  }, [timeLeft]);
+  useEffect(() => {
+    if (!done) return;
+    const beat = saveHighScore("pipe-flow", score);
+    const grade = gradeForScore(score, 260, 160, 80);
+    const summary = "Cleared " + clearedLevels + " / " + PIPE_LEVELS.length + " pipeline(s). Score: " + score + " (Grade " + grade + ")" + (beat ? " — new high score!" : "");
+    setTimeout(() => onComplete("Pipe Flow complete", summary), 400);
+    // eslint-disable-next-line
+  }, [done]);
+
+  function pushPop(text, color) {
+    const id = popIdRef.current++;
+    setPops((p) => p.concat([{ id, text, color }]));
+    setTimeout(() => setPops((p) => p.filter((pp) => pp.id !== id)), 750);
+  }
+  function clickCell(r, c) {
+    if (done || solved) return;
+    const cell = grid[r][c];
+    if (cell.fixed || cell.type !== "pipe") return;
+    const rows = grid.length, cols = grid[0].length;
+    const nextGrid = grid.map((row) => row.slice());
+    nextGrid[r][c] = { type: "pipe", connections: pipeRotate(cell.connections), fixed: false };
+    setGrid(nextGrid);
+    if (pipeIsSolved(nextGrid, rows, cols)) {
+      const gained = 50 + timeLeft;
+      setScore((s) => s + gained);
+      setSolved(true);
+      setClearedLevels((n) => n + 1);
+      pushPop("+" + gained, CRT_GREEN);
+      playArcadeSuccessSound();
+      const isLast = levelIndex + 1 >= PIPE_LEVELS.length;
+      setMessage(isLast ? "All pipelines connected!" : "Connected! Next pipeline loading…");
+      setTimeout(() => {
+        if (!isLast) {
+          const next = PIPE_LEVELS[levelIndex + 1];
+          setLevelIndex((li) => li + 1);
+          setGrid(generatePipeLevel(next.rows, next.cols));
+          setSolved(false);
+          setMessage("Click a pipe segment to rotate it. Connect the glowing source to the target.");
+        } else {
+          setDone(true);
+        }
+      }, 900);
+    }
+  }
+  function restart() {
+    setLevelIndex(0); setGrid(generatePipeLevel(PIPE_LEVELS[0].rows, PIPE_LEVELS[0].cols));
+    setSolved(false); setScore(0); setTimeLeft(PIPE_TOTAL_TIME); setDone(false); setClearedLevels(0);
+    setMessage("Click a pipe segment to rotate it. Connect the glowing source to the target.");
+  }
+
+  const rows = grid.length, cols = grid[0].length;
+  const cellSize = cols >= 5 ? 44 : 52;
+  return (
+    <div className="p-4 flex flex-col gap-3 items-center relative">
+      <FloatPops pops={pops} />
+      <div className="w-full flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
+        <span>Level {levelIndex + 1}/{PIPE_LEVELS.length}</span><span>Time: {timeLeft}s</span><span>Score: {score}</span><span>Best: {best}</span>
+      </div>
+      <div className="inline-grid gap-0.5" style={{ gridTemplateColumns: "repeat(" + cols + ", " + cellSize + "px)" }}>
+        {grid.map((row, r) => row.map((cell, c) => (
+          <button key={r + "-" + c} type="button" onClick={() => clickCell(r, c)} disabled={cell.fixed || cell.type !== "pipe"}
+            className="flex items-center justify-center p-0"
+            style={{ width: cellSize, height: cellSize, background: cell.type === "empty" ? "transparent" : "rgba(0,20,8,.4)", boxShadow: cell.type === "empty" ? "none" : bevel("out-shallow", CRT_GREEN), cursor: cell.fixed || cell.type !== "pipe" ? "default" : "pointer" }}>
+            <PipeCell cell={cell} size={cellSize - 8} solved={solved} />
+          </button>
+        )))}
+      </div>
+      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{message}</p>
+      {done && <button type="button" className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={restart}>Restart</button>}
+    </div>
+  );
+}
+
+/* ================= Spinning Plates — Command Center =================
+   Real-time attention-splitting: several system gauges decay continuously, click one
+   to ping/refill it. A new gauge comes online every 15s survived (up to 6). Pinging a
+   gauge that was already in its pulsing critical zone counts as a clutch "save" for
+   bonus score — the tension is deliberately different from the arcade's other,
+   turn-based puzzles. Critical state reads via a bright near-white pulse (`#eafff0`,
+   same value SystemStabilizerGame already uses for unsafe meters), never red — this
+   arcade stays strictly mono-CRT-green, no red/yellow/blue state colors anywhere. */
+const PLATE_NAMES = ["API Gateway", "Auth Service", "Job Queue", "Notifications", "Billing Sync", "Search Index"];
+function SpinningPlatesGame({ onComplete }) {
+  const [plates, setPlates] = useState(() => PLATE_NAMES.slice(0, 3).map((n) => ({ name: n, value: 100 })));
+  const [elapsed, setElapsed] = useState(0);
+  const [saves, setSaves] = useState(0);
+  const [done, setDone] = useState(false);
+  const [message, setMessage] = useState("Click a system to stabilize it before it goes critical.");
+  const [pops, setPops] = useState([]);
+  const popIdRef = useRef(0);
+  const [best] = useState(() => loadHighScore("spinning-plates"));
+
+  useEffect(() => {
+    if (done) return;
+    const id = setInterval(() => {
+      setElapsed((e) => e + 1);
+      setPlates((prev) => {
+        const decay = 3.5 + Math.random() * 4;
+        const next = prev.map((p) => ({ name: p.name, value: clamp(p.value - decay, 0, 100) }));
+        const failed = next.find((p) => p.value <= 0);
+        if (failed) { setDone(true); setMessage(failed.name + " went offline. Run over."); playArcadeFailSound(); }
+        return next;
+      });
+    }, 900);
+    return () => clearInterval(id);
+  }, [done]);
+  useEffect(() => {
+    if (done) return;
+    if (elapsed > 0 && elapsed % 15 === 0) {
+      setPlates((prev) => (prev.length < PLATE_NAMES.length ? prev.concat([{ name: PLATE_NAMES[prev.length], value: 100 }]) : prev));
+      if (elapsed / 15 <= PLATE_NAMES.length - 3) pushPop("NEW SYSTEM ONLINE", CONCEPT);
+    }
+    // eslint-disable-next-line
+  }, [elapsed]);
+  useEffect(() => {
+    if (!done) return;
+    const score = elapsed * 4 + saves * 15;
+    const beat = saveHighScore("spinning-plates", score);
+    const grade = gradeForScore(score, 260, 160, 90);
+    const summary = "Survived " + elapsed + "s, stabilized " + saves + " critical system(s). Score: " + score + " (Grade " + grade + ")" + (beat ? " — new high score!" : "");
+    setTimeout(() => onComplete("Spinning Plates complete", summary), 400);
+    // eslint-disable-next-line
+  }, [done]);
+
+  function pushPop(text, color) {
+    const id = popIdRef.current++;
+    const x = 15 + Math.random() * 60, y = 8 + Math.random() * 30;
+    setPops((p) => p.concat([{ id, text, color, x, y }]));
+    setTimeout(() => setPops((p) => p.filter((pp) => pp.id !== id)), 750);
+  }
+  function ping(i) {
+    if (done) return;
+    setPlates((prev) => {
+      const p = prev[i];
+      const wasCritical = p.value <= 25;
+      const next = prev.slice();
+      next[i] = { name: p.name, value: clamp(p.value + 32, 0, 100) };
+      if (wasCritical) { setSaves((s) => s + 1); pushPop("+15 SAVED!", CRT_GREEN); playArcadeSuccessSound(); }
+      return next;
+    });
+  }
+  function restart() {
+    setPlates(PLATE_NAMES.slice(0, 3).map((n) => ({ name: n, value: 100 })));
+    setElapsed(0); setSaves(0); setDone(false);
+    setMessage("Click a system to stabilize it before it goes critical.");
+  }
+
+  const score = elapsed * 4 + saves * 15;
+  return (
+    <div className="p-4 flex flex-col gap-3 relative" style={{ animation: done ? "arcade-shake .4s ease-in-out" : "none" }}>
+      <FloatPops pops={pops} />
+      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
+        <span>Time: {elapsed}s</span><span>Score: {score}</span><span>Best: {best}</span>
+      </div>
+      <div className="flex flex-col gap-2">
+        {plates.map((p, i) => {
+          const critical = p.value <= 25;
+          return (
+            <button key={p.name} type="button" onClick={() => ping(i)} disabled={done}
+              className="flex items-center gap-3 px-2 py-1.5 text-left disabled:opacity-60"
+              style={{ background: "rgba(0,20,8,.4)", boxShadow: bevel("out-shallow", CRT_GREEN) }}>
+              <span className="w-24 text-[11px] font-medium font-mono truncate" style={{ color: "#4fbf7a" }}>{p.name}</span>
+              <span className="flex-1 h-3 overflow-hidden" style={{ boxShadow: bevel("in-shallow", CRT_GREEN), background: "rgba(0,20,8,.5)" }}>
+                <span className="block h-full transition-[width]" style={{ width: p.value + "%", background: critical ? "#eafff0" : CRT_GREEN, animation: critical ? "arcade-pulse-critical .5s ease-in-out infinite" : "none" }}></span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{message}</p>
+      {done && <button type="button" className="self-center px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={restart}>Restart</button>}
+    </div>
+  );
+}
+
+/* ================= Fraud or Fine? — Payment Processing =================
+   Judgment-under-uncertainty, not just sorting: most transactions are straightforward,
+   but a few are legit-but-unusual on purpose (a large one-time purchase, travel-dates
+   overseas charge) to bait an over-eager flag — the same trick "Papers, Please"-style
+   review games use. Combo multiplier + speed bonus reward fast, accurate review. */
+const FRAUD_TRANSACTIONS = [
+  { amount: "$42.00", location: "Local", velocity: "Normal", note: "Grocery store purchase", isFraud: false },
+  { amount: "$9.99", location: "Local", velocity: "Normal", note: "Recurring subscription renewal", isFraud: false },
+  { amount: "$1,850.00", location: "Overseas", velocity: "3 charges in 5 min", note: "Electronics store, new device", isFraud: true },
+  { amount: "$620.00", location: "Local", velocity: "Normal", note: "One-time furniture purchase", isFraud: false },
+  { amount: "$75.00", location: "Overseas", velocity: "Normal", note: "Hotel booking, trip dates match calendar", isFraud: false },
+  { amount: "$310.00", location: "Local", velocity: "5 charges in 2 min", note: "Same small gift-card retailer, repeated", isFraud: true },
+  { amount: "$1,200.00", location: "Local", velocity: "Normal", note: "Annual insurance premium", isFraud: false },
+  { amount: "$58.00", location: "Overseas", velocity: "Normal", note: "Streaming service, account holder traveling", isFraud: false },
+  { amount: "$4,300.00", location: "Overseas", velocity: "2 charges in 1 min", note: "Wire transfer, new payee, no prior history", isFraud: true },
+  { amount: "$18.50", location: "Local", velocity: "Normal", note: "Coffee shop, regular merchant", isFraud: false },
+  { amount: "$980.00", location: "Local", velocity: "Normal", note: "Wedding vendor deposit, matches invoice", isFraud: false },
+  { amount: "$2,150.00", location: "Overseas", velocity: "Normal", note: "Luxury goods, first purchase on account", isFraud: true },
+];
+const FRAUD_ROUND_TIME = 5;
+function FraudOrFineGame({ onComplete }) {
+  const orderRef = useRef(shuffle(FRAUD_TRANSACTIONS));
+  const [index, setIndex] = useState(0);
+  const [lives, setLives] = useState(3);
+  const [score, setScore] = useState(0);
+  const [combo, setCombo] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(FRAUD_ROUND_TIME);
+  const [locked, setLocked] = useState(false);
+  const [done, setDone] = useState(false);
+  const [message, setMessage] = useState("Approve legit charges. Flag the fraud. " + FRAUD_ROUND_TIME + "s per transaction.");
+  const [flash, setFlash] = useState(null);
+  const [pops, setPops] = useState([]);
+  const popIdRef = useRef(0);
+  const [best] = useState(() => loadHighScore("fraud-or-fine"));
+
+  useEffect(() => {
+    if (done || locked) return;
+    const id = setInterval(() => setTimeLeft((t) => (t <= 1 ? 0 : t - 1)), 1000);
+    return () => clearInterval(id);
+  }, [done, locked, index]);
+  useEffect(() => {
+    if (done || locked) return;
+    if (timeLeft === 0) decide(null);
+    // eslint-disable-next-line
+  }, [timeLeft]);
+  useEffect(() => {
+    if (!done) return;
+    const beat = saveHighScore("fraud-or-fine", score);
+    const grade = gradeForScore(score, 260, 160, 80);
+    const summary = "Reviewed " + (index + 1) + " transaction(s), final score " + score + " (Grade " + grade + ")" + (beat ? " — new high score!" : "");
+    setTimeout(() => onComplete("Fraud or Fine? complete", summary), 500);
+    // eslint-disable-next-line
+  }, [done]);
+
+  function pushPop(text, color) {
+    const id = popIdRef.current++;
+    setPops((p) => p.concat([{ id, text, color }]));
+    setTimeout(() => setPops((p) => p.filter((pp) => pp.id !== id)), 700);
+  }
+  function decide(action) {
+    if (done || locked) return;
+    setLocked(true);
+    const txn = orderRef.current[index];
+    const correct = action !== null && ((action === "flag") === txn.isFraud);
+    if (correct) {
+      const speedBonus = timeLeft * 2;
+      const nextCombo = combo + 1;
+      const gained = 10 * Math.min(nextCombo, 5) + speedBonus;
+      setScore((s) => s + gained);
+      setCombo(nextCombo);
+      setFlash("good");
+      pushPop("+" + gained + (nextCombo > 1 ? "  x" + Math.min(nextCombo, 5) : ""), CRT_GREEN);
+      playArcadeSuccessSound();
+      setMessage(txn.isFraud ? "Correctly flagged." : "Correctly approved.");
+    } else {
+      setLives((l) => l - 1);
+      setCombo(0);
+      setFlash("bad");
+      pushPop(action === null ? "MISSED" : "WRONG", "#eafff0");
+      playArcadeFailSound();
+      setMessage(txn.isFraud ? "That one was fraud." : "That one was legit.");
+    }
+    setTimeout(() => setFlash(null), 260);
+    const nextIndex = index + 1;
+    const outOfLives = !correct && lives - 1 <= 0;
+    if (outOfLives || nextIndex >= orderRef.current.length) {
+      setDone(true);
+    } else {
+      setTimeout(() => { setIndex(nextIndex); setTimeLeft(FRAUD_ROUND_TIME); setLocked(false); }, 500);
+    }
+  }
+  function restart() {
+    orderRef.current = shuffle(FRAUD_TRANSACTIONS);
+    setIndex(0); setLives(3); setScore(0); setCombo(0); setTimeLeft(FRAUD_ROUND_TIME); setLocked(false); setDone(false);
+    setMessage("Approve legit charges. Flag the fraud. " + FRAUD_ROUND_TIME + "s per transaction.");
+  }
+
+  const txn = orderRef.current[index];
+  return (
+    <div className="p-4 flex flex-col gap-3 relative" style={{ animation: flash === "bad" ? "arcade-shake .3s ease-in-out" : "none" }}>
+      <FloatPops pops={pops} />
+      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
+        <span>Score: {score}</span><span>Lives: {"♥".repeat(Math.max(lives, 0))}</span><span>Best: {best}</span>
+      </div>
+      {!done && txn && (
+        <div className="p-3.5 flex flex-col gap-1.5" style={{ background: flash === "good" ? "rgba(63,230,118,.18)" : flash === "bad" ? "rgba(234,255,240,.32)" : "rgba(0,20,8,.4)", boxShadow: bevel("out-shallow", CRT_GREEN), transition: "background .2s" }}>
+          <div className="flex items-center justify-between">
+            <span className="text-[16px] font-bold font-mono" style={{ color: "#8fffb0" }}>{txn.amount}</span>
+            <span className="text-[11px] font-semibold font-mono" style={{ color: "#4fbf7a" }}>{timeLeft}s</span>
+          </div>
+          <div className="text-[11px] font-medium font-mono" style={{ color: "#4fbf7a" }}>{txn.location} · {txn.velocity}</div>
+          <div className="text-[14px] font-medium" style={{ color: "#4fbf7a" }}>{txn.note}</div>
+        </div>
+      )}
+      <div className="flex gap-2">
+        <button type="button" disabled={done || locked} className="flex-1 px-3 py-2 text-[13px] font-semibold disabled:opacity-40" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={() => decide("approve")}>Approve</button>
+        <button type="button" disabled={done || locked} className="flex-1 px-3 py-2 text-[13px] font-semibold disabled:opacity-40" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => decide("flag")}>Flag</button>
+      </div>
+      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{message}</p>
+      {done && <button type="button" className="self-center px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={restart}>Restart</button>}
+    </div>
+  );
+}
+
 const GAMES = [
   { id: "route-racer", title: "Route Racer", cluster: "field-operations", desc: "Grid-navigation puzzle. Visit every job site before you run out of moves.", summary: "Concept takeaway: Zuper's real dispatch system routes technicians around live traffic and job constraints automatically — this mini-game is an illustrative analogy, not a simulation of the real routing engine." },
   { id: "dispatch-tetris", title: "Dispatch Tetris", cluster: null, desc: "Schedule-fitting puzzle. Place each incoming job into an open technician slot.", summary: "Concept takeaway: Zuper's real scheduling tools fit incoming jobs into technician availability automatically — this mini-game is an illustrative analogy, not a simulation of the real scheduling engine." },
   { id: "workflow-wiring", title: "Workflow Wiring", cluster: "workflows-cluster", desc: "Connect event triggers to automated actions in a logic puzzle.", summary: "Concept takeaway: Zuper's real workflow automation connects triggers to actions behind the scenes — this mini-game is an illustrative analogy, not a simulation of the real automation engine." },
   { id: "system-stabilizer", title: "System Stabilizer", cluster: "core-platform", desc: "Resource-management mini-game. Keep every system meter in range.", summary: "Concept takeaway: Zuper's real platform monitors and balances system load automatically — this mini-game is an illustrative analogy, not a simulation of real infrastructure telemetry." },
+  { id: "pipe-flow", title: "Pipe Flow", cluster: "data-pipeline", desc: "Rotate-the-segment puzzle. Connect the source to the target before time runs out — grows each level.", summary: "Concept takeaway: Zuper's real data pipeline moves information between systems automatically, already connected — this mini-game is an illustrative analogy, not a simulation of the real pipeline." },
+  { id: "spinning-plates", title: "Spinning Plates", cluster: "command-center", desc: "Real-time survival. Ping each system before it goes critical — more come online the longer you last.", summary: "Concept takeaway: Zuper's real command center monitors every system at once so nothing goes critical unnoticed — this mini-game is an illustrative analogy, not a simulation of real monitoring." },
+  { id: "fraud-or-fine", title: "Fraud or Fine?", cluster: "payment-processing", desc: "Fast judgment call. Approve or flag each transaction before the clock runs out — some legit ones look suspicious on purpose.", summary: "Concept takeaway: Zuper's real payment processing screens transactions for risk automatically — this mini-game is an illustrative analogy, not a simulation of a real fraud model." },
 ];
 
 function ArcadeWindow() {
   const [view, setView] = useState("menu");
   const [achievement, setAchievement] = useState(null);
   const [summaryText, setSummaryText] = useState("");
-  function onGameComplete(title, resultText) { setAchievement({ title: title, text: resultText + " (Concept only — no score is saved or transmitted; in a real deployment this could offer a VIP demo booking link.)" }); }
+  function onGameComplete(title, resultText) { setAchievement({ title: title, text: resultText + " (Concept only — nothing is transmitted anywhere; any high score shown is kept in this browser's localStorage only. In a real deployment this could offer a VIP demo booking link.)" }); }
   function skip(game) { setSummaryText(game.summary); setView("summary"); setAchievement(null); }
   function backToMenu() { setView("menu"); setAchievement(null); }
   return (
@@ -1207,6 +1642,9 @@ function ArcadeWindow() {
             {view === "dispatch-tetris" && <DispatchTetrisGame onComplete={onGameComplete} />}
             {view === "workflow-wiring" && <WorkflowWiringGame onComplete={onGameComplete} />}
             {view === "system-stabilizer" && <SystemStabilizerGame onComplete={onGameComplete} />}
+            {view === "pipe-flow" && <PipeFlowGame onComplete={onGameComplete} />}
+            {view === "spinning-plates" && <SpinningPlatesGame onComplete={onGameComplete} />}
+            {view === "fraud-or-fine" && <FraudOrFineGame onComplete={onGameComplete} />}
             {view === "summary" && <p className="text-[14px] font-medium leading-relaxed p-4" style={{ color: "#8fffb0" }}>{summaryText}</p>}
           </div>
         </div>
