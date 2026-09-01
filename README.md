@@ -254,6 +254,17 @@ bounding box, and re-centering on a square canvas — `IconImg` also
 renders PNG icons at 88% of the tile now (up from 66%, which was tuned
 for the vector icons' own internal padding, not these).
 
+That first fixed-percentage crop then turned out to clip real artwork
+on several icons (a pipe, a location pin, connector dots, card corners)
+before the transparency pass ever ran, since it cut into the source
+sheet's cell before anything else happened — there was nothing left to
+recover afterward. Fixed with a two-stage re-crop: stage 1 takes the
+full, generous cell (no side insets, just the top ~60-70% to exclude
+the baked-in label text — row 3's smaller cells needed a tighter 60%
+than rows 1-2's 70%), guaranteeing nothing is clipped; stage 2 is the
+same chroma-key/auto-crop/re-center pass as before, now with the full
+artwork actually available to crop tight to.
+
 Desktop icons also dropped the bordered/background square tile
 (`iconTileVisuals`, removed) that used to sit behind every icon —
 direct feedback that it read as "a window/frame around the icon,"
@@ -286,6 +297,16 @@ underneath — no card, no border, no bevel box.
   terminal/shell surfaces) that itself replaced an even earlier pass
   where VT323 was applied everywhere, including small icon labels, which
   made them illegible.
+  - **Type scale**: a follow-up pass tightened every text size/weight to
+    a dense-desktop-OS scale, per a direct spec — `--text-xs` (10px)
+    through `--text-xl` (20px) as CSS vars in `index.html`, applied per
+    element category throughout app.jsx: desktop icon labels and window
+    titles at 13px/600, terminal text at 14px/500, system labels/status
+    (taskbar clock, badges) at 10-11px/500-600, buttons at 12-13px/600,
+    small metadata/footnotes at 10px/500, dialog headings at 16-18px/700,
+    dialog body at 13-14px/500-600. The boot screen keeps its own larger
+    20px display size — a one-time full-screen splash, not part of the
+    dense desktop chrome this scale targets.
 
 ## Important correction from an earlier version of this README
 

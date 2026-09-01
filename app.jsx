@@ -281,7 +281,7 @@ function IconImg({ icon, size, className, color }) {
 /* ---------- Desktop display settings (icon/text size) — persisted, purely cosmetic ---------- */
 const ICON_TILE_PX = { sm: 38, md: 52, lg: 70 };
 const ICON_GLYPH_REM = { sm: "1.05rem", md: "1.35rem", lg: "1.75rem" };
-const ICON_LABEL_REM = { sm: "0.72rem", md: "0.82rem", lg: "0.96rem" };
+const ICON_LABEL_REM = { sm: "11px", md: "13px", lg: "15px" };
 const ICON_CELL_PX = { sm: 78, md: 100, lg: 128 };
 const SIZE_OPTIONS = [{ value: "sm", label: "Small" }, { value: "md", label: "Medium" }, { value: "lg", label: "Large" }];
 
@@ -375,7 +375,7 @@ function ContextMenu({ x, y, items, onClose, theme }) {
   const top = Math.min(y, vh - items.length * 32 - 60);
   return (
     <div
-      className="fixed z-[1900] min-w-[190px] py-1.5 font-mono text-[0.92rem] overflow-hidden"
+      className="fixed z-[1900] min-w-[190px] py-1.5 font-mono font-medium text-[13px] overflow-hidden"
       style={{ left: left, top: top, background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "8px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 20px 50px rgba(0,0,0,.6)", fontFamily: t.fontChrome || undefined }}
       onPointerDown={(e) => e.stopPropagation()}
     >
@@ -396,7 +396,7 @@ function ContextMenu({ x, y, items, onClose, theme }) {
 function Toast({ text, onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 1800); return () => clearTimeout(t); }, [onDone]);
   return (
-    <div className="fixed bottom-[64px] left-1/2 z-[1950] px-4 py-2 rounded-lg font-mono text-[0.86rem] text-white/92"
+    <div className="fixed bottom-[64px] left-1/2 z-[1950] px-4 py-2 rounded-lg font-mono font-semibold text-[12px] text-white/92"
       style={{ transform: "translateX(-50%)", background: "rgba(20,21,28,.95)", border: "1px solid rgba(255,255,255,.15)", boxShadow: "0 10px 30px rgba(0,0,0,.5)" }}>
       {text}
     </div>
@@ -424,15 +424,15 @@ function QuickLauncher({ title, placeholder, apps, onOpen, onClose }) {
       <div className="fixed left-1/2 top-[22%] w-[380px] z-[1950] rounded-lg border border-white/10 overflow-hidden"
         style={{ transform: "translateX(-50%)", background: "rgba(16,17,23,.97)", backdropFilter: "blur(16px)", boxShadow: "0 24px 60px rgba(0,0,0,.6)" }}
         onClick={(e) => e.stopPropagation()}>
-        <div className="px-4 py-3 border-b border-white/10 font-mono text-[0.86rem] text-white/68">{title}</div>
+        <div className="px-4 py-3 border-b border-white/10 font-mono font-semibold text-[13px] text-white/68">{title}</div>
         <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={onKeyDown}
           placeholder={placeholder} spellCheck={false} autoComplete="off"
-          className="w-full px-4 py-3 bg-transparent outline-none text-white/92 font-mono text-[0.94rem] placeholder-white/40 border-b border-white/10" />
+          className="w-full px-4 py-3 bg-transparent outline-none text-white/92 font-mono font-medium text-[14px] placeholder-white/40 border-b border-white/10" />
         <div className="max-h-[260px] overflow-y-auto py-1.5">
-          {matches.length === 0 && <div className="px-4 py-2 text-white/48 font-mono text-[0.86rem]">No matching app.</div>}
+          {matches.length === 0 && <div className="px-4 py-2 text-white/48 font-mono font-medium text-[11px]">No matching app.</div>}
           {matches.map((a) => (
             <button key={a.id} type="button" onClick={() => openAndClose(a.id)}
-              className="crt-item w-full text-left px-4 py-2 pl-5 flex items-center gap-2.5 text-white/85 hover:text-white font-mono text-[0.9rem]">
+              className="crt-item w-full text-left px-4 py-2 pl-5 flex items-center gap-2.5 text-white/85 hover:text-white font-mono font-semibold text-[13px]">
               <IconImg icon={a.icon} size={20} className="w-5 text-center flex-shrink-0" />{a.title}
             </button>
           ))}
@@ -444,14 +444,14 @@ function QuickLauncher({ title, placeholder, apps, onOpen, onClose }) {
 
 function RealBadge({ children }) {
   return (
-    <span className="inline-flex items-center gap-1.5 font-mono text-[0.78rem] uppercase tracking-widest px-2 py-0.5 rounded-full border" style={{ color: REAL, borderColor: "rgba(126,230,163,.45)", background: "rgba(126,230,163,.12)" }}>
+    <span className="inline-flex items-center gap-1.5 font-mono font-semibold text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border" style={{ color: REAL, borderColor: "rgba(126,230,163,.45)", background: "rgba(126,230,163,.12)" }}>
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: REAL }}></span>{children}
     </span>
   );
 }
 function ConceptBadge({ children }) {
   return (
-    <span className="inline-flex items-center gap-1.5 font-mono text-[0.78rem] uppercase tracking-widest px-2 py-0.5 rounded-full border" style={{ color: CONCEPT, borderColor: "rgba(126,203,255,.45)", background: "rgba(126,203,255,.12)" }}>
+    <span className="inline-flex items-center gap-1.5 font-mono font-semibold text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border" style={{ color: CONCEPT, borderColor: "rgba(126,203,255,.45)", background: "rgba(126,203,255,.12)" }}>
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: CONCEPT }}></span>{children}
     </span>
   );
@@ -659,7 +659,7 @@ function Window({ id, title, x, y, w, h, z, color, theme, isFocused, isMaximized
         onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenu({ x: e.clientX, y: e.clientY }); }}
       >
         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c }}></span>
-        <span className="flex-1 truncate font-mono text-[0.9rem] tracking-wide" style={{ color: t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{title}</span>
+        <span className="flex-1 truncate font-mono font-semibold text-[13px] tracking-wide" style={{ color: t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{title}</span>
         <div className="flex gap-1">
           <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onMinimize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&#8211;</button>
           <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onToggleMaximize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&#9723;</button>
@@ -704,13 +704,13 @@ function FolderWindow({ clusterId, worldData, onOpenFile }) {
 
   return (
     <div className="p-4 font-mono">
-      <div className="text-[0.82rem] uppercase tracking-wider text-white/58 mb-1">/desktop/{clusterId}/</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-white/58 mb-1">/desktop/{clusterId}/</div>
       <RealBadge>Real cluster — sourced from labs.zuper.co</RealBadge>
       <div className="grid grid-cols-3 gap-4 mt-4">
         {files.map((f) => (
           <button key={f.key} type="button" className="flex flex-col items-center gap-1.5 p-2 rounded hover:bg-white/5" onDoubleClick={() => onOpenFile(clusterId, f.key)}>
             <span className="text-3xl">{f.glyph}</span>
-            <span className="text-[0.82rem] text-white/85 text-center leading-tight break-words">{f.label}</span>
+            <span className="text-[13px] font-semibold text-white/85 text-center leading-tight break-words">{f.label}</span>
           </button>
         ))}
       </div>
@@ -724,20 +724,20 @@ function MarkdownWindow({ clusterId, worldData }) {
   return (
     <div className="p-5">
       <RealBadge>Real content — names &amp; descriptions from labs.zuper.co</RealBadge>
-      <h1 className="text-white text-[1.5rem] mt-3 mb-1 font-mono">{c.name}</h1>
-      <p className="text-white/58 text-[0.88rem] font-mono mb-4">readme.md · {c.entities.length} entit{c.entities.length === 1 ? "y" : "ies"}</p>
+      <h1 className="text-white text-[18px] font-bold mt-3 mb-1 font-mono">{c.name}</h1>
+      <p className="text-white/58 text-[10px] font-medium font-mono mb-4">readme.md · {c.entities.length} entit{c.entities.length === 1 ? "y" : "ies"}</p>
       {c.entities.map((e) => (
         <div key={e.id} className="mb-4">
-          <h2 className="text-white text-[1.05rem] mb-1 flex items-center gap-2"><IconImg icon={ENTITY_ICONS[e.type] || "■"} size={22} className="inline-block" /> {e.name} <span className="text-white/48 text-[0.82rem] font-mono uppercase align-middle">{e.type}</span></h2>
-          <p className="text-white/85 text-[0.98rem] leading-relaxed mb-1.5">{e.description}</p>
+          <h2 className="text-white text-[16px] font-bold mb-1 flex items-center gap-2"><IconImg icon={ENTITY_ICONS[e.type] || "■"} size={22} className="inline-block" /> {e.name} <span className="text-white/48 text-[10px] font-semibold font-mono uppercase align-middle">{e.type}</span></h2>
+          <p className="text-white/85 text-[14px] font-medium leading-relaxed mb-1.5">{e.description}</p>
           {e.details && (
-            <ul className="text-white/72 text-[0.94rem] leading-loose pl-5 list-disc">
+            <ul className="text-white/72 text-[14px] font-medium leading-loose pl-5 list-disc">
               {e.details.map((d, i) => <li key={i}>{d}</li>)}
             </ul>
           )}
         </div>
       ))}
-      <p className="text-white/40 text-[0.86rem] italic mt-4 border-t border-white/10 pt-3">Source: labs.zuper.co /assets/js/zuper-world.js (fetched and verified this session). This reader's chrome is a concept UI; the entity names, types, descriptions, and details above are Zuper's real data, unedited.</p>
+      <p className="text-white/40 text-[10px] font-medium italic mt-4 border-t border-white/10 pt-3">Source: labs.zuper.co /assets/js/zuper-world.js (fetched and verified this session). This reader's chrome is a concept UI; the entity names, types, descriptions, and details above are Zuper's real data, unedited.</p>
     </div>
   );
 }
@@ -773,7 +773,7 @@ function ShellStatusWindow({ clusterId, worldData }) {
 
   if (!c) return null;
   return (
-    <div className="p-3 flex flex-col h-full font-terminal text-[1.15rem]">
+    <div className="p-3 flex flex-col h-full font-terminal font-medium text-[14px]">
       <ConceptBadge>Simulated output — node names are real, ports/latency are decorative</ConceptBadge>
       <div ref={logRef} className="flex-1 overflow-y-auto mt-3 space-y-0.5">
         {lines.map((l, i) => <div key={i} style={{ color: CRT_GREEN, opacity: l.indexOf("$") === 0 ? 1 : 0.8 }}>{l}</div>)}
@@ -787,7 +787,7 @@ function ShellConnectionsWindow({ clusterId, worldData }) {
   const c = findCluster(worldData, clusterId);
   if (!c) return null;
   return (
-    <div className="p-3 flex flex-col h-full font-terminal text-[1.15rem]">
+    <div className="p-3 flex flex-col h-full font-terminal font-medium text-[14px]">
       <RealBadge>Real connection data — sourced from labs.zuper.co</RealBadge>
       <div className="flex-1 overflow-y-auto mt-3 space-y-1">
         <div style={{ color: CRT_GREEN }}>$ bash connections.sh</div>
@@ -812,18 +812,18 @@ function DashboardWindow({ clusterId, worldData }) {
       <div className="flex items-center justify-between mb-1">
         <RealBadge>Real data, concept dashboard UI</RealBadge>
       </div>
-      <h1 className="text-white text-[1.3rem] mt-3 mb-3 font-mono">{appName}</h1>
+      <h1 className="text-white text-[18px] font-bold mt-3 mb-3 font-mono">{appName}</h1>
       <div className="grid grid-cols-2 gap-3">
         {c.entities.map((e) => (
           <div key={e.id} className="border border-white/10 rounded-lg p-3">
             <div className="mb-1.5"><IconImg icon={ENTITY_ICONS[e.type] || "■"} size={30} /></div>
-            <div className="text-white text-[1.0rem] font-mono">{e.name}</div>
-            <div className="text-white/58 text-[0.8rem] uppercase font-mono mb-1.5">{e.type} · {e.category}</div>
-            <p className="text-white/78 text-[0.9rem] leading-relaxed">{e.description}</p>
+            <div className="text-white text-[14px] font-semibold font-mono">{e.name}</div>
+            <div className="text-white/58 text-[10px] font-semibold uppercase font-mono mb-1.5">{e.type} · {e.category}</div>
+            <p className="text-white/78 text-[14px] font-medium leading-relaxed">{e.description}</p>
           </div>
         ))}
       </div>
-      <p className="text-white/40 text-[0.84rem] italic mt-4">"{appName}" is a concept UI shell wrapping labs.zuper.co's real entity data — not a confirmed real Zuper product name.</p>
+      <p className="text-white/40 text-[10px] font-medium italic mt-4">"{appName}" is a concept UI shell wrapping labs.zuper.co's real entity data — not a confirmed real Zuper product name.</p>
     </div>
   );
 }
@@ -833,15 +833,15 @@ function PropertiesWindow({ worldData }) {
   const totalFlows = worldData.reduce((s, c) => s + c.flows.length, 0);
   return (
     <div className="p-5 font-mono">
-      <h1 className="text-white text-[1.2rem] mb-3">Zuper Web OS — Properties</h1>
-      <div className="flex flex-col gap-1.5 text-[0.9rem] text-white/78 mb-4">
+      <h1 className="text-white text-[18px] font-bold mb-3">Zuper Web OS — Properties</h1>
+      <div className="flex flex-col gap-1.5 text-[14px] font-medium text-white/78 mb-4">
         <div>Clusters: <span className="text-white/92">{worldData.length}</span> (real, from labs.zuper.co)</div>
         <div>Entities: <span className="text-white/92">{totalEntities}</span></div>
         <div>Connection flows: <span className="text-white/92">{totalFlows}</span></div>
         <div>Build: <span className="text-white/92">concept prototype</span> (React + Tailwind, no backend)</div>
       </div>
       <RealBadge>Cluster/entity counts above are real</RealBadge>
-      <p className="text-white/48 text-[0.84rem] italic mt-4">This is a static desktop metaphor over real Zuper Labs scene data — no actual file system, accounts, or persistence beyond your browser's localStorage (icon positions/names only).</p>
+      <p className="text-white/48 text-[10px] font-medium italic mt-4">This is a static desktop metaphor over real Zuper Labs scene data — no actual file system, accounts, or persistence beyond your browser's localStorage (icon positions/names only).</p>
     </div>
   );
 }
@@ -850,13 +850,13 @@ function SizeRadioRow({ label, value, onChange, options }) {
   const opts = options || SIZE_OPTIONS;
   return (
     <div className="mb-5">
-      <div className="text-white/68 text-[0.86rem] font-mono mb-2">{label}</div>
+      <div className="text-white/68 text-[13px] font-semibold font-mono mb-2">{label}</div>
       <div className="flex gap-2 flex-wrap">
         {opts.map((o) => {
           const active = value === o.value;
           return (
             <button key={o.value} type="button" onClick={() => onChange(o.value)}
-              className="px-3.5 py-1.5 rounded-lg border font-mono text-[0.86rem] transition-colors"
+              className="px-3.5 py-1.5 rounded-lg border font-mono font-semibold text-[12px] transition-colors"
               style={{
                 borderColor: active ? ACCENT : "rgba(255,255,255,.15)",
                 color: active ? "#fff" : "rgba(255,255,255,.68)",
@@ -874,10 +874,10 @@ function SizeRadioRow({ label, value, onChange, options }) {
 function DisplaySettingsWindow({ iconSize, setIconSize, textSize, setTextSize }) {
   return (
     <div className="p-5">
-      <h1 className="text-white text-[1.15rem] mb-4 font-mono">Display settings</h1>
+      <h1 className="text-white text-[18px] font-bold mb-4 font-mono">Display settings</h1>
       <SizeRadioRow label="Icon size" value={iconSize} onChange={setIconSize} />
       <SizeRadioRow label="Text size" value={textSize} onChange={setTextSize} />
-      <p className="text-white/48 text-[0.82rem] italic mt-2">Changes apply immediately and are saved to this browser (localStorage) — nothing is sent anywhere.</p>
+      <p className="text-white/48 text-[10px] font-medium italic mt-2">Changes apply immediately and are saved to this browser (localStorage) — nothing is sent anywhere.</p>
     </div>
   );
 }
@@ -931,7 +931,7 @@ function RouteRacerGame({ onComplete }) {
   const remaining = state.jobs.filter((j) => !j.visited).length;
   return (
     <div className="flex flex-col items-center gap-3 p-4">
-      <div className="w-full flex items-center justify-between text-[0.9rem] font-mono" style={{ color: "#8fffb0" }}>
+      <div className="w-full flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
         <span>Moves: {state.moves} / {MOVE_LIMIT}</span><span>Jobs remaining: {remaining}</span>
         <button type="button" className="px-2 py-1" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => setState(makeState())}>Restart</button>
       </div>
@@ -944,7 +944,7 @@ function RouteRacerGame({ onComplete }) {
           <button type="button" className="w-8 h-8" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => move("right")} aria-label="Move right">&#8594;</button>
         </div>
       </div>
-      <p className="text-[0.92rem] text-center" style={{ color: "#4fbf7a" }}>{state.message}</p>
+      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{state.message}</p>
     </div>
   );
 }
@@ -980,18 +980,18 @@ function DispatchTetrisGame({ onComplete }) {
   function restart() { setSchedule(TECHS.map(() => new Array(SLOTS).fill(false))); setQueue(makeQueue()); setScore(0); setMisses(0); setTimeLeft(TIME_LIMIT); setDone(false); setMessage("Click a slot to place the current job into that many consecutive open hours."); }
   return (
     <div className="p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between text-[0.9rem] font-mono" style={{ color: "#8fffb0" }}>
+      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
         <span>Placed: {score}</span><span>Skipped: {misses}</span><span>Time: {timeLeft}s</span>
         <button type="button" className="px-2 py-1" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={restart}>Restart</button>
       </div>
       <div>
-        <div className="text-[0.84rem] mb-1.5 font-mono" style={{ color: "#4fbf7a" }}>Next job:</div>
-        {queue.length > 0 && <div className="w-11 h-[34px] flex items-center justify-center font-mono text-[0.94rem]" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }}>{queue[0]}h</div>}
+        <div className="text-[11px] font-medium mb-1.5 font-mono" style={{ color: "#4fbf7a" }}>Next job:</div>
+        {queue.length > 0 && <div className="w-11 h-[34px] flex items-center justify-center font-mono font-semibold text-[13px]" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }}>{queue[0]}h</div>}
       </div>
       <div className="flex flex-col gap-1.5">
         {TECHS.map((name, t) => (
           <div key={name} className="flex items-center gap-1.5">
-            <div className="w-14 text-[0.88rem] font-mono" style={{ color: "#4fbf7a" }}>{name}</div>
+            <div className="w-14 text-[11px] font-medium font-mono" style={{ color: "#4fbf7a" }}>{name}</div>
             <div className="flex gap-1">
               {Array.from({ length: SLOTS }).map((_, s) => {
                 const isInvalid = invalidCell === t + "," + s;
@@ -1008,7 +1008,7 @@ function DispatchTetrisGame({ onComplete }) {
           </div>
         ))}
       </div>
-      <p className="text-[0.92rem] text-center" style={{ color: "#4fbf7a" }}>{message}</p>
+      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{message}</p>
     </div>
   );
 }
@@ -1049,15 +1049,15 @@ function WorkflowWiringGame({ onComplete }) {
   const allWired = Object.keys(wired).length === pairsRef.current.length;
   return (
     <div className="p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between text-[0.9rem] font-mono" style={{ color: "#8fffb0" }}>
+      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
         <span>Wired: {Object.keys(wired).length} / {pairsRef.current.length}</span><span>Mistakes: {mistakes}</span>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
-          <div className="text-[0.82rem] uppercase tracking-wide font-mono" style={{ color: "#4fbf7a" }}>Triggers</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide font-mono" style={{ color: "#4fbf7a" }}>Triggers</div>
           {pairsRef.current.map((p) => (
             <button key={p.trigger} type="button" disabled={!!wired[p.trigger]} onClick={() => pickTrigger(p.trigger)}
-              className="text-left text-[0.92rem] px-2.5 py-2 disabled:opacity-40"
+              className="text-left text-[12px] font-semibold px-2.5 py-2 disabled:opacity-40"
               style={{
                 background: "rgba(0,20,8,.4)", color: "#8fffb0",
                 boxShadow: bevel(wired[p.trigger] || selected === p.trigger ? "in-shallow" : "out-shallow", CRT_GREEN),
@@ -1065,13 +1065,13 @@ function WorkflowWiringGame({ onComplete }) {
           ))}
         </div>
         <div className="flex flex-col gap-2">
-          <div className="text-[0.82rem] uppercase tracking-wide font-mono" style={{ color: "#4fbf7a" }}>Actions</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide font-mono" style={{ color: "#4fbf7a" }}>Actions</div>
           {actionsRef.current.map((a) => {
             const isWiredAction = Object.values(wired).includes(a);
             const isWrong = flashWrong === a;
             return (
               <button key={a} type="button" disabled={isWiredAction} onClick={() => pickAction(a)}
-                className="text-left text-[0.92rem] px-2.5 py-2 disabled:opacity-40"
+                className="text-left text-[12px] font-semibold px-2.5 py-2 disabled:opacity-40"
                 style={{
                   background: isWrong ? CRT_GREEN : "rgba(0,20,8,.4)", color: isWrong ? "#020402" : "#8fffb0",
                   boxShadow: bevel(isWiredAction || isWrong ? "in-shallow" : "out-shallow", CRT_GREEN),
@@ -1080,8 +1080,8 @@ function WorkflowWiringGame({ onComplete }) {
           })}
         </div>
       </div>
-      <p className="text-[0.92rem] text-center" style={{ color: "#4fbf7a" }}>{message}</p>
-      {allWired && <p className="text-center text-[0.88rem] font-mono" style={{ color: CONCEPT }}>Done — see the achievement note below.</p>}
+      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{message}</p>
+      {allWired && <p className="text-center text-[12px] font-semibold font-mono" style={{ color: CONCEPT }}>Done — see the achievement note below.</p>}
     </div>
   );
 }
@@ -1111,7 +1111,7 @@ function SystemStabilizerGame({ onComplete }) {
   function restart() { setValues({ CPU: 50, Memory: 50, "API Load": 50 }); setTimeLeft(DURATION); setDone(false); setMessage("Keep every meter between 25–75 until time runs out."); }
   return (
     <div className="p-4 flex flex-col gap-4">
-      <div className="flex items-center justify-between text-[0.9rem] font-mono" style={{ color: "#8fffb0" }}>
+      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#8fffb0" }}>
         <span>Time: {timeLeft}s</span>
         <button type="button" className="px-2 py-1" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={restart}>Restart</button>
       </div>
@@ -1121,7 +1121,7 @@ function SystemStabilizerGame({ onComplete }) {
           const meterColor = safe ? CRT_GREEN : "#eafff0";
           return (
             <div key={m} className="flex items-center gap-3">
-              <div className="w-20 text-[0.88rem] font-mono" style={{ color: "#4fbf7a" }}>{m}</div>
+              <div className="w-20 text-[11px] font-medium font-mono" style={{ color: "#4fbf7a" }}>{m}</div>
               <div className="flex-1 h-3 overflow-hidden" style={{ boxShadow: bevel("in-shallow", CRT_GREEN), background: "rgba(0,20,8,.5)" }}>
                 <div className="h-full transition-[width]" style={{ width: v + "%", background: meterColor, opacity: safe ? 0.8 : 1, animation: safe ? "none" : "crt-icon-glow 1s ease-in-out infinite" }}></div>
               </div>
@@ -1131,7 +1131,7 @@ function SystemStabilizerGame({ onComplete }) {
           );
         })}
       </div>
-      <p className="text-[0.92rem] text-center" style={{ color: "#4fbf7a" }}>{message}</p>
+      <p className="text-[14px] font-medium text-center" style={{ color: "#4fbf7a" }}>{message}</p>
     </div>
   );
 }
@@ -1157,11 +1157,11 @@ function ArcadeWindow() {
         <div className="grid gap-3 mt-3">
           {GAMES.map((g) => (
             <div key={g.id} className="p-3.5 flex flex-col gap-2" style={{ background: "rgba(0,20,8,.4)", boxShadow: bevel("out-shallow", CRT_GREEN) }}>
-              <h3 className="text-[1rem] m-0 font-mono" style={{ color: "#8fffb0" }}>{g.title}{g.cluster && <span className="ml-2 text-[0.78rem] font-normal" style={{ color: "#4fbf7a" }}>({g.cluster})</span>}</h3>
-              <p className="text-[0.94rem] leading-relaxed m-0" style={{ color: "#4fbf7a" }}>{g.desc}</p>
+              <h3 className="text-[16px] font-bold m-0 font-mono" style={{ color: "#8fffb0" }}>{g.title}{g.cluster && <span className="ml-2 text-[10px] font-medium" style={{ color: "#4fbf7a" }}>({g.cluster})</span>}</h3>
+              <p className="text-[14px] font-medium leading-relaxed m-0" style={{ color: "#4fbf7a" }}>{g.desc}</p>
               <div className="flex gap-2 mt-1">
-                <button type="button" className="px-3 py-1.5 text-[0.92rem]" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={() => { setAchievement(null); setView(g.id); }}>Play</button>
-                <button type="button" className="px-3 py-1.5 text-[0.92rem]" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => skip(g)}>Skip &amp; Read Summary</button>
+                <button type="button" className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#020402", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={() => { setAchievement(null); setView(g.id); }}>Play</button>
+                <button type="button" className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#8fffb0" }} onClick={() => skip(g)}>Skip &amp; Read Summary</button>
               </div>
             </div>
           ))}
@@ -1169,20 +1169,20 @@ function ArcadeWindow() {
       )}
       {view !== "menu" && (
         <div className="mt-3">
-          <button type="button" className="text-[0.92rem] hover:brightness-125" style={{ color: "#4fbf7a" }} onClick={backToMenu}>&larr; Back to Arcade</button>
+          <button type="button" className="text-[12px] font-semibold hover:brightness-125" style={{ color: "#4fbf7a" }} onClick={backToMenu}>&larr; Back to Arcade</button>
           <div className="mt-1">
             {view === "route-racer" && <RouteRacerGame onComplete={onGameComplete} />}
             {view === "dispatch-tetris" && <DispatchTetrisGame onComplete={onGameComplete} />}
             {view === "workflow-wiring" && <WorkflowWiringGame onComplete={onGameComplete} />}
             {view === "system-stabilizer" && <SystemStabilizerGame onComplete={onGameComplete} />}
-            {view === "summary" && <p className="text-[0.96rem] leading-relaxed p-4" style={{ color: "#8fffb0" }}>{summaryText}</p>}
+            {view === "summary" && <p className="text-[14px] font-medium leading-relaxed p-4" style={{ color: "#8fffb0" }}>{summaryText}</p>}
           </div>
         </div>
       )}
       {achievement && (
         <div className="mt-4 p-3.5" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-deep", CRT_GREEN) }}>
-          <h4 className="m-0 text-[1.02rem] font-mono" style={{ color: "#8fffb0" }}>{achievement.title}</h4>
-          <p className="m-0 mt-1 text-[0.92rem] leading-relaxed" style={{ color: "#4fbf7a" }}>{achievement.text}</p>
+          <h4 className="m-0 text-[16px] font-bold font-mono" style={{ color: "#8fffb0" }}>{achievement.title}</h4>
+          <p className="m-0 mt-1 text-[14px] font-medium leading-relaxed" style={{ color: "#4fbf7a" }}>{achievement.text}</p>
         </div>
       )}
     </div>
@@ -1262,7 +1262,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
      you type, and it scrolls up into history once you hit Enter. Clicking anywhere in
      the terminal refocuses the (invisible, borderless) input, same as a real one. */
   return (
-    <div className="p-3 flex flex-col h-full font-terminal text-[1.18rem]" onClick={() => inputRef.current && inputRef.current.focus()}>
+    <div className="p-3 flex flex-col h-full font-terminal font-medium text-[14px]" onClick={() => inputRef.current && inputRef.current.focus()}>
       <div ref={logRef} className="flex-1 overflow-y-auto space-y-1">
         {lines.map((l, i) => (
           <div key={i} className={l.kind === "err" ? "text-red-400" : l.kind === "cmd" ? "text-white" : ""} style={l.kind === "out" ? { color: CRT_GREEN, opacity: 0.85 } : undefined}>{l.text}</div>
@@ -1292,17 +1292,17 @@ function Taskbar({ onStartClick, running, onRunningClick, theme }) {
   }, []);
   return (
     <div className="fixed left-0 right-0 bottom-0 h-[52px] flex items-center gap-3 px-3 z-[800]" style={{ background: t.taskbarBg, backdropFilter: t.winBlur === "none" ? undefined : "blur(10px)", boxShadow: bevel("out-shallow", t.winBorder) + ", inset 0 1px 0 rgba(0,0,0,.4)" }}>
-      <button type="button" onClick={onStartClick} className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[0.94rem]" style={{ background: t.accent, color: "#020402", fontWeight: "bold", boxShadow: bevel("out-shallow", t.accent) }}>&#9635; Start</button>
+      <button type="button" onClick={onStartClick} className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[13px] font-semibold" style={{ background: t.accent, color: "#020402", boxShadow: bevel("out-shallow", t.accent) }}>&#9635; Start</button>
       <div className="flex-1 flex gap-1.5 overflow-x-auto">
         {running.map((r) => (
           <button key={r.id} type="button" onClick={() => onRunningClick(r.id)}
-            className="px-2.5 py-1 font-mono text-[0.88rem] whitespace-nowrap"
+            className="px-2.5 py-1 font-mono font-semibold text-[13px] whitespace-nowrap"
             style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel(r.focused ? "in-shallow" : "out-shallow", r.focused ? t.accent : t.winBorder), color: r.focused ? t.chromeText : t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{r.title}</button>
         ))}
       </div>
-      <span aria-hidden="true" className="hidden sm:inline text-[0.84rem] font-mono" style={{ color: t.chromeTextDim, opacity: .6, fontFamily: t.fontChrome || undefined }}>{telemetry}</span>
-      <span aria-hidden="true" className="text-[0.94rem] font-mono" style={{ color: t.chromeText, fontFamily: t.fontChrome || undefined }}>{clock}</span>
-      <a href="https://labs.zuper.co/" target="_blank" rel="noopener" className="text-[0.92rem] underline" style={{ color: t.accent }}>Subscribe</a>
+      <span aria-hidden="true" className="hidden sm:inline font-mono text-[11px]" style={{ color: t.chromeTextDim, opacity: .6, fontFamily: t.fontChrome || undefined }}>{telemetry}</span>
+      <span aria-hidden="true" className="font-mono font-semibold text-[11px]" style={{ color: t.chromeText, fontFamily: t.fontChrome || undefined }}>{clock}</span>
+      <a href="https://labs.zuper.co/" target="_blank" rel="noopener" className="text-[11px] underline" style={{ color: t.accent }}>Subscribe</a>
     </div>
   );
 }
@@ -1320,10 +1320,10 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
   return (
     <React.Fragment>
       <div className="fixed inset-0 z-[840]" onClick={onClose}></div>
-      <div className="fixed left-3 bottom-[60px] w-72 max-h-[70vh] overflow-y-auto py-2 z-[850] font-mono text-[0.92rem]"
+      <div className="fixed left-3 bottom-[60px] w-72 max-h-[70vh] overflow-y-auto py-2 z-[850] font-mono font-semibold text-[13px]"
         style={{ background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "8px", boxShadow: bevel("out-deep", t.winBorder), fontFamily: t.fontChrome || undefined }}
         onClick={(e) => e.stopPropagation()}>
-        <div className="px-4 pt-1 pb-1.5 text-[0.78rem] uppercase tracking-wide" style={{ color: t.chromeTextDim, opacity: .7 }}>Programs</div>
+        <div className="px-4 pt-1 pb-1.5 text-[11px] font-semibold uppercase tracking-wide" style={{ color: t.chromeTextDim, opacity: .7 }}>Programs</div>
         {topApps.map((a) => (
           <button key={a.id} type="button" className="crt-item w-full text-left px-4 py-2 pl-5 flex items-center gap-2.5" style={{ color: t.chromeText }} onClick={() => onOpen(a.id)}>
             <IconImg icon={a.icon} size={20} className="w-5 text-center flex-shrink-0" />{a.title}
@@ -1603,7 +1603,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
     <div className="absolute pointer-events-auto" style={{ left: current.x, top: current.y, zIndex: 500, transition: docked ? "left .4s ease, top .4s ease" : "none" }}
       onPointerDown={onPointerDown}>
       {open && (
-        <div className="absolute bottom-[166px] right-0 w-72 p-3 font-mono text-[0.82rem] flex flex-col"
+        <div className="absolute bottom-[166px] right-0 w-72 p-3 font-mono font-medium text-[13px] flex flex-col"
           style={{ background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "10px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 16px 40px rgba(0,0,0,.5)" }}>
           <div className="flex items-start justify-between gap-2">
             <ConceptBadge>Claude when configured, else local real-data search</ConceptBadge>
@@ -1620,7 +1620,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
               <p key={i} className="leading-relaxed whitespace-pre-wrap my-1.5" style={{ color: m.role === "user" ? t.chromeTextDim : t.chromeText }}>
                 {m.role === "user" ? "> " : ""}{m.text}
                 {m.role === "assistant" && (
-                  <span style={{ color: t.chromeTextDim, fontSize: "0.7rem" }}>{m.source === "claude" ? "  — via Claude" : "  — local search"}</span>
+                  <span style={{ color: t.chromeTextDim, fontSize: "10px", fontWeight: 500 }}>{m.source === "claude" ? "  — via Claude" : "  — local search"}</span>
                 )}
               </p>
             ))}
@@ -1628,13 +1628,13 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
           </div>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {suggestions.map((s, i) => (
-              <button key={i} type="button" disabled={thinking} onClick={() => ask(s)} className="px-2 py-0.5 text-[0.72rem] disabled:opacity-40" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>{s}</button>
+              <button key={i} type="button" disabled={thinking} onClick={() => ask(s)} className="px-2 py-0.5 text-[12px] font-semibold disabled:opacity-40" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>{s}</button>
             ))}
           </div>
           <form onSubmit={onSubmit} className="flex gap-1.5">
             <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask a question…" autoComplete="off" disabled={thinking}
-              className="flex-1 px-2 py-1 text-[0.82rem] bg-transparent outline-none disabled:opacity-40" style={{ border: "none", boxShadow: bevel("in-shallow", t.winBorder), color: t.chromeText, caretColor: t.accent }} />
-            <button type="submit" disabled={thinking} className="px-2.5 py-1 text-[0.8rem] disabled:opacity-40" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeText }}>Ask</button>
+              className="flex-1 px-2 py-1 text-[13px] font-medium bg-transparent outline-none disabled:opacity-40" style={{ border: "none", boxShadow: bevel("in-shallow", t.winBorder), color: t.chromeText, caretColor: t.accent }} />
+            <button type="submit" disabled={thinking} className="px-2.5 py-1 text-[12px] font-semibold disabled:opacity-40" style={{ background: "rgba(0,20,8,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeText }}>Ask</button>
           </form>
         </div>
       )}
@@ -1829,7 +1829,7 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
             <IconImg icon={icon} size={typeof icon === "string" ? glyphSize : Math.round(tile * (icon && icon.img ? 0.88 : 0.66))} color={color} />
           </span>
         </span>
-        <span className="text-center leading-tight font-mono break-words" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 0 6px " + color + "80" }}>{title}</span>
+        <span className="text-center leading-tight font-mono font-semibold break-words" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 0 6px " + color + "80" }}>{title}</span>
       </button>
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} theme={t} items={[
