@@ -1585,6 +1585,12 @@ const GAMES = [
   { id: "spinning-plates", title: "Spinning Plates", cluster: "command-center", desc: "Real-time survival. Ping each system before it goes critical — more come online the longer you last.", summary: "Concept takeaway: Zuper's real command center monitors every system at once so nothing goes critical unnoticed — this mini-game is an illustrative analogy, not a simulation of real monitoring." },
   { id: "fraud-or-fine", title: "Fraud or Fine?", cluster: "payment-processing", desc: "Fast judgment call. Approve or flag each transaction before the clock runs out — some legit ones look suspicious on purpose.", summary: "Concept takeaway: Zuper's real payment processing screens transactions for risk automatically — this mini-game is an illustrative analogy, not a simulation of a real fraud model." },
 ];
+/* Clusters that already have a matching arcade game don't get their own desktop
+   folder icon anymore — they're "in the arcade" now, per direct request. Derived
+   from GAMES (not a separately-maintained list) so it can't drift out of sync; the
+   folder window itself still exists in allWindows/worldData and stays reachable via
+   the terminal (`cd <cluster>` then `ls`), this only removes the desktop icon. */
+const ARCADE_CLUSTER_IDS = new Set(GAMES.filter((g) => g.cluster).map((g) => g.cluster));
 
 function ArcadeWindow() {
   const [view, setView] = useState("menu");
@@ -2332,7 +2338,7 @@ function App({ worldData, onReboot }) {
   ], []);
 
   const allWindows = useMemo(() => clusterApps.concat(fileWindows, staticApps, hiddenWindows), [clusterApps, fileWindows, staticApps, hiddenWindows]);
-  const desktopIconDefs = useMemo(() => clusterApps.concat(staticApps), [clusterApps, staticApps]);
+  const desktopIconDefs = useMemo(() => clusterApps.filter((a) => !ARCADE_CLUSTER_IDS.has(a.id)).concat(staticApps), [clusterApps, staticApps]);
 
   const wm = useWindowManager(allWindows);
   const stageRef = useRef(null);
