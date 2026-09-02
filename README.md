@@ -68,11 +68,12 @@ a mismatch once Mono CRT became the only look, so that got fixed too.
   hover, instead of the earlier generic white overlay.
 - `Terminal.app`'s input has a green `caretColor` for an authentic blinking
   cursor.
-- A large, mildly-transparent real Zuper Labs logo (`GlitchWatermark`,
-  `assets/zuper-logo.png` at ~8% opacity) is stamped behind the desktop
-  icons — was plain "ZUPER LABS" text, swapped for the actual logo mark
-  per direct request. Still plain and static, no animation — the screen
-  glitching independently of it is deliberate: see `ScreenGlitch` above.
+- A large watermark (`GlitchWatermark`) is stamped behind the desktop
+  icons: the real Zuper Labs logo (`assets/zuper-logo.png`, faint, ~8%
+  opacity) sits behind the plain "ZUPER LABS" text, both centered on the
+  same point — logo at the back, text overlaid on top, per direct
+  request. Still plain and static, no animation — the screen glitching
+  independently of it is deliberate: see `ScreenGlitch` above.
 
 ### Bevel texture (technique borrowed from 1j01/os-gui, recolored)
 

@@ -497,20 +497,25 @@ function ScanlineBackground({ color }) {
   );
 }
 
-/* ================= Background watermark imprint — the real Zuper Labs logo,
-   huge and mildly transparent, stamped behind the icons. Was plain "ZUPER LABS"
-   text; direct request swapped it for the actual logo mark now that we have a
-   clean transparent-PNG asset for it. Static, no glitch/breathe animation — same
-   "plain and static" call as the text version (the screen-glitch motion lives in
-   ScreenGlitch instead, not here). ================= */
+/* ================= Background watermark imprint — the real Zuper Labs logo
+   AND the "ZUPER LABS" text, overlaid on the same center point (logo behind,
+   faint; text on top, same plain full-color treatment it always had) —
+   direct request, after a stacked-column first pass wasn't what was wanted.
+   Static, no glitch/breathe animation — the screen-glitch motion lives in
+   ScreenGlitch instead, not here. ================= */
 function GlitchWatermark({ color }) {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true" style={{ zIndex: 0 }}>
       <img src="./assets/zuper-logo.png" alt="" style={{
         position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
-        width: "min(48vw, 640px)", height: "min(48vw, 640px)", objectFit: "contain",
-        opacity: 0.08,
+        width: "min(30vw, 380px)", height: "min(30vw, 380px)", objectFit: "contain", opacity: 0.08,
       }} />
+      <span style={{
+        position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
+        fontFamily: "'VT323','Inconsolata',monospace", fontWeight: 700,
+        fontSize: "min(15vw, 200px)", letterSpacing: "0.04em", whiteSpace: "nowrap", lineHeight: 1,
+        color: color,
+      }}>ZUPER LABS</span>
     </div>
   );
 }
