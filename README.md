@@ -54,12 +54,13 @@ a mismatch once Mono CRT became the only look, so that got fixed too.
 - `CRTOverlay` (the old moving scanline sweep + flicker + screen-curvature
   vignette, all layered on top of everything) was removed entirely — it
   visually darkened/shadowed open windows and the assistant, a real bug,
-  not a style choice. In its place, `ScreenGlitch` gives just the *glitch*
-  back without the vignette: two independent-cycle bands (9s/13s) that
-  briefly jitter position and flash, plus a very faint whole-screen flash
-  timed with the first band — parked at z-index 2, nowhere near the
-  z:1990 that caused the original bug. Strictly mono accent color, no RGB
-  channel-split.
+  not a style choice. In its place, `ScreenGlitch` brings back the
+  continuous sweep + flicker motion (a first attempt at a brief/occasional
+  glitch burst turned out not to be what was wanted — this is the
+  always-on version instead) without the vignette, which stays removed —
+  that part was disliked on its own, separately from the z-index bug.
+  Parked at z-index 2, nowhere near the z:1990 that caused the original
+  bug. Strictly mono accent color, no RGB channel-split.
 - Icon tiles use a real glow-pulse animation (`crt-icon-glow`), not just a
   static shadow.
 - Menu/list rows (Start menu, context menus, the Find/Run launcher) get a

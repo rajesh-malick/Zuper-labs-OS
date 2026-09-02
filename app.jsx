@@ -515,22 +515,30 @@ function GlitchWatermark({ color }) {
   );
 }
 
-/* ================= Screen glitch: brief periodic band-jitter + flash, across the
-   whole desktop — separate from GlitchWatermark (the "ZUPER LABS" text stays plain
-   and static per direct request; this is the screen glitching, not the text). Pure
-   CSS/keyframe animation, no canvas. Sits at z-index 2 — just above the plain
-   background layers (ScanlineBackground/GlitchWatermark, z:0) but nowhere near open
-   app windows (z:10+) or the assistant (z:500), learning from the earlier CRTOverlay
-   z-index bug (it used to sit at z:1990, "on top of everything," which visually
-   darkened/shadowed both — this one never goes near that range). Stays strictly
-   mono-accent-color — no RGB channel-split, that would break the "mono CRT only"
-   rule the rest of the OS follows. ================= */
+/* ================= Screen glitch: a CONTINUOUS moving scanline sweep + subtle
+   flicker across the whole desktop — separate from GlitchWatermark (the "ZUPER LABS"
+   text stays plain and static per direct request; this is the screen glitching, not
+   the text). First pass here was a brief/occasional band-jitter, which wasn't what
+   was actually wanted — this is the always-on sweep instead, the same motion the old
+   CRTOverlay had. Deliberately does NOT bring back CRTOverlay's dark-corners vignette
+   (radial-gradient + inset box-shadow) — that was the part actually disliked, plus
+   the reason it used to visually darken open windows before its z-index got fixed.
+   Sits at z-index 2 — just above the plain background layers
+   (ScanlineBackground/GlitchWatermark, z:0) and nowhere near open app windows (z:10+)
+   or the assistant (z:500); the old CRTOverlay sat at z:1990, "on top of everything,"
+   which is what caused that bug. Stays strictly mono-accent-color — no RGB
+   channel-split, that would break the "mono CRT only" rule the rest of the OS
+   follows. ================= */
 function ScreenGlitch({ color }) {
   return (
     <div className="fixed inset-0 pointer-events-none z-[2] overflow-hidden" aria-hidden="true">
-      <div className="absolute inset-x-0" style={{ top: "23%", height: "3px", background: color, opacity: 0, mixBlendMode: "screen", animation: "screen-glitch-a 9s ease-in-out infinite" }} />
-      <div className="absolute inset-x-0" style={{ top: "61%", height: "2px", background: color, opacity: 0, mixBlendMode: "screen", animation: "screen-glitch-b 13s ease-in-out infinite" }} />
-      <div className="absolute inset-0" style={{ background: color, opacity: 0, mixBlendMode: "overlay", animation: "screen-glitch-flash 9s ease-in-out infinite" }} />
+      <div className="absolute inset-x-0" style={{
+        top: 0, height: "140px", left: 0, right: 0,
+        background: "linear-gradient(180deg, transparent, " + color + "1c 45%, " + color + "0d 55%, transparent)",
+        animation: "crt-sweep 7s linear infinite",
+        mixBlendMode: "screen",
+      }} />
+      <div className="absolute inset-0" style={{ background: color, opacity: 0.02, animation: "crt-flicker 6.5s ease-in-out infinite", mixBlendMode: "overlay" }} />
     </div>
   );
 }
