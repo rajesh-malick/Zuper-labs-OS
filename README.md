@@ -68,11 +68,11 @@ a mismatch once Mono CRT became the only look, so that got fixed too.
   hover, instead of the earlier generic white overlay.
 - `Terminal.app`'s input has a green `caretColor` for an authentic blinking
   cursor.
-- A large, faint "ZUPER LABS" watermark (`GlitchWatermark`) is stamped
-  behind the desktop icons. It's plain static text now, no animation —
-  direct request, after the earlier jittering/breathing version read as
-  noise rather than a subtle watermark. The screen glitching independently
-  of this text is deliberate: see `ScreenGlitch` above.
+- A large, mildly-transparent real Zuper Labs logo (`GlitchWatermark`,
+  `assets/zuper-logo.png` at ~8% opacity) is stamped behind the desktop
+  icons — was plain "ZUPER LABS" text, swapped for the actual logo mark
+  per direct request. Still plain and static, no animation — the screen
+  glitching independently of it is deliberate: see `ScreenGlitch` above.
 
 ### Bevel texture (technique borrowed from 1j01/os-gui, recolored)
 
@@ -93,74 +93,57 @@ assistant's chat input (sunken) and buttons, and the scrollbar thumb/track.
 
 ## Desktop assistant
 
-An original CRT-terminal-robot mascot — a monitor head on tank treads
-with a real CRT silhouette (a thick bottom control-panel "chin" with
-two dummy buttons and the power LED, corner screws, and a diagonal
-glass-glare highlight on the curved screen, instead of reading as a
-plain rectangle), its screen glowing in the OS's own CRT accent color
-with a pixel-block smiley and a blinking `>_` cursor, plus a small
-power-LED in Zuper's real brand orange (`#ff4919`) as the one
-brand-color touch (own hand-drawn SVG design, own proportions and
-colors).
+The assistant's visual identity is now the real Zuper Labs logo mark
+(`assets/zuper-logo.png`) — direct request, replacing the earlier
+hand-drawn CRT-terminal-robot character entirely. It sits in a small
+dark device-style bezel (the same case gradient/material the old robot
+head used) so it still reads as a physical desktop widget with real
+depth rather than a flat pasted image, glows in the OS's own CRT accent
+color, and keeps the same genuine CSS 3D idle tilt
+(`perspective` + `rotateY`) the previous character had.
 
-This design exists because internal feedback pushed hard for "a
+This assistant exists because internal feedback pushed hard for "a
 Clippy-like character" — Microsoft's actual Clippy asset can't be used
-regardless of internal risk-tolerance (that's a fixed constraint, not a
-judgment call anyone here can waive, and it didn't change no matter how
-many times it came back up, including a standalone `Clippy.exe`
-Electron build that turned out to bundle the same real character
-artwork under a different packaging). What the pushback was actually
-asking for, once we talked it through, was Clippy's *reactivity* — a
-small object with a face that's always a little alive, that reacts to
-touch/click/idle — not its specific likeness. A retro CRT terminal on
-treads gets there as a genuinely original character, and it has a bonus
-the earlier orange-wrench design didn't: it's built entirely from the
-OS's own mono-CRT visual language (phosphor glow, scanlines, terminal
-cursor), so it actually ties into the rest of the desktop instead of
-just standing next to it. The concept direction (not the specific
-character) came from a reference screenshot the user shared of a
-different retro-CRT-robot design — used purely for style/vibe, not
-traced, with no names or branding carried over.
+regardless of internal risk-tolerance (a fixed constraint, not a
+judgment call anyone here can waive; it didn't change no matter how many
+times it came back up, including a standalone `Clippy.exe` Electron
+build that turned out to bundle the same real character artwork under
+different packaging — see below). What the pushback was actually asking
+for, once talked through, was Clippy's *reactivity* — a small thing
+that's always a little alive, that reacts to touch/click/idle — not its
+specific likeness. That reactivity is what carried forward into this
+logo-based redesign: the logo still greets, says goodbye, perks up on
+hover, idle-fidgets, and pulses while thinking, exactly as the earlier
+character did, just expressed as transforms/opacity/glow on the logo
+image itself instead of swapping SVG sub-parts.
 
 Earlier passes (alien-cat → humanoid → head-only golden-dog → head-only
-otter → full-body otter → orange wrench) were all clipped to a small circular badge, because the `<button>`
-itself visually *was* a 64x64 circle (background + border + boxShadow all
+otter → full-body otter → orange wrench → CRT-terminal-robot) were all
+clipped to a small circular badge, because the `<button>` itself
+visually *was* a 64x64 circle (background + border + boxShadow all
 circle-shaped) — that's the actual reason only a head ever fit, and why
 it kept reading as "a face inside a circular icon." The button is now
-just an invisible hit-box; every visible pixel is drawn by the SVG at
-whatever size the full figure needs, and the glow is a `drop-shadow`
-filter on the SVG (hugs the real silhouette) instead of a `boxShadow` on
-the button. The whole SVG also gets a genuine CSS 3D transform
-(`perspective` + `rotateY` — real 3D, not just gradient shading) as an
-idle animation, for visible dimensionality without the cost of a full
-WebGL rewrite (the Three.js attempt at real 3D for the whole Zuper Quest
-town, in the sibling side project, got reverted for being too big a
-swing — this is the lighter-weight version of that idea, scoped to one
-character). It docks near the currently focused window until you
-manually drag it, then stays where you put it.
+just an invisible hit-box; every visible pixel is drawn at whatever size
+the design needs, with the glow as a `drop-shadow` filter (hugs the real
+silhouette) instead of a `boxShadow` on the button. It docks near the
+currently focused window until you manually drag it, then stays where
+you put it.
 
 **Animation states.** Classic assistant-character libraries like
 `@react95/clippy` expose a named set of animations (`Wave`, `Greeting`,
 `GoodBye`, `GetAttention`, `Idle*`, `Thinking`/`Processing`, ...) and are
 reactive to touch, click, and idle time, not just clicks — that
 interaction-design vocabulary was used as design reference (not code or
-assets), reimplemented from scratch as CSS/SVG transforms on this
-original character: an idle eye-blink; a real hard-cut terminal cursor
-blink (`>_`, distinct from the eye-blink's soft squash, and always
-visible in the screen's corner regardless of state); ambient CRT
-scanline flicker; a tread-rock wave on opening the panel and a wave
-goodbye on closing it; a tread-rock right after a fresh reply; a
-hover-notice "perk up" on pointer-enter; a small randomized idle fidget
-(a head glance) every ~12-22s so the character stays alive even when
-nobody's touching it; and a head-tilt while a question is being
-answered. The **screen's own content swaps per state**, on top of all of
-that — a small pixel-block hand waving on greet (`Wave`/`Greeting`);
-"GOODBYE!!!" rendered in the VT323 terminal font on close (`GoodBye`); a
-bright scan-bar sweeping down the screen as a "glitch" cue on hover
-(`GetAttention`); three pulsing loading dots while thinking
-(`Processing`); and the default pixel-block smiley otherwise.
-`@react95/clippy` itself was **not used** — inspecting
-the published npm package confirmed it ships ~16.6MB of actual extracted
+assets), reimplemented from scratch on the logo image: a scale-up pulse
+on greet; a scale-down/fade dip on goodbye; an ambient ring glow around
+the bezel that brightens on greet, goodbye, or right after a fresh reply;
+a "perk up" 3D notice on pointer-enter; a small randomized idle fidget
+wobble every ~12-22s so it stays alive even when nobody's touching it;
+a head-tilt while a question is being answered; three pulsing loading
+dots under the logo while thinking; and a bright glint bar sweeping over
+the logo on hover, standing in for the old screen's `GetAttention` scan
+cue. `@react95/clippy` itself was **not used** — inspecting the
+published npm package confirmed it ships ~16.6MB of actual extracted
 Microsoft Office character sprites/sounds (Clippy, Merlin, Bonzi, Rover,
 etc.), with upstream docs stating outright those assets "remain property
 of Microsoft." Same reasoning as rejecting `@react95/icons` earlier, as
@@ -356,8 +339,10 @@ is that extracted data (regex-parsed from the real bundle, values untouched).
   sends what signal type to which other entity) is the real `flows` array
   from the same source file, not invented.
 - The accent color (`#ff4919`) — Zuper's brand orange.
-- The two outbound links ("Open real labs.zuper.co" in the Start menu, and
-  "Subscribe" in the taskbar) point at the actual `https://labs.zuper.co/`.
+- The "Subscribe" link in the taskbar points at the actual
+  `https://labs.zuper.co/`. (The redundant "Open real labs.zuper.co" links
+  that used to sit in the Start menu and the desktop right-click menu were
+  removed per direct request — Subscribe already covers that.)
 - The boot-screen "runtime check" lines (browser, core count, language,
   screen size) — read from the visitor's real `navigator`/`screen` APIs.
 
