@@ -51,9 +51,15 @@ a mismatch once Mono CRT became the only look, so that got fixed too.
 ### CRT authenticity details (added after reviewing further green-terminal
 ### references — Videotex-style UIs, Severance-style monochrome consoles,
 ### classic green Winamp skins)
-- A `CRTOverlay` layered on top of everything: a moving horizontal scanline
-  sweep, a subtle flicker, and a pronounced screen-curvature vignette
-  (darkened corners), all pure CSS/keyframe, no canvas.
+- `CRTOverlay` (the old moving scanline sweep + flicker + screen-curvature
+  vignette, all layered on top of everything) was removed entirely — it
+  visually darkened/shadowed open windows and the assistant, a real bug,
+  not a style choice. In its place, `ScreenGlitch` gives just the *glitch*
+  back without the vignette: two independent-cycle bands (9s/13s) that
+  briefly jitter position and flash, plus a very faint whole-screen flash
+  timed with the first band — parked at z-index 2, nowhere near the
+  z:1990 that caused the original bug. Strictly mono accent color, no RGB
+  channel-split.
 - Icon tiles use a real glow-pulse animation (`crt-icon-glow`), not just a
   static shadow.
 - Menu/list rows (Start menu, context menus, the Find/Run launcher) get a
@@ -62,12 +68,10 @@ a mismatch once Mono CRT became the only look, so that got fixed too.
 - `Terminal.app`'s input has a green `caretColor` for an authentic blinking
   cursor.
 - A large, faint "ZUPER LABS" watermark (`GlitchWatermark`) is stamped
-  behind the desktop icons. Its glitch burst is timed to the same 7s period
-  as the scanline sweep, peaking right as the sweep band crosses the
-  screen's vertical center — the watermark visibly glitches "when the
-  light touches it" — plus a second, shorter independent cycle for extra
-  ambient glitchiness in between. Strictly mono green/black; no RGB
-  channel-split, to stay consistent with the mono-CRT-only rule.
+  behind the desktop icons. It's plain static text now, no animation —
+  direct request, after the earlier jittering/breathing version read as
+  noise rather than a subtle watermark. The screen glitching independently
+  of this text is deliberate: see `ScreenGlitch` above.
 
 ### Bevel texture (technique borrowed from 1j01/os-gui, recolored)
 

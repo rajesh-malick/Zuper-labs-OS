@@ -515,6 +515,26 @@ function GlitchWatermark({ color }) {
   );
 }
 
+/* ================= Screen glitch: brief periodic band-jitter + flash, across the
+   whole desktop — separate from GlitchWatermark (the "ZUPER LABS" text stays plain
+   and static per direct request; this is the screen glitching, not the text). Pure
+   CSS/keyframe animation, no canvas. Sits at z-index 2 — just above the plain
+   background layers (ScanlineBackground/GlitchWatermark, z:0) but nowhere near open
+   app windows (z:10+) or the assistant (z:500), learning from the earlier CRTOverlay
+   z-index bug (it used to sit at z:1990, "on top of everything," which visually
+   darkened/shadowed both — this one never goes near that range). Stays strictly
+   mono-accent-color — no RGB channel-split, that would break the "mono CRT only"
+   rule the rest of the OS follows. ================= */
+function ScreenGlitch({ color }) {
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[2] overflow-hidden" aria-hidden="true">
+      <div className="absolute inset-x-0" style={{ top: "23%", height: "3px", background: color, opacity: 0, mixBlendMode: "screen", animation: "screen-glitch-a 9s ease-in-out infinite" }} />
+      <div className="absolute inset-x-0" style={{ top: "61%", height: "2px", background: color, opacity: 0, mixBlendMode: "screen", animation: "screen-glitch-b 13s ease-in-out infinite" }} />
+      <div className="absolute inset-0" style={{ background: color, opacity: 0, mixBlendMode: "overlay", animation: "screen-glitch-flash 9s ease-in-out infinite" }} />
+    </div>
+  );
+}
+
 /* ================= Generic right-click context menu ================= */
 function ContextMenu({ x, y, items, onClose, theme }) {
   useEffect(() => {
@@ -2566,6 +2586,7 @@ function App({ worldData, onReboot }) {
         onDoubleClick={(e) => { if (e.target === e.currentTarget) setCreateMenu({ x: e.clientX, y: e.clientY }); }}>
         <ScanlineBackground color={theme.accent} />
         <GlitchWatermark color={theme.accent} />
+        <ScreenGlitch color={theme.accent} />
 
         {desktopIcons.map((a, i) => (
           <DesktopIcon key={a.id} id={a.id} title={iconNames[a.id] || a.title} icon={a.icon} color={theme.accent}

@@ -121,6 +121,31 @@
        glitch/breathe animations were removed on request; this one keyframe is still
        live on the mascot. */
     @keyframes crt-flicker { 0%, 100% { opacity: .015; } 50% { opacity: .035; } 92% { opacity: .06; } }
+    /* Screen-level glitch (ScreenGlitch in app.jsx) — brief periodic band-jitter +
+       flash across the whole desktop, separate from the "ZUPER LABS" watermark text
+       (which stays plain/static). Two bands on independent cycles (9s, 13s) so the
+       glitch bursts don't always land together, plus a very faint whole-screen flash
+       timed with the first band. */
+    @keyframes screen-glitch-a {
+      0%, 88%, 100% { opacity: 0; transform: translateX(0); }
+      89% { opacity: .45; transform: translateX(-12px); }
+      90% { opacity: .15; transform: translateX(9px); }
+      91% { opacity: .55; transform: translateX(-5px); }
+      92% { opacity: 0; transform: translateX(0); }
+    }
+    @keyframes screen-glitch-b {
+      0%, 62%, 100% { opacity: 0; transform: translateX(0); }
+      63% { opacity: .35; transform: translateX(10px); }
+      64% { opacity: .5; transform: translateX(-7px); }
+      65% { opacity: 0; transform: translateX(0); }
+    }
+    @keyframes screen-glitch-flash {
+      0%, 88%, 100% { opacity: 0; }
+      89% { opacity: .04; }
+      90% { opacity: .01; }
+      91% { opacity: .06; }
+      92% { opacity: 0; }
+    }
     @keyframes crt-icon-glow { 0%, 100% { filter: drop-shadow(0 0 2px currentColor); } 50% { filter: drop-shadow(0 0 6px currentColor); } }
     html { cursor: default; }
     ::selection { background: rgba(255,176,0,.35); color: #fff3e0; }
