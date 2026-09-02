@@ -215,173 +215,134 @@ const CLUSTER_APPS = {
    pack"-style beveled look — same construction convention as those references, but
    kept strictly mono CRT-accent (currently amber; no borrowed artwork, no new colors). ---------- */
 function vintage(shape, fallback, img) { return { shape: shape, fallback: fallback, img: img }; }
-function glassIcon(key, fallback) { return { glass: key, fallback: fallback }; }
+function minimalIcon(key, fallback) { return { minimal: key, fallback: fallback }; }
 
-/* Desktop/app icons — a soft white "glassmorphic" icon set, per direct reference (a
-   frosted-glass icon sheet: filled off-white shapes with a soft gradient, a subtle
-   dark edge for definition, and a glowing halo) covering 10 of the 16 clusters by
-   name; the other 6 (arcade-linked, currently hidden from the desktop — see
-   ARCADE_CLUSTER_IDS) got matching original shapes in the same treatment for
-   consistency. This replaced the earlier flat single-stroke minimalist line-icon set
-   entirely — a different rendering philosophy again (filled + gradient + glow, not
-   thin outline), so it's a new shape library (GLASS_ICON_SHAPES) and a new renderer
-   (GlassIcon), not a restyle of MinimalIcon. The icon glyph itself carries the glass
-   look — no background tile/card behind it, per the earlier "just use icon" removal
-   of iconTileVisuals; the glow ties it back to the OS's own amber CRT accent. */
+/* Desktop/app icons — a fresh, hand-drawn minimalist single-stroke line-icon set, per
+   direct reference (PostHog's app-launcher icons: plain single-color outlines, no
+   fill, no detail, generous whitespace). This replaces the earlier full-color
+   pixel-art PNG set entirely — not a simplification of those, a different rendering
+   philosophy, so it's a new shape library (MINIMAL_ICON_SHAPES below) and a new flat
+   SVG renderer (MinimalIcon), not a reuse of the older embossed/pixelated
+   vintage/PixelIcon system (which stays wired up for ENTITY_ICONS and as the ultimate
+   fallback). One bespoke shape per cluster, not a generic icon-pack glyph. */
 const CLUSTER_ICONS = {
-  "command-center": glassIcon("command-center", "\u{1F5A5}️"),
-  "core-platform": glassIcon("core-platform", "\u{1F9E0}"),
-  "ai-intelligence": glassIcon("ai-intelligence", "\u{1F916}"),
-  "workflows-cluster": glassIcon("workflows-cluster", "\u{1F501}"),
-  "field-operations": glassIcon("field-operations", "\u{1F6F0}️"),
-  "security-compliance": glassIcon("security-compliance", "\u{1F512}"),
-  "careers": glassIcon("careers", "\u{1F4BC}"),
-  "blog": glassIcon("blog", "\u{1F4DD}"),
-  "customer-portal": glassIcon("customer-portal", "\u{1F464}"),
-  "data-pipeline": glassIcon("data-pipeline", "\u{1F4CA}"),
-  "payment-processing": glassIcon("payment-processing", "\u{1F4B3}"),
-  "inventory-management": glassIcon("inventory-management", "\u{1F4E6}"),
-  "integration-hub": glassIcon("integration-hub", "\u{1F517}"),
-  "predictive-analytics": glassIcon("predictive-analytics", "\u{1F52E}"),
-  "zuper-arcade": glassIcon("zuper-arcade", "\u{1F3AE}"),
-  "terminal": glassIcon("terminal", "⌨️"),
+  "command-center": minimalIcon("command-center", "\u{1F5A5}️"),
+  "core-platform": minimalIcon("core-platform", "\u{1F9E0}"),
+  "ai-intelligence": minimalIcon("ai-intelligence", "\u{1F916}"),
+  "workflows-cluster": minimalIcon("workflows-cluster", "\u{1F501}"),
+  "field-operations": minimalIcon("field-operations", "\u{1F6F0}️"),
+  "security-compliance": minimalIcon("security-compliance", "\u{1F512}"),
+  "careers": minimalIcon("careers", "\u{1F4BC}"),
+  "blog": minimalIcon("blog", "\u{1F4DD}"),
+  "customer-portal": minimalIcon("customer-portal", "\u{1F464}"),
+  "data-pipeline": minimalIcon("data-pipeline", "\u{1F4CA}"),
+  "payment-processing": minimalIcon("payment-processing", "\u{1F4B3}"),
+  "inventory-management": minimalIcon("inventory-management", "\u{1F4E6}"),
+  "integration-hub": minimalIcon("integration-hub", "\u{1F517}"),
+  "predictive-analytics": minimalIcon("predictive-analytics", "\u{1F52E}"),
+  "zuper-arcade": minimalIcon("zuper-arcade", "\u{1F3AE}"),
+  "terminal": minimalIcon("terminal", "⌨️"),
 };
 
-/* One shape array per cluster, 24x24 grid. Fillable shapes (rect/circle/ellipse/path)
-   default to the frosted-glass gradient fill + a subtle dark edge; line/polyline
-   default to a plain dark detail stroke (they have nothing to fill). Either default
-   can be overridden per-shape (e.g. a dark accent dot, a light checkmark) by just
-   setting fill/stroke directly in that shape's own attrs — see GlassIcon below. */
-const GLASS_ICON_SHAPES = {
+/* One shape array per cluster, in the same [tag, attrs] tuple format PixelIcon already
+   uses below — but rendered flat (MinimalIcon), not embossed/rasterized/pixelated.
+   24x24 grid, generous margins, thin uniform stroke — matching a clean modern
+   app-launcher icon set rather than a retro icon pack. */
+const MINIMAL_ICON_SHAPES = {
   "command-center": [ // broadcast beacon
-    ["circle", { cx: 12, cy: 17, r: 1.7 }],
-    ["path", { d: "M9 14a4.2 4.2 0 0 1 6 0", fill: "none" }],
-    ["path", { d: "M6.5 11.2a7.8 7.8 0 0 1 11 0", fill: "none" }],
+    ["path", { d: "M9 15a4.2 4.2 0 0 1 6 0" }],
+    ["path", { d: "M6.5 12.5a7.8 7.8 0 0 1 11 0" }],
+    ["circle", { cx: 12, cy: 18, r: 1.1, fill: "currentColor" }],
   ],
   "core-platform": [ // stacked layers
-    ["rect", { x: 5, y: 4.5, width: 14, height: 3.4, rx: 1 }],
-    ["rect", { x: 5, y: 10.3, width: 14, height: 3.4, rx: 1 }],
-    ["rect", { x: 5, y: 16.1, width: 14, height: 3.4, rx: 1 }],
+    ["rect", { x: 5, y: 4.5, width: 14, height: 3.2, rx: 1 }],
+    ["rect", { x: 5, y: 10.4, width: 14, height: 3.2, rx: 1 }],
+    ["rect", { x: 5, y: 16.3, width: 14, height: 3.2, rx: 1 }],
   ],
-  "ai-intelligence": [ // brain with circuit nodes
-    ["path", { d: "M12 4c-3 0-5 2-5 4.5-1.5.5-2.5 2-2.5 3.5 0 1.7 1.3 3 3 3.2-.3.6-.5 1.3-.5 2 0 2.2 1.8 4 4 4h2c2.2 0 4-1.8 4-4 0-.7-.2-1.4-.5-2 1.7-.2 3-1.5 3-3.2 0-1.5-1-3-2.5-3.5C17 6 15 4 12 4z" }],
-    ["line", { x1: 12, y1: 5, x2: 12, y2: 19 }],
-    ["circle", { cx: 15.6, cy: 9.3, r: 0.9 }],
-    ["circle", { cx: 17, cy: 13, r: 0.9 }],
-    ["line", { x1: 15.6, y1: 9.3, x2: 17, y2: 13 }],
+  "ai-intelligence": [ // sparkle
+    ["path", { d: "M12 3.5l1.7 6.3 6.3 1.7-6.3 1.7-1.7 6.3-1.7-6.3-6.3-1.7 6.3-1.7z" }],
   ],
   "workflows-cluster": [ // cycle/automation arrows
-    ["path", { d: "M4.5 12a7.5 7.5 0 0 1 13-5", fill: "none" }],
+    ["path", { d: "M4.5 12a7.5 7.5 0 0 1 13-5" }],
     ["polyline", { points: "16.5 3.5 17.5 7 14 7" }],
-    ["path", { d: "M19.5 12a7.5 7.5 0 0 1-13 5", fill: "none" }],
+    ["path", { d: "M19.5 12a7.5 7.5 0 0 1-13 5" }],
     ["polyline", { points: "7.5 20.5 6.5 17 10 17" }],
   ],
   "field-operations": [ // map pin
     ["path", { d: "M12 21s-6.5-6.7-6.5-11A6.5 6.5 0 0 1 18.5 10c0 4.3-6.5 11-6.5 11z" }],
-    ["circle", { cx: 12, cy: 9.7, r: 2.1, fill: "rgba(35,30,15,.45)", stroke: "none" }],
+    ["circle", { cx: 12, cy: 9.7, r: 2.1 }],
   ],
   "security-compliance": [ // shield with check
     ["path", { d: "M12 3l7 3v5.5c0 4.6-3 8.2-7 9.5-4-1.3-7-4.9-7-9.5V6z" }],
-    ["polyline", { points: "9 12.2 11 14.2 15.2 9.6", fill: "none", stroke: "rgba(35,30,15,.6)", strokeWidth: 1.6 }],
+    ["polyline", { points: "9 12.2 11 14.2 15.2 9.6" }],
   ],
-  careers: [ // person + briefcase
-    ["circle", { cx: 8.5, cy: 7.5, r: 2.6 }],
-    ["path", { d: "M4.5 18.5c0-3 1.8-5 4-5s4 2 4 5z" }],
-    ["rect", { x: 13, y: 12, width: 8, height: 6.5, rx: 1 }],
-    ["path", { d: "M15.5 12v-1.3a1.3 1.3 0 0 1 1.3-1.3h2.4a1.3 1.3 0 0 1 1.3 1.3V12", fill: "none" }],
-    ["line", { x1: 13, y1: 15, x2: 21, y2: 15 }],
+  careers: [ // briefcase
+    ["rect", { x: 3.5, y: 8, width: 17, height: 11, rx: 1.5 }],
+    ["path", { d: "M8.5 8V6.3A1.8 1.8 0 0 1 10.3 4.5h3.4A1.8 1.8 0 0 1 15.5 6.3V8" }],
+    ["line", { x1: 3.5, y1: 13, x2: 20.5, y2: 13 }],
   ],
-  blog: [ // document with thumbnail + lines
-    ["path", { d: "M5 3.5h9l4 4v13h-13z" }],
-    ["polyline", { points: "14 3.5 14 7.5 18 7.5" }],
-    ["rect", { x: 7.5, y: 9.5, width: 3, height: 3, rx: 0.5, fill: "rgba(35,30,15,.4)", stroke: "none" }],
-    ["line", { x1: 12.2, y1: 10, x2: 16, y2: 10 }],
-    ["line", { x1: 7.5, y1: 15, x2: 16, y2: 15 }],
-    ["line", { x1: 7.5, y1: 17.5, x2: 16, y2: 17.5 }],
+  blog: [ // page with pen
+    ["path", { d: "M6.5 3.5h8l3 3v14h-11z" }],
+    ["polyline", { points: "14.5 3.5 14.5 6.5 17.5 6.5" }],
+    ["line", { x1: 9, y1: 12.5, x2: 15, y2: 12.5 }],
+    ["line", { x1: 9, y1: 16, x2: 15, y2: 16 }],
   ],
-  "customer-portal": [ // person + door
-    ["circle", { cx: 8, cy: 8, r: 2.6 }],
-    ["path", { d: "M4 19c0-3 1.8-5 4-5s4 2 4 5z" }],
-    ["rect", { x: 14, y: 4, width: 6, height: 16, rx: 0.6 }],
-    ["circle", { cx: 18.3, cy: 12, r: 0.7, fill: "rgba(35,30,15,.55)", stroke: "none" }],
+  "customer-portal": [ // person
+    ["circle", { cx: 12, cy: 8, r: 3.4 }],
+    ["path", { d: "M5.2 20c0-4 3-6.8 6.8-6.8s6.8 2.8 6.8 6.8" }],
   ],
   "data-pipeline": [ // flow with arrow
-    ["circle", { cx: 5, cy: 8, r: 1.6 }],
-    ["path", { d: "M5 8h6.5A3.5 3.5 0 0 1 15 11.5V18", fill: "none" }],
-    ["polyline", { points: "12 15.5 15 18.5 18 15.5" }],
+    ["path", { d: "M5 8h6.5A3.5 3.5 0 0 1 15 11.5V19" }],
+    ["polyline", { points: "12 16 15 19 18 16" }],
+    ["circle", { cx: 5, cy: 8, r: 1.3, fill: "currentColor" }],
   ],
   "payment-processing": [ // card
     ["rect", { x: 3, y: 6, width: 18, height: 12.5, rx: 2 }],
-    ["rect", { x: 3, y: 9.5, width: 18, height: 2.2, fill: "rgba(35,30,15,.5)", stroke: "none" }],
-    ["line", { x1: 6, y1: 15.5, x2: 10.5, y2: 15.5 }],
+    ["line", { x1: 3, y1: 10.2, x2: 21, y2: 10.2 }],
+    ["line", { x1: 6, y1: 15, x2: 10.5, y2: 15 }],
   ],
-  "inventory-management": [ // two stacked boxes
-    ["path", { d: "M4 9l3.5-2 3.5 2-3.5 2z" }],
-    ["path", { d: "M4 9v4l3.5 2v-4z" }],
-    ["path", { d: "M11 9v4l-3.5 2v-4z" }],
-    ["path", { d: "M10 14l4.5-2.5 4.5 2.5-4.5 2.5z" }],
-    ["path", { d: "M10 14v5l4.5 2.5v-5z" }],
-    ["path", { d: "M19 14v5l-4.5 2.5v-5z" }],
+  "inventory-management": [ // box
+    ["path", { d: "M3.5 8l8.5-4.5L20.5 8 12 12.5z" }],
+    ["path", { d: "M3.5 8v9l8.5 4.5V12.5" }],
+    ["path", { d: "M20.5 8v9L12 21.5V12.5" }],
   ],
-  "integration-hub": [ // hub and spoke
-    ["circle", { cx: 12, cy: 12, r: 2.6 }],
-    ["rect", { x: 10.6, y: 2.5, width: 2.8, height: 2.8, rx: 0.5 }],
-    ["rect", { x: 10.6, y: 18.7, width: 2.8, height: 2.8, rx: 0.5 }],
-    ["rect", { x: 2.5, y: 10.6, width: 2.8, height: 2.8, rx: 0.5 }],
-    ["rect", { x: 18.7, y: 10.6, width: 2.8, height: 2.8, rx: 0.5 }],
-    ["line", { x1: 12, y1: 9.4, x2: 12, y2: 5.3 }],
-    ["line", { x1: 12, y1: 14.6, x2: 12, y2: 18.7 }],
-    ["line", { x1: 9.4, y1: 12, x2: 5.3, y2: 12 }],
-    ["line", { x1: 14.6, y1: 12, x2: 18.7, y2: 12 }],
+  "integration-hub": [ // chain link
+    ["path", { d: "M9.5 14.5l5-5" }],
+    ["path", { d: "M7.3 11.8l-1.6 1.6a3.2 3.2 0 0 0 4.5 4.5l1.6-1.6" }],
+    ["path", { d: "M16.7 12.2l1.6-1.6a3.2 3.2 0 0 0-4.5-4.5l-1.6 1.6" }],
   ],
-  "predictive-analytics": [ // bars + trend arrow
-    ["rect", { x: 4, y: 15, width: 3, height: 5, rx: 0.6 }],
-    ["rect", { x: 9, y: 11, width: 3, height: 9, rx: 0.6 }],
-    ["rect", { x: 14, y: 7, width: 3, height: 13, rx: 0.6 }],
-    ["polyline", { points: "5 10 10 5.5 13.5 8.5 19.5 3" }],
-    ["polyline", { points: "15.5 3 19.5 3 19.5 7" }],
+  "predictive-analytics": [ // trend line with arrow
+    ["line", { x1: 4, y1: 20, x2: 20, y2: 20 }],
+    ["polyline", { points: "4.5 15.5 9.5 10.5 13 13.5 19.5 6.5" }],
+    ["polyline", { points: "14.5 6.5 19.5 6.5 19.5 11.5" }],
   ],
-  "zuper-arcade": [ // game controller
-    ["path", { d: "M6 12a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3l1.2 5a2 2 0 0 1-3.6 1.6L14 17H10l-1.6 1.6A2 2 0 0 1 4.8 17z" }],
-    ["line", { x1: 8, y1: 12.3, x2: 8, y2: 14.3, stroke: "rgba(35,30,15,.6)", strokeWidth: 1.4 }],
-    ["line", { x1: 7, y1: 13.3, x2: 9, y2: 13.3, stroke: "rgba(35,30,15,.6)", strokeWidth: 1.4 }],
-    ["circle", { cx: 16, cy: 12.5, r: 0.7, fill: "rgba(35,30,15,.55)", stroke: "none" }],
-    ["circle", { cx: 14.3, cy: 14.2, r: 0.7, fill: "rgba(35,30,15,.55)", stroke: "none" }],
+  "zuper-arcade": [ // joystick
+    ["rect", { x: 5, y: 13, width: 14, height: 7, rx: 2.5 }],
+    ["circle", { cx: 9.5, cy: 16.5, r: 1, fill: "currentColor" }],
+    ["circle", { cx: 14.5, cy: 16.5, r: 1, fill: "currentColor" }],
+    ["path", { d: "M9 13V9.5a3 3 0 0 1 6 0V13" }],
   ],
-  terminal: [ // monitor + prompt
-    ["rect", { x: 3, y: 4, width: 18, height: 13, rx: 1.5 }],
-    ["path", { d: "M10 17v2h4v-2", fill: "none" }],
-    ["polyline", { points: "6.5 8.5 9 10.7 6.5 12.9", fill: "none", stroke: "rgba(35,30,15,.6)", strokeWidth: 1.4 }],
-    ["line", { x1: 11.5, y1: 12.9, x2: 15, y2: 12.9, stroke: "rgba(35,30,15,.6)", strokeWidth: 1.4 }],
+  terminal: [ // prompt
+    ["rect", { x: 3, y: 4.5, width: 18, height: 15, rx: 1.8 }],
+    ["polyline", { points: "7.5 10 10.5 12.5 7.5 15" }],
+    ["line", { x1: 12.3, y1: 15, x2: 16, y2: 15 }],
   ],
 };
 
-/* Renders a GLASS_ICON_SHAPES entry — filled shapes get a soft white-to-cool-grey
-   gradient (the "frosted glass" material) plus a subtle dark edge for definition;
-   line/polyline get a plain dark detail stroke since they have nothing to fill. A
-   glow drop-shadow in the current theme accent (amber) ties the glyph back into the
-   OS's own CRT look even though the glass material itself is colorless. Gradient id
-   is namespaced per shapeKey since each icon is its own standalone <svg>. */
-function GlassIcon({ shapeKey, size, className, color }) {
-  const shapes = GLASS_ICON_SHAPES[shapeKey] || [];
-  const gid = "glass-fill-" + shapeKey;
-  const glow = color || CRT_GREEN;
+/* Renders a MINIMAL_ICON_SHAPES entry as a plain flat SVG — thin uniform stroke, no
+   canvas rasterization, no embossed shadow/highlight passes, no pixelation. This is
+   the deliberate visual difference from PixelIcon below: crisp and minimal, not
+   chunky and retro. */
+function MinimalIcon({ shapeKey, size, className, color }) {
+  const shapes = MINIMAL_ICON_SHAPES[shapeKey] || [];
+  const c = color || CRT_GREEN;
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" className={className}
-      style={{ flexShrink: 0, filter: "drop-shadow(0 0 5px " + glow + "b0) drop-shadow(0 1px 1px rgba(0,0,0,.35))" }}>
-      <defs>
-        <linearGradient id={gid} x1="0.15" y1="0" x2="0.4" y2="1">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="100%" stopColor="#c9cfc4" />
-        </linearGradient>
-      </defs>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.6"
+      strokeLinecap="round" strokeLinejoin="round" className={className} style={{ flexShrink: 0 }}>
       {shapes.map((s, i) => {
         const tag = s[0], a = s[1];
-        const isLineLike = tag === "line" || tag === "polyline";
-        const base = isLineLike
-          ? { stroke: "rgba(35,30,15,.55)", strokeWidth: 1.3, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" }
-          : { fill: "url(#" + gid + ")", stroke: "rgba(35,30,15,.45)", strokeWidth: 0.7, strokeLinejoin: "round" };
-        const props = Object.assign({ key: i }, base, a);
+        const isDot = a.fill === "currentColor";
+        const props = Object.assign({ key: i }, a, isDot ? { fill: c, stroke: "none" } : null);
         if (tag === "path") return <path {...props} />;
         if (tag === "rect") return <rect {...props} />;
         if (tag === "circle") return <circle {...props} />;
@@ -393,7 +354,6 @@ function GlassIcon({ shapeKey, size, className, color }) {
     </svg>
   );
 }
-
 const ENTITY_ICONS = {
   server: vintage("server", "\u{1F5A5}️"),
   database: vintage("database", "\u{1F5C4}️"),
@@ -492,12 +452,12 @@ function PixelIcon({ shape, size, className, color }) {
   );
 }
 
-/* Renders a glassmorphic desktop/app icon if one's set, else a full-color pixel-art
-   PNG (unused now, kept for anything not yet migrated), else a mono-CRT vintage
-   embossed vector icon (ENTITY_ICONS), else a plain emoji fallback. */
+/* Renders a minimalist flat line icon if one's set (desktop/app icons), else a
+   full-color pixel-art PNG (unused now, kept for anything not yet migrated), else a
+   mono-CRT vintage embossed vector icon (ENTITY_ICONS), else a plain emoji fallback. */
 function IconImg({ icon, size, className, color }) {
   if (!icon || typeof icon === "string") return <span className={className} style={{ fontSize: size }}>{icon}</span>;
-  if (icon.glass && GLASS_ICON_SHAPES[icon.glass]) return <GlassIcon shapeKey={icon.glass} size={size} className={className} color={color} />;
+  if (icon.minimal && MINIMAL_ICON_SHAPES[icon.minimal]) return <MinimalIcon shapeKey={icon.minimal} size={size} className={className} color={color} />;
   if (icon.img) return <img src={icon.img} alt="" draggable={false} className={className} style={{ width: size, height: size, objectFit: "contain", imageRendering: "pixelated", flexShrink: 0 }} />;
   if (!icon.shape || !VINTAGE_ICON_SHAPES[icon.shape]) return <span className={className} style={{ fontSize: size, color: color || CRT_GREEN }}>{icon.fallback}</span>;
   return <PixelIcon shape={icon.shape} size={size} className={className} color={color} />;
