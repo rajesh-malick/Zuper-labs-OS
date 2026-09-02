@@ -272,6 +272,24 @@ rather than just an icon. `DesktopIcon` now renders the bare icon
 image plus its own green `crt-icon-glow` drop-shadow, with the label
 underneath — no card, no border, no bevel box.
 
+**Second update:** the full-color pixel-art PNG set above was replaced
+entirely by a fresh, hand-drawn minimalist single-stroke line-icon set
+(`MINIMAL_ICON_SHAPES`/`MinimalIcon` in app.jsx), per direct reference —
+PostHog's own app-launcher icons (plain single-color outlines, no fill,
+no detail, generous whitespace). This isn't a simplification of the PNG
+set, it's a different rendering philosophy entirely: a new shape library
+(one bespoke 24x24 outline per cluster — a broadcast beacon for
+Command Center, stacked layers for Core Platform, a sparkle for AI
+Intelligence, a map pin for Field Operations, and so on) drawn as plain
+flat SVG (`fill="none"`, thin uniform stroke, round joins) with no
+canvas rasterization, no embossed shadow/highlight passes, and no
+pixelation — the deliberate opposite of `PixelIcon`'s chunky retro
+treatment. The 16 PNGs and the AI-generated reference sheet crop are
+gone from the repo (`icons/` removed); `ENTITY_ICONS` still uses the
+original embossed vintage/PixelIcon system unchanged, since this
+change was scoped to desktop/app icons specifically, not the
+entity-type badges inside cluster detail windows.
+
 ## OS mechanics (added after a "make it more lively" pass, refs: windows93.net, dustinbrett.com/daedalOS, posthog.com)
 
 - **Draggable desktop icons** — free-position, persisted to `localStorage`

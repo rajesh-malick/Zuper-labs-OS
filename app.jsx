@@ -215,31 +215,145 @@ const CLUSTER_APPS = {
    pack"-style beveled look — same construction convention as those references, but
    kept strictly mono CRT-accent (currently amber; no borrowed artwork, no new colors). ---------- */
 function vintage(shape, fallback, img) { return { shape: shape, fallback: fallback, img: img }; }
+function minimalIcon(key, fallback) { return { minimal: key, fallback: fallback }; }
 
-/* Desktop/app icons now use a hand-picked full-color pixel-art PNG set (user-supplied,
-   one image per cluster/app, cropped from a single AI-generated reference sheet made
-   specifically for this project's exact cluster names — not any third-party character
-   or franchise art) instead of the mono-CRT vector glyphs below. The vintage/PixelIcon
-   shape system stays wired up as the fallback for anything without a PNG (ENTITY_ICONS,
-   and any future cluster added without matching art). */
+/* Desktop/app icons — a fresh, hand-drawn minimalist single-stroke line-icon set, per
+   direct reference (PostHog's app-launcher icons: plain single-color outlines, no
+   fill, no detail, generous whitespace). This replaces the earlier full-color
+   pixel-art PNG set entirely — not a simplification of those, a different rendering
+   philosophy, so it's a new shape library (MINIMAL_ICON_SHAPES below) and a new flat
+   SVG renderer (MinimalIcon), not a reuse of the older embossed/pixelated
+   vintage/PixelIcon system (which stays wired up for ENTITY_ICONS and as the ultimate
+   fallback). One bespoke shape per cluster, not a generic icon-pack glyph. */
 const CLUSTER_ICONS = {
-  "command-center": vintage("desktop", "\u{1F5A5}️", "icons/command-center.png"),
-  "core-platform": vintage("chip", "\u{1F9E0}", "icons/core-platform.png"),
-  "ai-intelligence": vintage("robot", "\u{1F916}", "icons/ai-intelligence.png"),
-  "workflows-cluster": vintage("cycle", "\u{1F501}", "icons/workflows-cluster.png"),
-  "field-operations": vintage("satellite", "\u{1F6F0}️", "icons/field-operations.png"),
-  "security-compliance": vintage("lock", "\u{1F512}", "icons/security-compliance.png"),
-  "careers": vintage("briefcase", "\u{1F4BC}", "icons/careers.png"),
-  "blog": vintage("memo", "\u{1F4DD}", "icons/blog.png"),
-  "customer-portal": vintage("person", "\u{1F464}", "icons/customer-portal.png"),
-  "data-pipeline": vintage("bars", "\u{1F4CA}", "icons/data-pipeline.png"),
-  "payment-processing": vintage("card", "\u{1F4B3}", "icons/payment-processing.png"),
-  "inventory-management": vintage("box", "\u{1F4E6}", "icons/inventory-management.png"),
-  "integration-hub": vintage("link", "\u{1F517}", "icons/integration-hub.png"),
-  "predictive-analytics": vintage("orb", "\u{1F52E}", "icons/predictive-analytics.png"),
-  "zuper-arcade": vintage("joystick", "\u{1F3AE}", "icons/zuper-arcade.png"),
-  "terminal": vintage("prompt", "⌨️", "icons/terminal.png"),
+  "command-center": minimalIcon("command-center", "\u{1F5A5}️"),
+  "core-platform": minimalIcon("core-platform", "\u{1F9E0}"),
+  "ai-intelligence": minimalIcon("ai-intelligence", "\u{1F916}"),
+  "workflows-cluster": minimalIcon("workflows-cluster", "\u{1F501}"),
+  "field-operations": minimalIcon("field-operations", "\u{1F6F0}️"),
+  "security-compliance": minimalIcon("security-compliance", "\u{1F512}"),
+  "careers": minimalIcon("careers", "\u{1F4BC}"),
+  "blog": minimalIcon("blog", "\u{1F4DD}"),
+  "customer-portal": minimalIcon("customer-portal", "\u{1F464}"),
+  "data-pipeline": minimalIcon("data-pipeline", "\u{1F4CA}"),
+  "payment-processing": minimalIcon("payment-processing", "\u{1F4B3}"),
+  "inventory-management": minimalIcon("inventory-management", "\u{1F4E6}"),
+  "integration-hub": minimalIcon("integration-hub", "\u{1F517}"),
+  "predictive-analytics": minimalIcon("predictive-analytics", "\u{1F52E}"),
+  "zuper-arcade": minimalIcon("zuper-arcade", "\u{1F3AE}"),
+  "terminal": minimalIcon("terminal", "⌨️"),
 };
+
+/* One shape array per cluster, in the same [tag, attrs] tuple format PixelIcon already
+   uses below — but rendered flat (MinimalIcon), not embossed/rasterized/pixelated.
+   24x24 grid, generous margins, thin uniform stroke — matching a clean modern
+   app-launcher icon set rather than a retro icon pack. */
+const MINIMAL_ICON_SHAPES = {
+  "command-center": [ // broadcast beacon
+    ["path", { d: "M9 15a4.2 4.2 0 0 1 6 0" }],
+    ["path", { d: "M6.5 12.5a7.8 7.8 0 0 1 11 0" }],
+    ["circle", { cx: 12, cy: 18, r: 1.1, fill: "currentColor" }],
+  ],
+  "core-platform": [ // stacked layers
+    ["rect", { x: 5, y: 4.5, width: 14, height: 3.2, rx: 1 }],
+    ["rect", { x: 5, y: 10.4, width: 14, height: 3.2, rx: 1 }],
+    ["rect", { x: 5, y: 16.3, width: 14, height: 3.2, rx: 1 }],
+  ],
+  "ai-intelligence": [ // sparkle
+    ["path", { d: "M12 3.5l1.7 6.3 6.3 1.7-6.3 1.7-1.7 6.3-1.7-6.3-6.3-1.7 6.3-1.7z" }],
+  ],
+  "workflows-cluster": [ // cycle/automation arrows
+    ["path", { d: "M4.5 12a7.5 7.5 0 0 1 13-5" }],
+    ["polyline", { points: "16.5 3.5 17.5 7 14 7" }],
+    ["path", { d: "M19.5 12a7.5 7.5 0 0 1-13 5" }],
+    ["polyline", { points: "7.5 20.5 6.5 17 10 17" }],
+  ],
+  "field-operations": [ // map pin
+    ["path", { d: "M12 21s-6.5-6.7-6.5-11A6.5 6.5 0 0 1 18.5 10c0 4.3-6.5 11-6.5 11z" }],
+    ["circle", { cx: 12, cy: 9.7, r: 2.1 }],
+  ],
+  "security-compliance": [ // shield with check
+    ["path", { d: "M12 3l7 3v5.5c0 4.6-3 8.2-7 9.5-4-1.3-7-4.9-7-9.5V6z" }],
+    ["polyline", { points: "9 12.2 11 14.2 15.2 9.6" }],
+  ],
+  careers: [ // briefcase
+    ["rect", { x: 3.5, y: 8, width: 17, height: 11, rx: 1.5 }],
+    ["path", { d: "M8.5 8V6.3A1.8 1.8 0 0 1 10.3 4.5h3.4A1.8 1.8 0 0 1 15.5 6.3V8" }],
+    ["line", { x1: 3.5, y1: 13, x2: 20.5, y2: 13 }],
+  ],
+  blog: [ // page with pen
+    ["path", { d: "M6.5 3.5h8l3 3v14h-11z" }],
+    ["polyline", { points: "14.5 3.5 14.5 6.5 17.5 6.5" }],
+    ["line", { x1: 9, y1: 12.5, x2: 15, y2: 12.5 }],
+    ["line", { x1: 9, y1: 16, x2: 15, y2: 16 }],
+  ],
+  "customer-portal": [ // person
+    ["circle", { cx: 12, cy: 8, r: 3.4 }],
+    ["path", { d: "M5.2 20c0-4 3-6.8 6.8-6.8s6.8 2.8 6.8 6.8" }],
+  ],
+  "data-pipeline": [ // flow with arrow
+    ["path", { d: "M5 8h6.5A3.5 3.5 0 0 1 15 11.5V19" }],
+    ["polyline", { points: "12 16 15 19 18 16" }],
+    ["circle", { cx: 5, cy: 8, r: 1.3, fill: "currentColor" }],
+  ],
+  "payment-processing": [ // card
+    ["rect", { x: 3, y: 6, width: 18, height: 12.5, rx: 2 }],
+    ["line", { x1: 3, y1: 10.2, x2: 21, y2: 10.2 }],
+    ["line", { x1: 6, y1: 15, x2: 10.5, y2: 15 }],
+  ],
+  "inventory-management": [ // box
+    ["path", { d: "M3.5 8l8.5-4.5L20.5 8 12 12.5z" }],
+    ["path", { d: "M3.5 8v9l8.5 4.5V12.5" }],
+    ["path", { d: "M20.5 8v9L12 21.5V12.5" }],
+  ],
+  "integration-hub": [ // chain link
+    ["path", { d: "M9.5 14.5l5-5" }],
+    ["path", { d: "M7.3 11.8l-1.6 1.6a3.2 3.2 0 0 0 4.5 4.5l1.6-1.6" }],
+    ["path", { d: "M16.7 12.2l1.6-1.6a3.2 3.2 0 0 0-4.5-4.5l-1.6 1.6" }],
+  ],
+  "predictive-analytics": [ // trend line with arrow
+    ["line", { x1: 4, y1: 20, x2: 20, y2: 20 }],
+    ["polyline", { points: "4.5 15.5 9.5 10.5 13 13.5 19.5 6.5" }],
+    ["polyline", { points: "14.5 6.5 19.5 6.5 19.5 11.5" }],
+  ],
+  "zuper-arcade": [ // joystick
+    ["rect", { x: 5, y: 13, width: 14, height: 7, rx: 2.5 }],
+    ["circle", { cx: 9.5, cy: 16.5, r: 1, fill: "currentColor" }],
+    ["circle", { cx: 14.5, cy: 16.5, r: 1, fill: "currentColor" }],
+    ["path", { d: "M9 13V9.5a3 3 0 0 1 6 0V13" }],
+  ],
+  terminal: [ // prompt
+    ["rect", { x: 3, y: 4.5, width: 18, height: 15, rx: 1.8 }],
+    ["polyline", { points: "7.5 10 10.5 12.5 7.5 15" }],
+    ["line", { x1: 12.3, y1: 15, x2: 16, y2: 15 }],
+  ],
+};
+
+/* Renders a MINIMAL_ICON_SHAPES entry as a plain flat SVG — thin uniform stroke, no
+   canvas rasterization, no embossed shadow/highlight passes, no pixelation. This is
+   the deliberate visual difference from PixelIcon below: crisp and minimal, not
+   chunky and retro. */
+function MinimalIcon({ shapeKey, size, className, color }) {
+  const shapes = MINIMAL_ICON_SHAPES[shapeKey] || [];
+  const c = color || CRT_GREEN;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.6"
+      strokeLinecap="round" strokeLinejoin="round" className={className} style={{ flexShrink: 0 }}>
+      {shapes.map((s, i) => {
+        const tag = s[0], a = s[1];
+        const isDot = a.fill === "currentColor";
+        const props = Object.assign({ key: i }, a, isDot ? { fill: c, stroke: "none" } : null);
+        if (tag === "path") return <path {...props} />;
+        if (tag === "rect") return <rect {...props} />;
+        if (tag === "circle") return <circle {...props} />;
+        if (tag === "ellipse") return <ellipse {...props} />;
+        if (tag === "line") return <line {...props} />;
+        if (tag === "polyline") return <polyline {...props} />;
+        return null;
+      })}
+    </svg>
+  );
+}
 const ENTITY_ICONS = {
   server: vintage("server", "\u{1F5A5}️"),
   database: vintage("database", "\u{1F5C4}️"),
@@ -338,10 +452,12 @@ function PixelIcon({ shape, size, className, color }) {
   );
 }
 
-/* Renders a full-color pixel-art PNG icon if one's set, else a mono-CRT vintage
-   vector icon, else a plain emoji glyph fallback for stray strings. */
+/* Renders a minimalist flat line icon if one's set (desktop/app icons), else a
+   full-color pixel-art PNG (unused now, kept for anything not yet migrated), else a
+   mono-CRT vintage embossed vector icon (ENTITY_ICONS), else a plain emoji fallback. */
 function IconImg({ icon, size, className, color }) {
   if (!icon || typeof icon === "string") return <span className={className} style={{ fontSize: size }}>{icon}</span>;
+  if (icon.minimal && MINIMAL_ICON_SHAPES[icon.minimal]) return <MinimalIcon shapeKey={icon.minimal} size={size} className={className} color={color} />;
   if (icon.img) return <img src={icon.img} alt="" draggable={false} className={className} style={{ width: size, height: size, objectFit: "contain", imageRendering: "pixelated", flexShrink: 0 }} />;
   if (!icon.shape || !VINTAGE_ICON_SHAPES[icon.shape]) return <span className={className} style={{ fontSize: size, color: color || CRT_GREEN }}>{icon.fallback}</span>;
   return <PixelIcon shape={icon.shape} size={size} className={className} color={color} />;
