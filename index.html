@@ -11,6 +11,43 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js" crossorigin></script>
+  <!-- The real Ghost "Portal" member-signup widget, embedded exactly as labs.zuper.co
+       itself embeds it (same script, same data-key/data-api — copied verbatim from
+       the live site's own <head>). This is the genuine widget talking to the real
+       Ghost backend, not a mockup of it: it self-injects its own floating trigger
+       (hidden here via CSS below, since the taskbar's own Subscribe link triggers it
+       instead) and intercepts clicks on any element with data-portal="signup"
+       anywhere on the page to open the real signup modal in place, with no page
+       navigation. Verified working cross-origin before shipping. -->
+  <script defer src="https://cdn.jsdelivr.net/ghost/portal@~2.37/umd/portal.min.js" data-i18n="false" data-ghost="https://labs.zuper.co/" data-key="98895e45fa4fb6745f2462726b" data-api="https://labs.zuper.co/ghost/api/content/" crossorigin="anonymous"></script>
+  <script>
+    /* Portal renders its own default floating "Subscribe" trigger inside its iframe
+       (same-origin/scriptable since it's a plain srcdoc iframe, no sandboxing) —
+       redundant and visually inconsistent with this OS's own taskbar Subscribe link,
+       which triggers the exact same real modal via data-portal="signup". A plain
+       outer <style> can't reach inside that iframe's own document, so this polls
+       briefly for that document's <head> and injects one CSS rule into it — a live
+       stylesheet rule, so it hides the trigger whenever Portal renders it, no need to
+       wait for the specific element — then stops; the modal/iframe itself is left
+       completely alone. Gives up after ~10s so a slow/blocked load can't loop forever. */
+    (function () {
+      var attempts = 0;
+      function tryInject() {
+        attempts += 1;
+        var root = document.getElementById("ghost-portal-root");
+        var ifr = root && root.querySelector("iframe");
+        var doc = ifr && (ifr.contentDocument || (ifr.contentWindow && ifr.contentWindow.document));
+        if (doc && doc.head) {
+          var style = doc.createElement("style");
+          style.textContent = "[class*='triggerbtn-container']{display:none!important;}";
+          doc.head.appendChild(style);
+          return;
+        }
+        if (attempts < 40) setTimeout(tryInject, 250);
+      }
+      tryInject();
+    })();
+  </script>
   <style>
     /* Type scale for a dense retro desktop OS — per direct reference. Deliberately
        smaller/tighter than the boot-screen-style 17-18px JetBrains Mono that inspired

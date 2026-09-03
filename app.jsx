@@ -1897,7 +1897,11 @@ function Taskbar({ onStartClick, running, onRunningClick, theme }) {
         ))}
       </div>
       <span aria-hidden="true" className="font-mono font-semibold text-[11px]" style={{ color: t.chromeText, fontFamily: t.fontChrome || undefined }}>{clock}</span>
-      <a href="https://labs.zuper.co/" target="_blank" rel="noopener" className="text-[11px] underline" style={{ color: t.accent }}>Subscribe</a>
+      {/* data-portal="signup" is Ghost Portal's own trigger attribute (script tag in
+          index.html) — a real click opens the actual Ghost signup modal right here,
+          no navigating away. href/target stay as a fallback for the rare case the
+          portal script hasn't loaded (slow network, blocked request, etc). */}
+      <a href="https://labs.zuper.co/#/portal/signup" target="_blank" rel="noopener" data-portal="signup" className="text-[11px] underline" style={{ color: t.accent }}>Subscribe</a>
     </div>
   );
 }

@@ -370,10 +370,18 @@ is that extracted data (regex-parsed from the real bundle, values untouched).
   sends what signal type to which other entity) is the real `flows` array
   from the same source file, not invented.
 - The accent color (`#ff4919`) — Zuper's brand orange.
-- The "Subscribe" link in the taskbar points at the actual
-  `https://labs.zuper.co/`. (The redundant "Open real labs.zuper.co" links
-  that used to sit in the Start menu and the desktop right-click menu were
-  removed per direct request — Subscribe already covers that.)
+- The "Subscribe" link in the taskbar opens the **real** Ghost member-
+  signup modal for labs.zuper.co, in place — not a copy of it, and not
+  just a link that navigates away (direct correction after it was a
+  plain outbound link). It's Ghost's actual "Portal" widget, embedded
+  with the exact same script and site key labs.zuper.co's own page uses
+  (see `index.html`); clicking Subscribe really does sign the visitor up
+  on the real site. Its own default floating trigger button is hidden
+  since the taskbar link already covers that; href/target stay as a
+  fallback if the embed script hasn't loaded. (The redundant "Open real
+  labs.zuper.co" links that used to sit in the Start menu and the
+  desktop right-click menu were removed earlier, per a separate direct
+  request — Subscribe already covers that.)
 - The boot-screen "runtime check" lines (browser, core count, language,
   screen size) — read from the visitor's real `navigator`/`screen` APIs.
 
