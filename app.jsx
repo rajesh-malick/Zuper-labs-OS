@@ -1897,7 +1897,12 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
    found nothing on the first attempt alone. preventDefault always fires immediately
    (required — it has to happen synchronously in the event handler, can't be delayed
    into the retry), and if Portal genuinely never becomes ready within the retry
-   budget, this replays the exact navigation the browser would have done itself. */
+   budget, this replays the exact navigation the browser would have done itself.
+
+   Also explicitly un-blocks Portal's own iframe (pointer-events: none by default —
+   see index.html) the moment a click actually reaches this handler, so the modal is
+   interactive once it opens; index.html's own watcher clears that override again
+   once the iframe collapses back down after the modal closes. */
 function openGhostSignup(e) {
   e.preventDefault();
   const href = e.currentTarget.getAttribute("href");
@@ -1907,6 +1912,7 @@ function openGhostSignup(e) {
     attempts += 1;
     const root = document.getElementById("ghost-portal-root");
     const ifr = root && root.querySelector("iframe");
+    if (ifr) ifr.style.pointerEvents = "auto";
     let doc = null;
     try { doc = ifr && (ifr.contentDocument || (ifr.contentWindow && ifr.contentWindow.document)); } catch (err) { /* cross-origin — fall through to the retry/fallback below */ }
     const trigger = doc && doc.querySelector("[class*='triggerbtn-container']");

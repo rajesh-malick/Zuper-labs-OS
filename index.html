@@ -38,11 +38,19 @@
           pinned at fixed bottom-right with z-index 3999998 — which sits directly on
           top of this OS's own taskbar Subscribe link and silently swallows real mouse
           clicks aimed at it, even though nothing visible is there once (1) hides its
-          content. Fixed by toggling pointer-events on the OUTER iframe itself (in our
-          own document, not its content) based on its own collapsed-vs-open size: none
-          while collapsed (so clicks pass through to our taskbar), auto once open (so
-          the real Name/Email form inside is actually usable). A MutationObserver on
-          the iframe's style attribute keeps this correct across every open/close.
+          content. A JS-driven toggle (checking the iframe's collapsed-vs-open size on
+          every style mutation) was tried first here and reliably worked once things
+          had settled for a few seconds, but a click landing in the first moment or
+          two after Portal creates its iframe could still slip through before that JS
+          had run even once — any JS fix has to run AFTER the element exists, which is
+          exactly the gap. Fixed for real with a static CSS rule below
+          (#ghost-portal-root iframe — pointer-events: none), which the browser
+          applies to that element the instant it exists, no JS/timing gap at all.
+          openGhostSignup (app.jsx) explicitly flips it to `auto` itself the moment a
+          click actually reaches our own Subscribe link, so the real modal is
+          interactive once open; this script just watches for the iframe collapsing
+          back down afterward and clears that override so the default `none` governs
+          again.
 
        On slower connections (production, not localhost) Portal's own React
        component re-renders and swaps in a BRAND NEW iframe element at least once
@@ -65,14 +73,14 @@
             doc.head.appendChild(style);
           }
         }
-        function syncPointerEvents() {
+        function clearOverrideOnceCollapsed() {
           var w = parseFloat(ifr.style.width) || 0;
           var isCollapsed = ifr.style.width.indexOf("%") === -1 && w > 0 && w < 300;
-          ifr.style.pointerEvents = isCollapsed ? "none" : "auto";
+          if (isCollapsed) ifr.style.pointerEvents = "";
         }
         injectHideStyle();
-        syncPointerEvents();
-        new MutationObserver(function () { injectHideStyle(); syncPointerEvents(); })
+        clearOverrideOnceCollapsed();
+        new MutationObserver(function () { injectHideStyle(); clearOverrideOnceCollapsed(); })
           .observe(ifr, { attributes: true, attributeFilter: ["style"] });
         ifr.addEventListener("load", injectHideStyle);
       }
@@ -90,6 +98,10 @@
     })();
   </script>
   <style>
+    /* Static default — see the script above for why this has to be plain CSS and
+       not JS-applied: the browser matches it the instant the iframe element exists,
+       with no timing gap a real early click could slip through. */
+    #ghost-portal-root iframe { pointer-events: none; }
     /* Type scale for a dense retro desktop OS — per direct reference. Deliberately
        smaller/tighter than the boot-screen-style 17-18px JetBrains Mono that inspired
        the font choice: that worked because the cookie dialog it came from is one big
