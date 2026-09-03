@@ -15,7 +15,6 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 const ACCENT = "#ff4919";
 const CONCEPT = "#7ecbff";
-const REAL = "#7ee6a3";
 /* The OS shell's own mono-CRT accent — was green (#3fe676), now a classic amber-
    phosphor terminal color, per direct request. Kept as its own constant (distinct
    hex from ACCENT) rather than reusing ACCENT directly: ACCENT ties to Zuper's real
@@ -631,21 +630,6 @@ function QuickLauncher({ title, placeholder, apps, onOpen, onClose }) {
   );
 }
 
-function RealBadge({ children }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 font-mono font-semibold text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border" style={{ color: REAL, borderColor: "rgba(126,230,163,.45)", background: "rgba(126,230,163,.12)" }}>
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: REAL }}></span>{children}
-    </span>
-  );
-}
-function ConceptBadge({ children }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 font-mono font-semibold text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border" style={{ color: CONCEPT, borderColor: "rgba(126,203,255,.45)", background: "rgba(126,203,255,.12)" }}>
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: CONCEPT }}></span>{children}
-    </span>
-  );
-}
-
 /* ================= Boot screen ================= */
 function BootScreen({ onDone, extraLine }) {
   const linesRef = useRef(buildLines());
@@ -894,7 +878,6 @@ function FolderWindow({ clusterId, worldData, onOpenFile }) {
   return (
     <div className="p-4 font-mono">
       <div className="text-[11px] font-semibold uppercase tracking-wider text-white/58 mb-1">/desktop/{clusterId}/</div>
-      <RealBadge>Real cluster — sourced from labs.zuper.co</RealBadge>
       <div className="grid grid-cols-3 gap-4 mt-4">
         {files.map((f) => (
           <button key={f.key} type="button" className="flex flex-col items-center gap-1.5 p-2 rounded hover:bg-white/5" onDoubleClick={() => onOpenFile(clusterId, f.key)}>
@@ -912,7 +895,6 @@ function MarkdownWindow({ clusterId, worldData }) {
   if (!c) return null;
   return (
     <div className="p-5">
-      <RealBadge>Real content — names &amp; descriptions from labs.zuper.co</RealBadge>
       <h1 className="text-white text-[18px] font-bold mt-3 mb-1 font-mono">{c.name}</h1>
       <p className="text-white/58 text-[10px] font-medium font-mono mb-4">readme.md · {c.entities.length} entit{c.entities.length === 1 ? "y" : "ies"}</p>
       {c.entities.map((e) => (
@@ -963,8 +945,7 @@ function ShellStatusWindow({ clusterId, worldData }) {
   if (!c) return null;
   return (
     <div className="p-3 flex flex-col h-full font-terminal font-medium text-[14px]">
-      <ConceptBadge>Simulated output — node names are real, ports/latency are decorative</ConceptBadge>
-      <div ref={logRef} className="flex-1 overflow-y-auto mt-3 space-y-0.5">
+      <div ref={logRef} className="flex-1 overflow-y-auto space-y-0.5">
         {lines.map((l, i) => <div key={i} style={{ color: CRT_GREEN, opacity: l.indexOf("$") === 0 ? 1 : 0.8 }}>{l}</div>)}
       </div>
       <button type="button" disabled={running} className="mt-2 self-start border border-white/15 rounded px-2 py-1 text-white/85 hover:border-white/30 disabled:opacity-40" onClick={run}>Re-run</button>
@@ -977,8 +958,7 @@ function ShellConnectionsWindow({ clusterId, worldData }) {
   if (!c) return null;
   return (
     <div className="p-3 flex flex-col h-full font-terminal font-medium text-[14px]">
-      <RealBadge>Real connection data — sourced from labs.zuper.co</RealBadge>
-      <div className="flex-1 overflow-y-auto mt-3 space-y-1">
+      <div className="flex-1 overflow-y-auto space-y-1">
         <div style={{ color: CRT_GREEN }}>$ bash connections.sh</div>
         {c.flows.length === 0 && <div className="text-white/58">no outbound flows defined for this cluster.</div>}
         {c.flows.map((f) => (
@@ -998,9 +978,6 @@ function DashboardWindow({ clusterId, worldData }) {
   const appName = CLUSTER_APPS[clusterId];
   return (
     <div className="p-5">
-      <div className="flex items-center justify-between mb-1">
-        <RealBadge>Real data, concept dashboard UI</RealBadge>
-      </div>
       <h1 className="text-white text-[18px] font-bold mt-3 mb-3 font-mono">{appName}</h1>
       <div className="grid grid-cols-2 gap-3">
         {c.entities.map((e) => (
@@ -1029,7 +1006,6 @@ function PropertiesWindow({ worldData }) {
         <div>Connection flows: <span className="text-white/92">{totalFlows}</span></div>
         <div>Build: <span className="text-white/92">concept prototype</span> (React + Tailwind, no backend)</div>
       </div>
-      <RealBadge>Cluster/entity counts above are real</RealBadge>
       <p className="text-white/48 text-[10px] font-medium italic mt-4">This is a static desktop metaphor over real Zuper Labs scene data — no actual file system, accounts, or persistence beyond your browser's localStorage (icon positions/names only).</p>
     </div>
   );
@@ -1750,7 +1726,6 @@ function ArcadeWindow() {
   function backToMenu() { setView("menu"); setAchievement(null); }
   return (
     <div className="p-4">
-      <ConceptBadge>Concept mini-games — not simulations of real Zuper systems</ConceptBadge>
       {view === "menu" && (
         <div className="grid gap-3 mt-3">
           {GAMES.map((g) => (
@@ -1870,8 +1845,21 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         ))}
         <div className="flex items-center gap-2">
           <span style={{ color: CRT_GREEN }}>{promptString()}</span>
-          <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { run(input); setInput(""); } }}
-            className="flex-1 bg-transparent outline-none text-white" style={{ caretColor: CRT_GREEN }} spellCheck={false} autoComplete="off" autoFocus aria-label="Terminal command input" />
+          {/* A real <input> still does all the work (value/onChange/focus/keydown) but
+              is fully invisible (opacity 0, including its own native caret) — what's
+              actually shown is this styled text plus a blinking block cursor after
+              it, a classic terminal look that reads unmistakably as "type here"
+              instead of a thin, easy-to-miss native i-beam caret sitting right after
+              the prompt's own "$". */}
+          <div className="relative flex-1">
+            <span className="text-white" style={{ whiteSpace: "pre" }}>{input}</span>
+            <span aria-hidden="true" style={{
+              display: "inline-block", width: "0.6em", height: "1.05em", verticalAlign: "text-bottom",
+              background: CRT_GREEN, marginLeft: 1, animation: "term-cursor-blink 1s steps(1) infinite",
+            }} />
+            <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { run(input); setInput(""); } }}
+              className="absolute inset-0 bg-transparent outline-none opacity-0" style={{ caretColor: "transparent" }} spellCheck={false} autoComplete="off" autoFocus aria-label="Terminal command input" />
+          </div>
         </div>
       </div>
     </div>
@@ -2295,8 +2283,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
       {open && (
         <div className="absolute bottom-[166px] right-0 w-72 p-3 font-mono font-medium text-[13px] flex flex-col"
           style={{ background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "10px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 16px 40px rgba(0,0,0,.5)" }}>
-          <div className="flex items-start justify-between gap-2">
-            <ConceptBadge>Claude when configured, else local real-data search</ConceptBadge>
+          <div className="flex items-start justify-end">
             <button type="button" onClick={() => setOpen(false)} className="text-[0.9rem] leading-none px-1" style={{ color: t.chromeTextDim }} aria-label="Hide assistant">×</button>
           </div>
           <div ref={logRef} className="overflow-y-auto my-2" style={{ maxHeight: 220, minHeight: messages.length ? 60 : 0 }}>

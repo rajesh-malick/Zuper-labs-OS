@@ -66,8 +66,13 @@ a mismatch once Mono CRT became the only look, so that got fixed too.
 - Menu/list rows (Start menu, context menus, the Find/Run launcher) get a
   bright-green hover highlight and a classic `> ` selection-cursor prefix on
   hover, instead of the earlier generic white overlay.
-- `Terminal.app`'s input has a green `caretColor` for an authentic blinking
-  cursor.
+- `Terminal.app`'s prompt shows a classic blinking amber **block** cursor
+  after the typed text, not a thin native i-beam caret — direct request,
+  after the native caret (sitting right after the prompt's own `$`) read
+  as too subtle to clearly signal "type here." The real `<input>` still
+  does all the work (value, focus, keydown) but is fully invisible
+  (`opacity: 0`, including its own caret); what's shown is styled text
+  plus the block cursor next to it.
 - A large watermark (`GlitchWatermark`) is stamped behind the desktop
   icons: the real Zuper Labs logo (`assets/zuper-logo.png`, faint, ~8%
   opacity) sits behind the plain "ZUPER LABS" text, both centered on the
@@ -365,7 +370,13 @@ is that extracted data (regex-parsed from the real bundle, values untouched).
   `data-pipeline`, `payment-processing`, `inventory-management`,
   `integration-hub`, `predictive-analytics`. Shown in `readme.md` (per
   folder), the `*.app`/`*.exe`/`*.sys` dashboard, and `cat readme.md` in the
-  terminal — all marked with a green "real" badge.
+  terminal. (Earlier passes marked these with small "real"/"concept"
+  pill badges — `RealBadge`/`ConceptBadge` — throughout the UI; removed
+  per direct request as visual clutter, and because they were still
+  green/blue from before the amber retheme and had never been updated,
+  clashing with the "mono accent color only" rule everything else here
+  follows. The underlying real-vs-concept distinction this README
+  documents is unchanged — only the on-screen callouts are gone.)
 - **The `connections.sh` data** — each cluster's real `flows` (which entity
   sends what signal type to which other entity) is the real `flows` array
   from the same source file, not invented.
@@ -422,9 +433,9 @@ is that extracted data (regex-parsed from the real bundle, values untouched).
   `LiveDispatch.app`, `PartsTracker.app`, `APIGateway.sys`, `ZuperAI.app`,
   `InvoicingPortal.app`, `AuditLogs.exe`, `CommandConsole.app`) — reasonable
   UI-convenience names for the dashboard windows, not confirmed real Zuper
-  product names. Each dashboard is badged "Real data, concept dashboard UI."
+  product names.
 - **`status.sh` output** — streams real entity names but simulated port
-  numbers/latency; badged "Simulated output" inline.
+  numbers/latency.
 - **Seven Arcade mini-games**: Route Racer, Dispatch Tetris, Workflow Wiring,
   System Stabilizer, Pipe Flow, Spinning Plates, Fraud or Fine?. Illustrative
   analogies only (grid navigation, slot-fitting, trigger-to-action matching,
