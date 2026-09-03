@@ -1885,21 +1885,36 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
    renders via in-browser Babel, so the Taskbar's Subscribe link doesn't exist in the
    DOM yet when Portal's scan runs — its own auto-wiring silently never attaches to
    it, and clicking did nothing. Fixed by reaching into Portal's own iframe (same-
-   origin via srcdoc, no sandbox) at click-time instead and clicking its real internal
-   trigger directly — works regardless of mount timing since it's looked up on demand,
-   not registered in advance. data-portal="signup" stays on the anchor too (harmless,
-   and correct per Ghost's own convention) as a no-cost fallback path. */
+   origin via srcdoc, no sandbox) and clicking its real internal trigger directly —
+   works regardless of mount timing since it's looked up on demand, not registered in
+   advance. data-portal="signup" stays on the anchor too (harmless, and correct per
+   Ghost's own convention) as a no-cost fallback path.
+
+   Retries for a few seconds instead of trying once: on a real (not locally-served)
+   deploy, Portal itself can still be mid-startup (fetching site/member config, and
+   sometimes replacing its own iframe once — see index.html) for a second or two
+   after this app's own UI is already interactive, so a click in that narrow window
+   found nothing on the first attempt alone. preventDefault always fires immediately
+   (required — it has to happen synchronously in the event handler, can't be delayed
+   into the retry), and if Portal genuinely never becomes ready within the retry
+   budget, this replays the exact navigation the browser would have done itself. */
 function openGhostSignup(e) {
-  const root = document.getElementById("ghost-portal-root");
-  const ifr = root && root.querySelector("iframe");
-  let doc = null;
-  try { doc = ifr && (ifr.contentDocument || (ifr.contentWindow && ifr.contentWindow.document)); } catch (err) { /* cross-origin — fall through to the href fallback */ }
-  const trigger = doc && doc.querySelector("[class*='triggerbtn-container']");
-  if (trigger) {
-    e.preventDefault();
-    trigger.click();
+  e.preventDefault();
+  const href = e.currentTarget.getAttribute("href");
+  const target = e.currentTarget.getAttribute("target");
+  let attempts = 0;
+  function tryOpen() {
+    attempts += 1;
+    const root = document.getElementById("ghost-portal-root");
+    const ifr = root && root.querySelector("iframe");
+    let doc = null;
+    try { doc = ifr && (ifr.contentDocument || (ifr.contentWindow && ifr.contentWindow.document)); } catch (err) { /* cross-origin — fall through to the retry/fallback below */ }
+    const trigger = doc && doc.querySelector("[class*='triggerbtn-container']");
+    if (trigger) { trigger.click(); return; }
+    if (attempts < 15) { setTimeout(tryOpen, 200); return; }
+    if (target === "_blank") window.open(href, "_blank", "noopener"); else window.location.href = href;
   }
-  /* else: Portal hasn't finished loading — let the normal href/target navigation happen. */
+  tryOpen();
 }
 
 /* ================= Taskbar / Start menu ================= */

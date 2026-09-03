@@ -392,8 +392,14 @@ is that extracted data (regex-parsed from the real bundle, values untouched).
   element (which Portal does at least once during its own startup on a
   slower connection), not just the first one found, since attaching the
   fix once to an iframe that later gets replaced silently stops working.
-  href/target stay as
-  a fallback if the embed script hasn't loaded. (The redundant "Open
+  On top of that, `openGhostSignup` itself retries for a few seconds
+  (not just once) before giving up — on a real deploy, Portal can still
+  be mid-startup for a second or two after this app's own UI is already
+  clickable, so a click in that narrow window found nothing on a single
+  attempt. Only after the retry budget is exhausted does it replay the
+  plain href/target navigation itself, matching what an unmodified link
+  would have done — that's the actual fallback for the embed script
+  never loading at all, not the common case. (The redundant "Open
   real labs.zuper.co" links that used to sit in the Start menu and the
   desktop right-click menu were removed earlier, per a separate direct
   request — Subscribe already covers that.)
