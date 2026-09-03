@@ -1878,6 +1878,30 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   );
 }
 
+/* Ghost Portal (the real member-signup widget, embedded in index.html) scans the
+   page for [data-portal] elements once, at its own script-init time — it does not
+   use document-level click delegation. That's fine on labs.zuper.co's own page,
+   where the trigger link is already in the initial static HTML, but this whole app
+   renders via in-browser Babel, so the Taskbar's Subscribe link doesn't exist in the
+   DOM yet when Portal's scan runs — its own auto-wiring silently never attaches to
+   it, and clicking did nothing. Fixed by reaching into Portal's own iframe (same-
+   origin via srcdoc, no sandbox) at click-time instead and clicking its real internal
+   trigger directly — works regardless of mount timing since it's looked up on demand,
+   not registered in advance. data-portal="signup" stays on the anchor too (harmless,
+   and correct per Ghost's own convention) as a no-cost fallback path. */
+function openGhostSignup(e) {
+  const root = document.getElementById("ghost-portal-root");
+  const ifr = root && root.querySelector("iframe");
+  let doc = null;
+  try { doc = ifr && (ifr.contentDocument || (ifr.contentWindow && ifr.contentWindow.document)); } catch (err) { /* cross-origin — fall through to the href fallback */ }
+  const trigger = doc && doc.querySelector("[class*='triggerbtn-container']");
+  if (trigger) {
+    e.preventDefault();
+    trigger.click();
+  }
+  /* else: Portal hasn't finished loading — let the normal href/target navigation happen. */
+}
+
 /* ================= Taskbar / Start menu ================= */
 function Taskbar({ onStartClick, running, onRunningClick, theme }) {
   const [clock, setClock] = useState("");
@@ -1897,11 +1921,10 @@ function Taskbar({ onStartClick, running, onRunningClick, theme }) {
         ))}
       </div>
       <span aria-hidden="true" className="font-mono font-semibold text-[11px]" style={{ color: t.chromeText, fontFamily: t.fontChrome || undefined }}>{clock}</span>
-      {/* data-portal="signup" is Ghost Portal's own trigger attribute (script tag in
-          index.html) — a real click opens the actual Ghost signup modal right here,
-          no navigating away. href/target stay as a fallback for the rare case the
-          portal script hasn't loaded (slow network, blocked request, etc). */}
-      <a href="https://labs.zuper.co/#/portal/signup" target="_blank" rel="noopener" data-portal="signup" className="text-[11px] underline" style={{ color: t.accent }}>Subscribe</a>
+      {/* onClick triggers the real Ghost signup modal directly (see openGhostSignup
+          above) — data-portal="signup" is also set per Ghost's own convention, and
+          href/target remain as a fallback if the embed script hasn't loaded at all. */}
+      <a href="https://labs.zuper.co/#/portal/signup" target="_blank" rel="noopener" data-portal="signup" onClick={openGhostSignup} className="text-[11px] underline" style={{ color: t.accent }}>Subscribe</a>
     </div>
   );
 }
