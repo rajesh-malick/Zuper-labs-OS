@@ -53,10 +53,7 @@
        whatever iframe is current each time, in addition to the initial poll for the
        root existing at all. */
     (function () {
-      window.__portalDebug = [];
-      function log(msg) { window.__portalDebug.push(Date.now() + " " + msg); }
       function setupIframe(ifr) {
-        log("setupIframe called, already=" + !!ifr.__zuperSetup);
         if (ifr.__zuperSetup) return;
         ifr.__zuperSetup = true;
         function injectHideStyle() {
@@ -82,12 +79,10 @@
       function watchRoot() {
         var root = document.getElementById("ghost-portal-root");
         if (!root) { setTimeout(watchRoot, 250); return; }
-        log("root found, childCount=" + root.children.length);
         var current = root.querySelector("iframe");
         if (current) setupIframe(current);
         new MutationObserver(function () {
           var cur = root.querySelector("iframe");
-          log("root childList mutated, iframeFound=" + !!cur + ", childCount=" + root.children.length);
           if (cur) setupIframe(cur);
         }).observe(root, { childList: true });
       }
