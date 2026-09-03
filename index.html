@@ -44,34 +44,49 @@
           the real Name/Email form inside is actually usable). A MutationObserver on
           the iframe's style attribute keeps this correct across every open/close.
 
-       Gives up polling for the iframe after ~10s so a slow/blocked load can't loop
-       forever; the modal/iframe's own content and behavior are left alone either
-       way. */
+       On slower connections (production, not localhost) Portal's own React
+       component re-renders and swaps in a BRAND NEW iframe element at least once
+       during its own startup (fetching site config/member state) — attaching the
+       fix once to the first iframe found isn't enough, since that element can become
+       a detached, no-longer-current node with nothing watching the real one. So this
+       watches #ghost-portal-root itself for childList changes and re-applies setup to
+       whatever iframe is current each time, in addition to the initial poll for the
+       root existing at all. */
     (function () {
-      var attempts = 0;
-      function setup(ifr) {
-        var doc = ifr.contentDocument || (ifr.contentWindow && ifr.contentWindow.document);
-        if (doc && doc.head) {
-          var style = doc.createElement("style");
-          style.textContent = "[class*='triggerbtn-container']{visibility:hidden!important;}";
-          doc.head.appendChild(style);
+      function setupIframe(ifr) {
+        if (ifr.__zuperSetup) return;
+        ifr.__zuperSetup = true;
+        function injectHideStyle() {
+          var doc = ifr.contentDocument || (ifr.contentWindow && ifr.contentWindow.document);
+          if (doc && doc.head && !doc.getElementById("zuper-os-hide-trigger")) {
+            var style = doc.createElement("style");
+            style.id = "zuper-os-hide-trigger";
+            style.textContent = "[class*='triggerbtn-container']{visibility:hidden!important;}";
+            doc.head.appendChild(style);
+          }
         }
         function syncPointerEvents() {
           var w = parseFloat(ifr.style.width) || 0;
           var isCollapsed = ifr.style.width.indexOf("%") === -1 && w > 0 && w < 300;
           ifr.style.pointerEvents = isCollapsed ? "none" : "auto";
         }
+        injectHideStyle();
         syncPointerEvents();
-        new MutationObserver(syncPointerEvents).observe(ifr, { attributes: true, attributeFilter: ["style"] });
+        new MutationObserver(function () { injectHideStyle(); syncPointerEvents(); })
+          .observe(ifr, { attributes: true, attributeFilter: ["style"] });
+        ifr.addEventListener("load", injectHideStyle);
       }
-      function tryFind() {
-        attempts += 1;
+      function watchRoot() {
         var root = document.getElementById("ghost-portal-root");
-        var ifr = root && root.querySelector("iframe");
-        if (ifr) { setup(ifr); return; }
-        if (attempts < 40) setTimeout(tryFind, 250);
+        if (!root) { setTimeout(watchRoot, 250); return; }
+        var current = root.querySelector("iframe");
+        if (current) setupIframe(current);
+        new MutationObserver(function () {
+          var cur = root.querySelector("iframe");
+          if (cur) setupIframe(cur);
+        }).observe(root, { childList: true });
       }
-      tryFind();
+      watchRoot();
     })();
   </script>
   <style>

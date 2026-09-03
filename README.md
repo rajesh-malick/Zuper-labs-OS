@@ -387,7 +387,12 @@ is that extracted data (regex-parsed from the real bundle, values untouched).
   fix): while collapsed it sits at fixed bottom-right with a very high
   z-index, right on top of the taskbar's own Subscribe link, so
   `index.html` toggles `pointer-events` on that iframe off while
-  collapsed and on once the modal is actually open. href/target stay as
+  collapsed and on once the modal is actually open — watching
+  `#ghost-portal-root` itself for the iframe being swapped for a new
+  element (which Portal does at least once during its own startup on a
+  slower connection), not just the first one found, since attaching the
+  fix once to an iframe that later gets replaced silently stops working.
+  href/target stay as
   a fallback if the embed script hasn't loaded. (The redundant "Open
   real labs.zuper.co" links that used to sit in the Start menu and the
   desktop right-click menu were removed earlier, per a separate direct
