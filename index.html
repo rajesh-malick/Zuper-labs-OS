@@ -73,21 +73,25 @@
             doc.head.appendChild(style);
           }
         }
-        function clearOverrideOnceCollapsed() {
+        function syncPointerEvents() {
           /* position: fixed = the small default-trigger state; position: relative =
-             the real open modal covering the viewport. Far more reliable than a
-             width-number check — Portal sets width through several intermediate
-             values while animating the trigger open (some under 300px), and a
-             width-based check was clearing this override — re-blocking pointer
-             events on the iframe — mid-open, before the animation even settled,
-             which is what made the modal's own close (X) button stop responding
-             despite the modal still visibly being open. Position only ever takes
-             these two discrete values, set directly by Portal, not animated. */
-          if (ifr.style.position === "fixed") ifr.style.pointerEvents = "";
+             the real open modal covering the viewport — a discrete value Portal sets
+             directly, not animated, unlike width (which passes through several
+             intermediate values while animating open, some coincidentally small
+             enough that an earlier width-based check misfired mid-animation).
+             Bidirectional on purpose, not just "clear once collapsed": Portal
+             sometimes swaps in a brand new iframe element for the open state rather
+             than reusing the collapsed one, and openGhostSignup's own explicit
+             `auto` (app.jsx) only ever touches whatever iframe existed at click-time
+             — a freshly-swapped-in open iframe would otherwise start from the static
+             `none` default and nothing would ever flip it back to `auto`. Syncing to
+             the current position on every observed mutation self-heals regardless of
+             which specific element is currently in the DOM. */
+          ifr.style.pointerEvents = ifr.style.position === "fixed" ? "" : "auto";
         }
         injectHideStyle();
-        clearOverrideOnceCollapsed();
-        new MutationObserver(function () { injectHideStyle(); clearOverrideOnceCollapsed(); })
+        syncPointerEvents();
+        new MutationObserver(function () { injectHideStyle(); syncPointerEvents(); })
           .observe(ifr, { attributes: true, attributeFilter: ["style"] });
         ifr.addEventListener("load", injectHideStyle);
       }
