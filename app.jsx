@@ -2501,7 +2501,11 @@ function App({ worldData, onReboot }) {
 
   const staticApps = useMemo(() => [
     { id: "zuper-arcade", title: "Zuper_Arcade.exe", icon: CLUSTER_ICONS["zuper-arcade"], kind: "arcade", rect: { x: 480, y: 30, w: 480, h: 580 } },
-    { id: "terminal", title: "Terminal.app", icon: CLUSTER_ICONS["terminal"], kind: "terminal", rect: { x: 640, y: 320, w: 380, h: 340 } },
+    /* Wider/taller default open size — direct request, after the old 380x340
+       default made the prompt path (e.g. "guest@zuper-web-os:/desktop/ai-
+       intelligence$") wrap across 2-3 lines by default, cramped and awkward
+       to read, requiring a manual resize every time just to use it comfortably. */
+    { id: "terminal", title: "Terminal.app", icon: CLUSTER_ICONS["terminal"], kind: "terminal", rect: { x: 220, y: 60, w: 880, h: 520 } },
   ], []);
 
   const hiddenWindows = useMemo(() => [

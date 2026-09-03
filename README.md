@@ -497,11 +497,15 @@ folder view as before, just reached through the shell instead of a direct
 double-click. `cd ..` (or `cd` with no argument) returns to `/desktop`.
 However it's opened — a cluster icon, the `Terminal.app` icon itself, or
 reopening it from the taskbar — the window re-centers on the stage every
-time, rather than sitting wherever it was last left. The prompt itself
-also behaves like a real terminal now: there's no separate input box below
-a divider with a "type 'help'" placeholder hint — the live prompt is just
-the last line of the same scrolling log, auto-focused, exactly the way
-`cmd.exe` or a real shell works.
+time, rather than sitting wherever it was last left. It also now opens
+much wider/taller by default (880x520, up from 380x340) — direct request,
+after the old default made the prompt path (e.g.
+`guest@zuper-web-os:/desktop/ai-intelligence$`) wrap across 2-3 lines
+out of the box, cramped and awkward to read until manually resized. The
+prompt itself also behaves like a real terminal now: there's no separate
+input box below a divider with a "type 'help'" placeholder hint — the
+live prompt is just the last line of the same scrolling log, auto-focused,
+exactly the way `cmd.exe` or a real shell works.
 
 ## Deployment
 
