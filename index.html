@@ -21,31 +21,57 @@
        navigation. Verified working cross-origin before shipping. -->
   <script defer src="https://cdn.jsdelivr.net/ghost/portal@~2.37/umd/portal.min.js" data-i18n="false" data-ghost="https://labs.zuper.co/" data-key="98895e45fa4fb6745f2462726b" data-api="https://labs.zuper.co/ghost/api/content/" crossorigin="anonymous"></script>
   <script>
-    /* Portal renders its own default floating "Subscribe" trigger inside its iframe
-       (same-origin/scriptable since it's a plain srcdoc iframe, no sandboxing) —
-       redundant and visually inconsistent with this OS's own taskbar Subscribe link,
-       which triggers the exact same real modal via data-portal="signup". A plain
-       outer <style> can't reach inside that iframe's own document, so this polls
-       briefly for that document's <head> and injects one CSS rule into it — a live
-       stylesheet rule, so it hides the trigger whenever Portal renders it, no need to
-       wait for the specific element — then stops; the modal/iframe itself is left
-       completely alone. Gives up after ~10s so a slow/blocked load can't loop forever. */
+    /* Portal renders its own default floating "Subscribe" trigger inside an iframe
+       it injects at #ghost-portal-root (same-origin/scriptable via srcdoc, no
+       sandboxing) — redundant and visually inconsistent with this OS's own taskbar
+       Subscribe link, which triggers the exact same real modal (app.jsx's
+       openGhostSignup finds and clicks this same internal trigger element directly,
+       since Portal's own [data-portal] auto-wiring can't see elements React renders
+       after Portal's one-time DOM scan already ran).
+
+       Two SEPARATE things needed fixing here, found by testing real clicks (not just
+       JS-invoked ones, which bypass hit-testing and so falsely looked fine):
+       1) Cosmetic: hide the default trigger's visible content. A plain outer <style>
+          can't reach inside the iframe's own document, so this polls briefly for that
+          document's <head> and injects one rule into it.
+       2) The actual bug: while collapsed/idle, Portal keeps that iframe element
+          pinned at fixed bottom-right with z-index 3999998 — which sits directly on
+          top of this OS's own taskbar Subscribe link and silently swallows real mouse
+          clicks aimed at it, even though nothing visible is there once (1) hides its
+          content. Fixed by toggling pointer-events on the OUTER iframe itself (in our
+          own document, not its content) based on its own collapsed-vs-open size: none
+          while collapsed (so clicks pass through to our taskbar), auto once open (so
+          the real Name/Email form inside is actually usable). A MutationObserver on
+          the iframe's style attribute keeps this correct across every open/close.
+
+       Gives up polling for the iframe after ~10s so a slow/blocked load can't loop
+       forever; the modal/iframe's own content and behavior are left alone either
+       way. */
     (function () {
       var attempts = 0;
-      function tryInject() {
+      function setup(ifr) {
+        var doc = ifr.contentDocument || (ifr.contentWindow && ifr.contentWindow.document);
+        if (doc && doc.head) {
+          var style = doc.createElement("style");
+          style.textContent = "[class*='triggerbtn-container']{visibility:hidden!important;}";
+          doc.head.appendChild(style);
+        }
+        function syncPointerEvents() {
+          var w = parseFloat(ifr.style.width) || 0;
+          var isCollapsed = ifr.style.width.indexOf("%") === -1 && w > 0 && w < 300;
+          ifr.style.pointerEvents = isCollapsed ? "none" : "auto";
+        }
+        syncPointerEvents();
+        new MutationObserver(syncPointerEvents).observe(ifr, { attributes: true, attributeFilter: ["style"] });
+      }
+      function tryFind() {
         attempts += 1;
         var root = document.getElementById("ghost-portal-root");
         var ifr = root && root.querySelector("iframe");
-        var doc = ifr && (ifr.contentDocument || (ifr.contentWindow && ifr.contentWindow.document));
-        if (doc && doc.head) {
-          var style = doc.createElement("style");
-          style.textContent = "[class*='triggerbtn-container']{display:none!important;}";
-          doc.head.appendChild(style);
-          return;
-        }
-        if (attempts < 40) setTimeout(tryInject, 250);
+        if (ifr) { setup(ifr); return; }
+        if (attempts < 40) setTimeout(tryFind, 250);
       }
-      tryInject();
+      tryFind();
     })();
   </script>
   <style>

@@ -376,10 +376,20 @@ is that extracted data (regex-parsed from the real bundle, values untouched).
   plain outbound link). It's Ghost's actual "Portal" widget, embedded
   with the exact same script and site key labs.zuper.co's own page uses
   (see `index.html`); clicking Subscribe really does sign the visitor up
-  on the real site. Its own default floating trigger button is hidden
-  since the taskbar link already covers that; href/target stay as a
-  fallback if the embed script hasn't loaded. (The redundant "Open real
-  labs.zuper.co" links that used to sit in the Start menu and the
+  on the real site, via `openGhostSignup` in app.jsx, which reaches into
+  Portal's own iframe and clicks its real internal trigger directly —
+  needed because Portal wires up `[data-portal]` elements by scanning
+  the DOM once at its own script-init time, before this app's own
+  React-rendered Subscribe link exists yet, so Portal's usual
+  auto-wiring never sees it. Its own default floating trigger button is
+  hidden (cosmetic) and, separately, kept from swallowing real clicks
+  aimed at the taskbar (the actual bug in an earlier version of this
+  fix): while collapsed it sits at fixed bottom-right with a very high
+  z-index, right on top of the taskbar's own Subscribe link, so
+  `index.html` toggles `pointer-events` on that iframe off while
+  collapsed and on once the modal is actually open. href/target stay as
+  a fallback if the embed script hasn't loaded. (The redundant "Open
+  real labs.zuper.co" links that used to sit in the Start menu and the
   desktop right-click menu were removed earlier, per a separate direct
   request — Subscribe already covers that.)
 - The boot-screen "runtime check" lines (browser, core count, language,
