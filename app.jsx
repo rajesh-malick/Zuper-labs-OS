@@ -2167,10 +2167,26 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
   /* Proactive "nudge" — the logo-based mascot has no animated face/screen to draw the
      eye the way the old CRT-robot did, so left alone it can read as a static app icon.
      After 90s of no interaction while the panel's closed, surface a small speech
-     bubble with one of the real suggested questions to invite a click; it auto-hides
-     itself a few seconds later either way. Any hover/click/drag resets the idle clock
-     (via bumpActivity) so it never shows more than once per idle stretch — a nudge,
-     not a nag. */
+     bubble to invite a click; it auto-hides itself a few seconds later either way.
+     Any hover/click/drag resets the idle clock (via bumpActivity) so it never shows
+     more than once per idle stretch — a nudge, not a nag. The bubble's own wording is
+     a casual, talked-out-loud version ("hey, know what X is? wanna know!") of the
+     same real question the chat's suggestion chips ask — kept as a separate list from
+     `suggestions` above so the chips can stay plainly worded while the nudge gets to
+     be chattier; both drive the exact same local-search/Claude question underneath. */
+  const nudgeSuggestions = React.useMemo(() => {
+    if (!worldData || !worldData.length) return [{ label: "hey, want a quick tip?", question: "Give me a tip" }];
+    const withEntities = worldData.find((c) => c.entities.length);
+    const sample = withEntities ? withEntities.entities[0].name : null;
+    const firstName = worldData[0].name;
+    const list = [
+      { label: "hey, know how many clusters there are? wanna know!", question: "How many clusters are there?" },
+      { label: "curious what " + firstName + " is? just ask!", question: "What is " + firstName + "?" },
+    ];
+    if (sample) list.push({ label: "hey, know what " + sample + " is? wanna know!", question: "Tell me about " + sample });
+    list.push({ label: "need a quick tip? I got one!", question: "Give me a tip" });
+    return list;
+  }, [worldData]);
   const [nudge, setNudge] = useState(null);
   const [nudgeTick, setNudgeTick] = useState(0);
   function bumpActivity() {
@@ -2180,17 +2196,17 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
   useEffect(() => {
     if (open || thinking) { setNudge(null); return; }
     const id = setTimeout(() => {
-      setNudge(suggestions[Math.floor(Math.random() * suggestions.length)]);
+      setNudge(nudgeSuggestions[Math.floor(Math.random() * nudgeSuggestions.length)]);
     }, 90000);
     return () => clearTimeout(id);
-  }, [open, thinking, nudgeTick, suggestions]);
+  }, [open, thinking, nudgeTick, nudgeSuggestions]);
   useEffect(() => {
     if (!nudge) return;
     const id = setTimeout(() => { setNudge(null); setNudgeTick((k) => k + 1); }, 9000);
     return () => clearTimeout(id);
   }, [nudge]);
   function onNudgeClick() {
-    const q = nudge;
+    const q = nudge && nudge.question;
     setNudge(null);
     setOpen(true);
     ask(q);
@@ -2271,16 +2287,28 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
         </div>
       )}
       {nudge && !open && (
-        <button type="button" onClick={onNudgeClick}
-          className="absolute bottom-[124px] right-2 max-w-[190px] px-2.5 py-1.5 text-[12px] font-semibold text-left"
+        <button type="button" onClick={onNudgeClick} aria-label={"Ask: " + nudge.label}
+          className="absolute bottom-[128px] right-3 w-[180px] px-3.5 py-3 text-[12px] font-bold text-left leading-snug"
           style={{
-            background: t.panelBg, backdropFilter: t.panelBlur, color: t.chromeText,
-            borderRadius: t.winRadius === "0px" ? "0px" : "8px",
-            boxShadow: bevel("out-shallow", t.winBorder) + ", 0 8px 18px rgba(0,0,0,.4)",
-            borderLeft: "3px solid " + t.accent,
-            animation: "nudge-in .3s ease-out 1",
+            background: "#fff3e0", color: "#2a1608",
+            border: "2.5px solid " + t.accent,
+            borderRadius: "26% 24% 28% 30% / 55% 50% 45% 50%",
+            boxShadow: "0 8px 18px rgba(0,0,0,.45)",
+            animation: "nudge-in .35s ease-out 1",
           }}>
-          {nudge}
+          {/* faint halftone-dot texture, comic-panel style */}
+          <span aria-hidden="true" style={{
+            position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none",
+            backgroundImage: "radial-gradient(" + t.accent + "55 1px, transparent 1.3px)",
+            backgroundSize: "7px 7px", opacity: 0.5,
+          }} />
+          <span style={{ position: "relative" }}>{nudge.label}</span>
+          {/* speech-bubble tail, pointing down toward the mascot */}
+          <span aria-hidden="true" style={{
+            position: "absolute", right: 16, bottom: -8, width: 16, height: 16,
+            background: "#fff3e0", borderRight: "2.5px solid " + t.accent, borderBottom: "2.5px solid " + t.accent,
+            transform: "rotate(45deg)", borderRadius: "0 0 3px 0",
+          }} />
         </button>
       )}
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}

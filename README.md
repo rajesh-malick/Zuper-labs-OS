@@ -177,14 +177,24 @@ as a cute, chirpy little robot (R2-D2-style trills) instead of a UI
 chime.
 
 **Proactive nudge.** After 90s of no interaction with the assistant
-while its chat panel is closed, a small speech-bubble pops up next to
-it with one of the real suggested questions (e.g. "How many clusters
-are there?") to invite a click — direct request, since the flat logo
-mark can't pull attention toward itself the way an animated character
-screen could. It auto-hides itself after ~9s either way, and any hover,
-click, or drag resets the idle clock, so it shows at most once per idle
-stretch rather than repeatedly nagging. Clicking the bubble opens the
-chat panel and immediately asks that question.
+while its chat panel is closed, a comic-style speech bubble pops up
+next to it — direct request, since the flat logo mark can't pull
+attention toward itself the way an animated character screen could.
+Per a direct visual reference, it's an organic "cloud" shape (an
+asymmetric blob `border-radius`, not a plain rounded rectangle) with a
+thick accent-colored border, a warm off-white fill, a faint halftone-
+dot texture, and a pointed tail aimed down at the mascot — a pop-art
+speech-bubble look, not the OS's usual sharp CRT chrome. Its wording is
+deliberately casual/talked-out-loud ("hey, know how many clusters
+there are? wanna know!") rather than the plain question text the chat
+panel's own suggestion chips use — both a chatty label and the real
+underlying question are defined together per entry (`nudgeSuggestions`
+in app.jsx), so the bubble can sound conversational while still asking
+the assistant something real underneath. It auto-hides itself after
+~9s either way, and any hover, click, or drag resets the idle clock, so
+it shows at most once per idle stretch rather than repeatedly nagging.
+Clicking the bubble opens the chat panel and immediately asks that
+underlying question.
 
 Click it to open a small chat panel: type any question and it tries a real
 Claude model first, falling back to deterministic local keyword search over
