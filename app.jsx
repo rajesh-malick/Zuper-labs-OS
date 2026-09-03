@@ -1881,15 +1881,10 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
 /* ================= Taskbar / Start menu ================= */
 function Taskbar({ onStartClick, running, onRunningClick, theme }) {
   const [clock, setClock] = useState("");
-  const [telemetry, setTelemetry] = useState("");
   const t = theme || THEME;
   useEffect(() => {
     function tick() { const d = new Date(); setClock(String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0")); }
     tick(); const id = setInterval(tick, 15000); return () => clearInterval(id);
-  }, []);
-  useEffect(() => {
-    function tick() { const t = Date.now() / 1000; setTelemetry("sys x:" + (Math.sin(t * 0.11) * 40 + 40).toFixed(1) + " y:" + (Math.cos(t * 0.07) * 12 + 12).toFixed(1) + " z:" + (Math.sin(t * 0.05) * 60 + 60).toFixed(1)); }
-    tick(); const id = setInterval(tick, 800); return () => clearInterval(id);
   }, []);
   return (
     <div className="fixed left-0 right-0 bottom-0 h-[52px] flex items-center gap-3 px-3 z-[800]" style={{ background: t.taskbarBg, backdropFilter: t.winBlur === "none" ? undefined : "blur(10px)", boxShadow: bevel("out-shallow", t.winBorder) + ", inset 0 1px 0 rgba(0,0,0,.4)" }}>
@@ -1901,7 +1896,6 @@ function Taskbar({ onStartClick, running, onRunningClick, theme }) {
             style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel(r.focused ? "in-shallow" : "out-shallow", r.focused ? t.accent : t.winBorder), color: r.focused ? t.chromeText : t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{r.title}</button>
         ))}
       </div>
-      <span aria-hidden="true" className="hidden sm:inline font-mono text-[11px]" style={{ color: t.chromeTextDim, opacity: .6, fontFamily: t.fontChrome || undefined }}>{telemetry}</span>
       <span aria-hidden="true" className="font-mono font-semibold text-[11px]" style={{ color: t.chromeText, fontFamily: t.fontChrome || undefined }}>{clock}</span>
       <a href="https://labs.zuper.co/" target="_blank" rel="noopener" className="text-[11px] underline" style={{ color: t.accent }}>Subscribe</a>
     </div>

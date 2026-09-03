@@ -424,7 +424,6 @@ is that extracted data (regex-parsed from the real bundle, values untouched).
 - **Achievement banner** after a win is local UI only — nothing scored,
   stored, or transmitted anywhere off this browser; any high score shown
   lives in `localStorage` only. Notes a VIP-demo link as an unbuilt idea.
-- **Taskbar telemetry** is decorative sine/cosine motion, not real data.
 
 ## Structure
 
