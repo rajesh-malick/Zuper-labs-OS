@@ -136,14 +136,24 @@ you put it.
 reactive to touch, click, and idle time, not just clicks — that
 interaction-design vocabulary was used as design reference (not code or
 assets), reimplemented from scratch on the logo image: a scale-up pulse
-on greet; a scale-down/fade dip on goodbye; an ambient ring glow around
-the bezel that brightens on greet, goodbye, or right after a fresh reply;
-a "perk up" 3D notice on pointer-enter; a small randomized idle fidget
-wobble every ~12-22s so it stays alive even when nobody's touching it;
-a head-tilt while a question is being answered; three pulsing loading
-dots under the logo while thinking; and a bright glint bar sweeping over
-the logo on hover, standing in for the old screen's `GetAttention` scan
-cue. `@react95/clippy` itself was **not used** — inspecting the
+on greet; a scale-down/fade dip on goodbye; a slight scale-up on hover;
+an ambient ring glow around the bezel that brightens on greet, goodbye,
+or right after a fresh reply; a "perk up" 3D notice on pointer-enter; a
+small randomized idle fidget wobble every ~12-22s so it stays alive even
+when nobody's touching it; a head-tilt while a question is being
+answered; and three pulsing loading dots under the logo while thinking.
+A continuous, gentle scale "breathing" pulse (`mascot-breathe`) runs at
+all times, on top of every other state — direct request, after the
+switch to a flat logo mark made the mascot read as a static app icon
+rather than something alive; this is the one thing that's always
+running, regardless of state, to keep it feeling like a living object.
+The old CRT-robot's screen-content states (a hand-drawn smiley/wave/
+"GOODBYE!!!" text, ambient scanline flicker, and a bright scan bar
+sweeping over the screen on hover) are gone along with that character —
+they were specific to its terminal-screen conceit and don't apply to a
+flat logo mark; direct request removed the last of them (the hover scan
+bar and the screen's ambient flicker) once they no longer made sense.
+`@react95/clippy` itself was **not used** — inspecting the
 published npm package confirmed it ships ~16.6MB of actual extracted
 Microsoft Office character sprites/sounds (Clippy, Merlin, Bonzi, Rover,
 etc.), with upstream docs stating outright those assets "remain property
@@ -165,6 +175,16 @@ a fast vibrato wobble (an LFO modulating its own pitch) and playing
 short multi-note runs instead of one glide — that's what actually reads
 as a cute, chirpy little robot (R2-D2-style trills) instead of a UI
 chime.
+
+**Proactive nudge.** After 90s of no interaction with the assistant
+while its chat panel is closed, a small speech-bubble pops up next to
+it with one of the real suggested questions (e.g. "How many clusters
+are there?") to invite a click — direct request, since the flat logo
+mark can't pull attention toward itself the way an animated character
+screen could. It auto-hides itself after ~9s either way, and any hover,
+click, or drag resets the idle clock, so it shows at most once per idle
+stretch rather than repeatedly nagging. Clicking the bubble opens the
+chat panel and immediately asks that question.
 
 Click it to open a small chat panel: type any question and it tries a real
 Claude model first, falling back to deterministic local keyword search over

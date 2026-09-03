@@ -2164,6 +2164,38 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
     return ["How many clusters are there?", "What is " + worldData[0].name + "?"].concat(sample ? ["Tell me about " + sample] : []).concat(["Give me a tip"]);
   }, [worldData]);
 
+  /* Proactive "nudge" — the logo-based mascot has no animated face/screen to draw the
+     eye the way the old CRT-robot did, so left alone it can read as a static app icon.
+     After 90s of no interaction while the panel's closed, surface a small speech
+     bubble with one of the real suggested questions to invite a click; it auto-hides
+     itself a few seconds later either way. Any hover/click/drag resets the idle clock
+     (via bumpActivity) so it never shows more than once per idle stretch — a nudge,
+     not a nag. */
+  const [nudge, setNudge] = useState(null);
+  const [nudgeTick, setNudgeTick] = useState(0);
+  function bumpActivity() {
+    setNudgeTick((k) => k + 1);
+    setNudge(null);
+  }
+  useEffect(() => {
+    if (open || thinking) { setNudge(null); return; }
+    const id = setTimeout(() => {
+      setNudge(suggestions[Math.floor(Math.random() * suggestions.length)]);
+    }, 90000);
+    return () => clearTimeout(id);
+  }, [open, thinking, nudgeTick, suggestions]);
+  useEffect(() => {
+    if (!nudge) return;
+    const id = setTimeout(() => { setNudge(null); setNudgeTick((k) => k + 1); }, 9000);
+    return () => clearTimeout(id);
+  }, [nudge]);
+  function onNudgeClick() {
+    const q = nudge;
+    setNudge(null);
+    setOpen(true);
+    ask(q);
+  }
+
   function defaultPos() {
     const rect = stageRef.current ? stageRef.current.getBoundingClientRect() : { width: 1400, height: 800 };
     return { x: rect.width - 110, y: rect.height - 210 };
@@ -2191,6 +2223,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
   useEffect(() => { try { if (pos) localStorage.setItem("zuper-os-assistant-pos", JSON.stringify(pos)); } catch (e) {} }, [pos]);
 
   function onPointerDown(e) {
+    bumpActivity();
     dragRef.current = { dragging: true, moved: false, startX: e.clientX, startY: e.clientY, startLeft: current.x, startTop: current.y };
   }
   function onClickCapture(e) {
@@ -2237,8 +2270,21 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
           </form>
         </div>
       )}
+      {nudge && !open && (
+        <button type="button" onClick={onNudgeClick}
+          className="absolute bottom-[124px] right-2 max-w-[190px] px-2.5 py-1.5 text-[12px] font-semibold text-left"
+          style={{
+            background: t.panelBg, backdropFilter: t.panelBlur, color: t.chromeText,
+            borderRadius: t.winRadius === "0px" ? "0px" : "8px",
+            boxShadow: bevel("out-shallow", t.winBorder) + ", 0 8px 18px rgba(0,0,0,.4)",
+            borderLeft: "3px solid " + t.accent,
+            animation: "nudge-in .3s ease-out 1",
+          }}>
+          {nudge}
+        </button>
+      )}
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}
-        onMouseEnter={() => { setHover(true); playAssistantGlitchSound(); }} onMouseLeave={() => setHover(false)}
+        onMouseEnter={() => { setHover(true); bumpActivity(); playAssistantGlitchSound(); }} onMouseLeave={() => setHover(false)}
         className="flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
         style={{ width: 80, height: 160, animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible" }}
         aria-label="Zuper OS assistant — real platform data, Claude when configured">
@@ -2259,31 +2305,35 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
             filter: "drop-shadow(0 10px 14px rgba(0,0,0,.5)) drop-shadow(0 0 7px " + t.accent + "90)",
             animation: hover ? "mascot-notice .5s ease-out 1" : thinking ? "dog-think-tilt 1.6s ease-in-out infinite" : fidget ? "mascot-fidget .9s ease-in-out 1" : "mascot-3d-tilt 5s ease-in-out infinite",
           }}>
-            {/* ambient glow ring — brighter/faster on greet, goodbye, or a fresh reply */}
-            <div style={{
-              position: "absolute", inset: -6, borderRadius: "50%",
-              background: "radial-gradient(circle, " + t.accent + "50 0%, transparent 72%)",
-              animation: (greet || bye || excited) ? "dot-pulse .5s ease-in-out 3" : "crt-flicker 3.5s ease-in-out infinite",
-            }} />
-            <img src="./assets/zuper-logo.png" alt="Zuper Labs" draggable={false} style={{
-              position: "relative", width: 42, height: 42, objectFit: "contain",
-              filter: "drop-shadow(0 0 6px " + t.accent + "a0)",
-              transform: bye ? "scale(.7) translateY(6px)" : greet ? "scale(1.18)" : "scale(1)",
-              opacity: bye ? 0.35 : 1,
-              transition: "transform .35s ease, opacity .35s ease",
-            }} />
-            {/* thinking indicator — same three-dot pulse the terminal-screen version used */}
-            {thinking && (
-              <div style={{ position: "absolute", bottom: 8, display: "flex", gap: 3 }}>
-                <span style={{ width: 4, height: 4, borderRadius: "50%", background: t.accent, filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite" }} />
-                <span style={{ width: 4, height: 4, borderRadius: "50%", background: t.accent, filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite", animationDelay: "0.15s" }} />
-                <span style={{ width: 4, height: 4, borderRadius: "50%", background: t.accent, filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite", animationDelay: "0.3s" }} />
-              </div>
-            )}
-            {/* hover glint — the same "get attention" scan-sweep the old screen used, now a bright bar over the logo */}
-            {hover && (
-              <div style={{ position: "absolute", left: 4, right: 4, height: 10, background: t.accent, opacity: 0.35, borderRadius: 4, animation: "screen-scan-sweep .7s ease-in-out 1" }} />
-            )}
+            {/* breathing wrapper — a continuous, gentle scale pulse (own nested element
+                so it composes with the plate's own tilt/notice/fidget transform above
+                instead of fighting it for the same CSS property) is what reads as
+                "alive" now that the mascot is a flat logo mark instead of an animated
+                CRT-robot screen. No CRT-style flicker/scanline artifacts here anymore —
+                those belonged to the old character; this is just a clean, calm glow. */}
+            <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", animation: "mascot-breathe 2.6s ease-in-out infinite" }}>
+              {/* ambient glow ring — brighter/faster on greet, goodbye, or a fresh reply */}
+              <div style={{
+                position: "absolute", inset: -6, borderRadius: "50%",
+                background: "radial-gradient(circle, " + t.accent + "50 0%, transparent 72%)",
+                animation: (greet || bye || excited) ? "dot-pulse .5s ease-in-out 3" : "dot-pulse 3s ease-in-out infinite",
+              }} />
+              <img src="./assets/zuper-logo.png" alt="Zuper Labs" draggable={false} style={{
+                position: "relative", width: 42, height: 42, objectFit: "contain",
+                filter: "drop-shadow(0 0 6px " + t.accent + "a0)",
+                transform: bye ? "scale(.7) translateY(6px)" : greet ? "scale(1.18)" : hover ? "scale(1.08)" : "scale(1)",
+                opacity: bye ? 0.35 : 1,
+                transition: "transform .25s ease, opacity .35s ease",
+              }} />
+              {/* thinking indicator — same three-dot pulse the terminal-screen version used */}
+              {thinking && (
+                <div style={{ position: "absolute", bottom: 8, display: "flex", gap: 3 }}>
+                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: t.accent, filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite" }} />
+                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: t.accent, filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite", animationDelay: "0.15s" }} />
+                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: t.accent, filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite", animationDelay: "0.3s" }} />
+                </div>
+              )}
+            </div>
           </div>
           {/* small grounding shadow, standing in for the old tank-tread base */}
           <div style={{ position: "absolute", left: 22, top: 118, width: 36, height: 8, borderRadius: "50%", background: "rgba(0,0,0,.45)", filter: "blur(2px)" }} />

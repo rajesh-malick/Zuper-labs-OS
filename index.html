@@ -105,17 +105,22 @@
     /* A hard on/off opacity toggle — how a real terminal cursor blinks — for the
        CRT-robot mascot's >_ glyph, distinct from dog-blink's eyelid squash. */
     @keyframes term-cursor-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
-    /* Screen-content states for the CRT-robot mascot: a loading-dots pulse while
-       thinking/processing, and a bright scan bar that sweeps down the screen for a
-       "get attention" glitch-scan effect on hover. */
+    /* dot-pulse: a loading-dots/glow-ring pulse, used by the assistant's thinking
+       indicator and its ambient glow ring. (screen-scan-sweep, the old CRT-robot's
+       hover "get attention" scan bar, was removed along with the rest of that
+       character's screen-content states — no longer applicable to the logo-based
+       assistant.) */
     @keyframes dot-pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
-    @keyframes screen-scan-sweep {
-      0% { transform: translateY(0); opacity: 0; }
-      15% { opacity: .6; }
-      85% { opacity: .6; }
-      100% { transform: translateY(32px); opacity: 0; }
-    }
     .assistant-eye { transform-box: fill-box; transform-origin: center; animation: dog-blink 4.5s ease-in-out infinite; }
+    /* mascot-breathe: a continuous, gentle scale pulse on the logo-based assistant's
+       inner content (glow ring + logo) — this is what makes it read as a living thing
+       rather than a static app icon now that it's a flat logo mark instead of an
+       animated character screen. Always running, layered on a separate nested element
+       so it composes with the outer plate's own tilt/notice/fidget transforms instead
+       of fighting them for the same `transform` property. */
+    @keyframes mascot-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.055); } }
+    /* nudge-in: entrance for the proactive suggestion bubble near the assistant. */
+    @keyframes nudge-in { 0% { opacity: 0; transform: translateY(6px) scale(.96); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
     /* crt-flicker: used by both the CRT-robot mascot's screen-scanline ambient
        flicker AND ScreenGlitch's whole-screen flicker layer (below). crt-sweep:
        the continuous moving scanline band for ScreenGlitch — the old CRTOverlay had
