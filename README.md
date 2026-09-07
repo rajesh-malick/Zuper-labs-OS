@@ -74,11 +74,17 @@ a mismatch once Mono CRT became the only look, so that got fixed too.
   (`opacity: 0`, including its own caret); what's shown is styled text
   plus the block cursor next to it.
 - A large watermark (`GlitchWatermark`) is stamped behind the desktop
-  icons: the real Zuper Labs logo (`assets/zuper-logo.png`, faint, ~8%
-  opacity) sits behind the plain "ZUPER LABS" text, both centered on the
-  same point — logo at the back, text overlaid on top, per direct
-  request. Still plain and static, no animation — the screen glitching
-  independently of it is deliberate: see `ScreenGlitch` above.
+  icons: the real Zuper Labs logo mark (`assets/zuper-logo.png`, faint,
+  ~8% opacity) sits behind the real Zuper Labs **wordmark** image
+  (`assets/zuper-wordmark.png` — the actual brand asset, white "Zuper
+  Labs" text in the same orange bracket-frame as the logo, not a
+  recreated pixel-font approximation), both centered on the same point.
+  The wordmark image also replaced the earlier plain pixel-font "ZUPER
+  LABS" text treatment in the boot screen (shown once, above the boot
+  log) and gained a new home as a header at the top of the Start menu —
+  direct request, once the real wordmark asset was available. Still
+  plain and static, no animation — the screen glitching independently of
+  it is deliberate: see `ScreenGlitch` above.
 
 ### Bevel texture (technique borrowed from 1j01/os-gui, recolored)
 
@@ -333,8 +339,9 @@ entity-type badges inside cluster detail windows.
   desktop icon labels, badges, the taskbar, body copy, and the terminal —
   now uses [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (OFL
   licensed, freely usable), per direct reference. The one deliberate
-  exception is the "ZUPER LABS" background watermark (`GlitchWatermark`
-  in app.jsx), which keeps its own VT323 treatment. This replaced an
+  exception is the "Zuper Labs" background watermark (`GlitchWatermark`
+  in app.jsx), which is now the real wordmark image asset rather than any
+  typeface at all. This replaced an
   earlier two-tier split (Inconsolata for chrome, VT323 for genuine
   terminal/shell surfaces) that itself replaced an even earlier pass
   where VT323 was applied everywhere, including small icon labels, which
