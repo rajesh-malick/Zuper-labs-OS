@@ -241,6 +241,7 @@ const CLUSTER_ICONS = {
   "predictive-analytics": minimalIcon("predictive-analytics", "\u{1F52E}"),
   "zuper-arcade": minimalIcon("zuper-arcade", "\u{1F3AE}"),
   "terminal": minimalIcon("terminal", "⌨️"),
+  "zuper-careers": minimalIcon("zuper-careers", "\u{1F511}"),
 };
 
 /* One shape array per cluster, in the same [tag, attrs] tuple format PixelIcon already
@@ -325,6 +326,12 @@ const MINIMAL_ICON_SHAPES = {
     ["rect", { x: 3, y: 4.5, width: 18, height: 15, rx: 1.8 }],
     ["polyline", { points: "7.5 10 10.5 12.5 7.5 15" }],
     ["line", { x1: 12.3, y1: 15, x2: 16, y2: 15 }],
+  ],
+  "zuper-careers": [ // key
+    ["circle", { cx: 8, cy: 16, r: 4 }],
+    ["line", { x1: 11, y1: 13, x2: 20, y2: 4 }],
+    ["line", { x1: 16, y1: 8, x2: 19, y2: 11 }],
+    ["line", { x1: 18, y1: 6, x2: 20.5, y2: 8.5 }],
   ],
 };
 
@@ -1867,6 +1874,160 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   );
 }
 
+/* ================= Careers puzzle (Zuper_Careers.exe) =================
+   A 2-question key-hunt: each question gives the candidate real-world instructions
+   (content TBD from Sameer — the two <PLACEHOLDER> blocks below are exactly where
+   his real Q1/Q2 copy goes), they find a 16-char key and paste it in below, it's
+   validated server-side (api/careers-validate.js — never client-side, since a
+   valid key sitting anywhere in this public repo's shipped JS would let anyone
+   just view-source the answer), and once both are solved they leave an email,
+   which triggers a notification to Raghav and Sameer (api/careers-submit.js, via
+   Resend). Progress (which step, and whether the email step is already done)
+   persists to localStorage so refreshing mid-hunt doesn't lose it — the same
+   lightweight-persistence pattern the rest of this app already uses for icon
+   positions and arcade high scores; no real answer/key is ever stored client-side. */
+const CAREERS_STORAGE_KEY = "zuper-os-careers-progress";
+function loadCareersProgress() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CAREERS_STORAGE_KEY));
+    if (saved && (saved.step === 1 || saved.step === 2 || saved.step === 3 || saved.step === 4)) return saved;
+  } catch (e) {}
+  return { step: 1 };
+}
+function saveCareersProgress(progress) {
+  try { localStorage.setItem(CAREERS_STORAGE_KEY, JSON.stringify(progress)); } catch (e) {}
+}
+
+const CAREERS_QUESTIONS = {
+  1: "<PLACEHOLDER — Sameer's real Question 1 instructions go here.> Follow the instructions you were given, then paste the 16-character key you find below.",
+  2: "<PLACEHOLDER — Sameer's real Question 2 instructions go here.> Follow the instructions you were given, then paste the 16-character key you find below.",
+};
+
+function CareersWindow() {
+  const [progress, setProgress] = useState(loadCareersProgress);
+  const [key, setKey] = useState("");
+  const [email, setEmail] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState(null);
+  const [shake, setShake] = useState(false);
+  const inputRef = useRef(null);
+  useEffect(() => { inputRef.current && inputRef.current.focus(); }, [progress.step]);
+
+  function fail(message) {
+    setError(message);
+    setShake(true);
+    playArcadeFailSound();
+    setTimeout(() => setShake(false), 400);
+  }
+
+  async function submitKey(e) {
+    e.preventDefault();
+    const trimmed = key.trim();
+    if (!trimmed || checking) return;
+    setChecking(true);
+    setError(null);
+    try {
+      const r = await fetch("/api/careers-validate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ step: progress.step, key: trimmed }),
+      });
+      const data = await r.json().catch(() => null);
+      if (r.ok && data && data.valid) {
+        playArcadeSuccessSound();
+        const next = { step: progress.step === 1 ? 2 : 3 };
+        setProgress(next);
+        saveCareersProgress(next);
+        setKey("");
+      } else if (r.status === 503) {
+        fail("This challenge isn't configured yet — check back soon.");
+      } else {
+        fail("That key didn't check out. Double-check it and try again.");
+      }
+    } catch (err) {
+      fail("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  async function submitEmail(e) {
+    e.preventDefault();
+    const trimmed = email.trim();
+    if (!trimmed || checking) return;
+    setChecking(true);
+    setError(null);
+    try {
+      const r = await fetch("/api/careers-submit", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
+      });
+      const data = await r.json().catch(() => null);
+      if (r.ok && data && data.ok) {
+        const next = { step: 4 };
+        setProgress(next);
+        saveCareersProgress(next);
+      } else if (r.status === 503) {
+        fail("Email notifications aren't configured yet — check back soon.");
+      } else {
+        fail("Couldn't send that — double-check your email and try again.");
+      }
+    } catch (err) {
+      fail("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  return (
+    <div className="p-5 flex flex-col h-full font-mono" style={{ animation: shake ? "arcade-shake .4s ease-in-out" : "none" }}>
+      <h1 className="text-white text-[18px] font-bold mb-1">Zuper Careers Challenge</h1>
+      <p className="text-[12px] font-medium mb-4" style={{ color: "#c98a2e" }}>
+        {progress.step <= 2 ? "Question " + progress.step + " of 2" : progress.step === 3 ? "Both keys solved" : "Submitted"}
+      </p>
+
+      {(progress.step === 1 || progress.step === 2) && (
+        <form onSubmit={submitKey} className="flex flex-col gap-3">
+          <p className="text-[14px] font-medium leading-relaxed" style={{ color: CRT_GREEN }}>{CAREERS_QUESTIONS[progress.step]}</p>
+          <input ref={inputRef} value={key} onChange={(e) => setKey(e.target.value)} disabled={checking}
+            placeholder="16-character key" maxLength={64} spellCheck={false} autoComplete="off"
+            className="px-2.5 py-2 text-[14px] font-medium bg-transparent outline-none disabled:opacity-40 tracking-widest"
+            style={{ border: "none", boxShadow: bevel("in-shallow", CRT_GREEN), color: "#fff", caretColor: CRT_GREEN }} />
+          {error && <p className="text-[12px] font-semibold" style={{ color: "#fff3e0" }}>{error}</p>}
+          <button type="submit" disabled={checking || !key.trim()} className="self-start px-3 py-1.5 text-[13px] font-semibold disabled:opacity-40"
+            style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }}>
+            {checking ? "Checking…" : "Submit key"}
+          </button>
+        </form>
+      )}
+
+      {progress.step === 3 && (
+        <form onSubmit={submitEmail} className="flex flex-col gap-3">
+          <p className="text-[14px] font-medium leading-relaxed" style={{ color: CRT_GREEN }}>
+            Nice work — both keys check out. Leave your email and we'll follow up.
+          </p>
+          <input value={email} onChange={(e) => setEmail(e.target.value)} disabled={checking}
+            type="email" placeholder="you@example.com" spellCheck={false} autoComplete="off"
+            className="px-2.5 py-2 text-[14px] font-medium bg-transparent outline-none disabled:opacity-40"
+            style={{ border: "none", boxShadow: bevel("in-shallow", CRT_GREEN), color: "#fff", caretColor: CRT_GREEN }} />
+          {error && <p className="text-[12px] font-semibold" style={{ color: "#fff3e0" }}>{error}</p>}
+          <button type="submit" disabled={checking || !email.trim()} className="self-start px-3 py-1.5 text-[13px] font-semibold disabled:opacity-40"
+            style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }}>
+            {checking ? "Sending…" : "Submit"}
+          </button>
+        </form>
+      )}
+
+      {progress.step === 4 && (
+        <p className="text-[14px] font-medium leading-relaxed" style={{ color: CRT_GREEN }}>
+          🎉 Thanks — we've got your details and someone from the team will be in touch.
+        </p>
+      )}
+    </div>
+  );
+}
+
 /* Ghost Portal (the real member-signup widget, embedded in index.html) scans the
    page for [data-portal] elements once, at its own script-init time — it does not
    use document-level click delegation. That's fine on labs.zuper.co's own page,
@@ -2513,6 +2674,7 @@ function App({ worldData, onReboot }) {
        intelligence$") wrap across 2-3 lines by default, cramped and awkward
        to read, requiring a manual resize every time just to use it comfortably. */
     { id: "terminal", title: "Terminal.app", icon: CLUSTER_ICONS["terminal"], kind: "terminal", rect: { x: 220, y: 60, w: 880, h: 520 } },
+    { id: "zuper-careers", title: "Zuper_Careers.exe", icon: CLUSTER_ICONS["zuper-careers"], kind: "careers-puzzle", rect: { x: 340, y: 60, w: 460, h: 480 } },
   ], []);
 
   const hiddenWindows = useMemo(() => [
@@ -2656,6 +2818,7 @@ function App({ worldData, onReboot }) {
               {w.kind === "dashboard" && <DashboardWindow clusterId={w.clusterId} worldData={worldData} />}
               {w.kind === "arcade" && <ArcadeWindow />}
               {w.kind === "terminal" && <TerminalWindow worldData={worldData} jumpTo={terminalJump} onOpenFolder={wm.open} />}
+              {w.kind === "careers-puzzle" && <CareersWindow />}
               {w.kind === "properties" && <PropertiesWindow worldData={worldData} />}
               {w.kind === "display-settings" && <DisplaySettingsWindow iconSize={iconSize} setIconSize={setIconSize} textSize={textSize} setTextSize={setTextSize} />}
             </Window>

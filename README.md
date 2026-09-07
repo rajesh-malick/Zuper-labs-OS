@@ -236,6 +236,51 @@ locally, or before the env var is set on Vercel), `/api/ask` 404s or
 returns 503 and the assistant transparently falls back to local search —
 the app never breaks, it just answers from the local data instead.
 
+## Careers challenge (Zuper_Careers.exe)
+
+A separate desktop icon — distinct from the existing `careers/` cluster
+folder, which still shows Zuper's real careers product-cluster data
+untouched — for a 2-question key-hunt flow, spec'd directly by Sameer:
+each question gives the candidate real-world instructions, they find a
+16-character key and paste it into the app, it's validated, and once
+both are solved they leave an email that triggers a notification to
+Raghav and Sameer.
+
+**Current state — content is placeholder, mechanism is real.** The two
+`<PLACEHOLDER — Sameer's real Question N instructions go here.>` blocks
+in `CareersWindow` (app.jsx) are exactly where his actual Q1/Q2 copy
+goes; everything around them — key entry, validation, progression,
+email capture, the notification — is fully wired and functional.
+
+**Why validation happens server-side, never client-side:** this repo is
+public. If a valid key lived anywhere in the shipped JS, any candidate
+could just view the source on GitHub and read the answer straight off.
+So `api/careers-validate.js` checks a submitted key against
+`CAREER_KEY_1` / `CAREER_KEY_2` — Vercel environment variables, the same
+pattern as `ANTHROPIC_API_KEY` above — never committed to the repo, and
+never returned to the client on failure.
+
+**Email notification:** `api/careers-submit.js` sends the "candidate
+completed both keys" email via [Resend](https://resend.com), gated on a
+`RESEND_API_KEY` env var. Its `FROM_EMAIL` currently uses Resend's
+shared sandbox sender (`onboarding@resend.dev`), which can only deliver
+to the Resend account's own verified address — enough to test the wiring
+end to end, but to actually reach `raghav@zuper.co` / `sameer@zuper.co`
+in production, a real sending domain needs to be verified in the Resend
+dashboard and `FROM_EMAIL` updated to use it.
+
+**Progress persistence:** which step a candidate is on (and whether
+they've already submitted their email) is saved to `localStorage`
+(`zuper-os-careers-progress`) so a refresh mid-hunt doesn't lose
+progress — the same lightweight pattern already used for icon positions
+and arcade high scores. No real key or answer is ever stored client-side,
+only the step index.
+
+Without `CAREER_KEY_1`/`CAREER_KEY_2` or `RESEND_API_KEY` configured
+(e.g. running locally, or before they're set on Vercel), the relevant
+step shows an inline "isn't configured yet" message rather than
+breaking or silently succeeding.
+
 ## Icon licensing note
 
 Desktop/app icons are **hand-authored, original shapes** — not traced or
