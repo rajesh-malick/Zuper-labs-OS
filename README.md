@@ -238,13 +238,26 @@ the app never breaks, it just answers from the local data instead.
 
 ## Careers challenge (Zuper_Careers.exe)
 
-A separate desktop icon — distinct from the existing `careers/` cluster
-folder, which still shows Zuper's real careers product-cluster data
-untouched — for a 2-question key-hunt flow, spec'd directly by Sameer:
-each question gives the candidate real-world instructions, they find a
-16-character key and paste it into the app, it's validated, and once
-both are solved they leave an email that triggers a notification to
-Raghav and Sameer.
+A 2-question key-hunt flow, spec'd directly by Sameer: each question
+gives the candidate real-world instructions, they find a 16-character
+key and paste it into the app, it's validated, and once both are solved
+they leave an email that triggers a notification to Raghav and Sameer.
+
+**Lives behind the real `careers/` desktop icon, not a separate one.**
+First pass gave it its own "Zuper_Careers.exe" icon, sitting right next
+to the existing `careers/` cluster icon — direct correction after that
+read as two confusing, redundant "careers" things side by side, since
+they mean genuinely different content (`careers/` is one of Zuper's 14
+*real* product clusters — an actual product Zuper builds, not "apply to
+work here"). Merged: double-clicking `careers/` now opens this challenge
+directly (see the `id === "careers"` special-case in `handleIconOpen`,
+app.jsx) instead of the generic folder-opens-Terminal behavior every
+other cluster gets. The real cluster data isn't lost — `cd careers` /
+`ls` in the terminal still works exactly as before, and `CareersWindow`
+itself has a "What does Zuper's real Careers product do? →" link that
+jumps straight there. `zuper-careers` is still a real, independently
+openable window (registered in `hiddenWindows`, same pattern as
+Properties/Display settings) — it just no longer has its own icon.
 
 **Current state — content is placeholder, mechanism is real.** The two
 `<PLACEHOLDER — Sameer's real Question N instructions go here.>` blocks

@@ -518,7 +518,7 @@ function GlitchWatermark() {
       }} />
       <img src="./assets/zuper-wordmark.png" alt="" style={{
         position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
-        width: "min(50vw, 660px)", objectFit: "contain", opacity: 0.9,
+        width: "min(58vw, 820px)", objectFit: "contain", opacity: 0.9,
       }} />
     </div>
   );
@@ -1903,7 +1903,7 @@ const CAREERS_QUESTIONS = {
   2: "<PLACEHOLDER — Sameer's real Question 2 instructions go here.> Follow the instructions you were given, then paste the 16-character key you find below.",
 };
 
-function CareersWindow() {
+function CareersWindow({ onViewRealCareers }) {
   const [progress, setProgress] = useState(loadCareersProgress);
   const [key, setKey] = useState("");
   const [email, setEmail] = useState("");
@@ -1983,9 +1983,14 @@ function CareersWindow() {
   return (
     <div className="p-5 flex flex-col h-full font-mono" style={{ animation: shake ? "arcade-shake .4s ease-in-out" : "none" }}>
       <h1 className="text-white text-[18px] font-bold mb-1">Zuper Careers Challenge</h1>
-      <p className="text-[12px] font-medium mb-4" style={{ color: "#c98a2e" }}>
+      <p className="text-[12px] font-medium mb-1" style={{ color: "#c98a2e" }}>
         {progress.step <= 2 ? "Question " + progress.step + " of 2" : progress.step === 3 ? "Both keys solved" : "Submitted"}
       </p>
+      {onViewRealCareers && (
+        <button type="button" onClick={onViewRealCareers} className="self-start text-[11px] font-semibold underline mb-4" style={{ color: "#c98a2e" }}>
+          What does Zuper's real Careers product do? →
+        </button>
+      )}
 
       {(progress.step === 1 || progress.step === 2) && (
         <form onSubmit={submitKey} className="flex flex-col gap-3">
@@ -2674,12 +2679,22 @@ function App({ worldData, onReboot }) {
        intelligence$") wrap across 2-3 lines by default, cramped and awkward
        to read, requiring a manual resize every time just to use it comfortably. */
     { id: "terminal", title: "Terminal.app", icon: CLUSTER_ICONS["terminal"], kind: "terminal", rect: { x: 220, y: 60, w: 880, h: 520 } },
-    { id: "zuper-careers", title: "Zuper_Careers.exe", icon: CLUSTER_ICONS["zuper-careers"], kind: "careers-puzzle", rect: { x: 340, y: 60, w: 460, h: 480 } },
   ], []);
 
+  /* zuper-careers has no desktop icon of its own — direct request/correction after
+     having both a real "careers" cluster icon (Zuper's own real product cluster
+     data) AND a separate "Zuper_Careers.exe" icon read as two confusing, redundant
+     "careers" things sitting side by side. Merged: the existing careers/ desktop
+     icon now opens this challenge directly (see the id === "careers" special-case
+     in handleIconOpen below) instead of the generic folder-opens-Terminal behavior
+     every other cluster gets; the real cluster data isn't lost, just one click
+     further away — CareersWindow links out to it. Still a real, independently
+     openable window (hence living in hiddenWindows, the same pattern used for
+     Properties/Display settings), just not its own icon. */
   const hiddenWindows = useMemo(() => [
     { id: "desktop-properties", title: "Properties", kind: "properties", rect: { x: 300, y: 160, w: 380, h: 320 } },
     { id: "display-settings", title: "Display settings", kind: "display-settings", rect: { x: 340, y: 140, w: 360, h: 320 } },
+    { id: "zuper-careers", title: "Zuper_Careers.exe", icon: CLUSTER_ICONS["zuper-careers"], kind: "careers-puzzle", rect: { x: 340, y: 60, w: 460, h: 480 } },
   ], []);
 
   const allWindows = useMemo(() => clusterApps.concat(fileWindows, staticApps, hiddenWindows), [clusterApps, fileWindows, staticApps, hiddenWindows]);
@@ -2737,6 +2752,17 @@ function App({ worldData, onReboot }) {
     wm.focus("terminal");
   }
 
+  /* Reaches the real careers/ cluster data (readme.md etc.) from inside
+     CareersWindow — same jump-to-terminal mechanism a folder icon's own
+     double-click uses, since the careers desktop icon itself now opens the
+     challenge instead (see handleIconOpen). Keeps the real data one click away
+     rather than gone. */
+  function openRealCareersCluster() {
+    jumpCounterRef.current += 1;
+    setTerminalJump({ cwd: "careers", nonce: jumpCounterRef.current });
+    openTerminalCentered();
+  }
+
   function toggleFromTaskbar(id) {
     const w = wm.state[id];
     if (!w.open || w.minimized) { if (id === "terminal") openTerminalCentered(); else wm.open(id); }
@@ -2752,7 +2778,14 @@ function App({ worldData, onReboot }) {
   const [terminalJump, setTerminalJump] = useState(null);
   function handleIconOpen(id) {
     const def = winDefById[id];
-    if (def && def.kind === "folder") {
+    if (id === "careers") {
+      // The one cluster whose icon opens straight into the real "apply to Zuper"
+      // challenge instead of the generic folder-opens-Terminal every other cluster
+      // gets — see the hiddenWindows comment above for why. The real careers/
+      // cluster data (readme.md etc.) is still just as reachable as before via
+      // `cd careers` / `ls` in the terminal, and CareersWindow links to it too.
+      wm.open("zuper-careers");
+    } else if (def && def.kind === "folder") {
       jumpCounterRef.current += 1;
       setTerminalJump({ cwd: def.id, nonce: jumpCounterRef.current });
       openTerminalCentered();
@@ -2818,7 +2851,7 @@ function App({ worldData, onReboot }) {
               {w.kind === "dashboard" && <DashboardWindow clusterId={w.clusterId} worldData={worldData} />}
               {w.kind === "arcade" && <ArcadeWindow />}
               {w.kind === "terminal" && <TerminalWindow worldData={worldData} jumpTo={terminalJump} onOpenFolder={wm.open} />}
-              {w.kind === "careers-puzzle" && <CareersWindow />}
+              {w.kind === "careers-puzzle" && <CareersWindow onViewRealCareers={openRealCareersCluster} />}
               {w.kind === "properties" && <PropertiesWindow worldData={worldData} />}
               {w.kind === "display-settings" && <DisplaySettingsWindow iconSize={iconSize} setIconSize={setIconSize} textSize={textSize} setTextSize={setTextSize} />}
             </Window>
