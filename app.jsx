@@ -3197,17 +3197,86 @@ function App({ worldData, onReboot }) {
   );
 }
 
+/* A product-design review found the desktop-OS metaphor (draggable/resizable windows,
+   hover states, terminal typing, a DevTools-based puzzle) simply doesn't work on a
+   phone — and a careers link gets opened on phones constantly. MOBILE_BREAKPOINT covers
+   real phones in portrait (390-430px iPhones, 360-412px Android) with margin, while
+   staying narrower than tablets/small laptops, which can still reasonably attempt the
+   real thing via "Continue to desktop version anyway" below. */
+const MOBILE_BREAKPOINT = 700;
+function useIsNarrowViewport() {
+  const [narrow, setNarrow] = useState(() => (typeof window !== "undefined" ? window.innerWidth < MOBILE_BREAKPOINT : false));
+  useEffect(() => {
+    function onResize() { setNarrow(window.innerWidth < MOBILE_BREAKPOINT); }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return narrow;
+}
+
+/* Deliberately NOT just "come back on desktop" — a candidate who opened this on their
+   phone specifically to check out careers deserves something real, not a wall. Reuses
+   the same real worldData the desktop OS itself renders from (no separate/fake content
+   to keep in sync), plus the same real closing line the actual DevTools challenge ends
+   on (careers@zuper.co), since the challenge itself can't run here. */
+function MobileFallback({ worldData, onContinue }) {
+  return (
+    <div className="min-h-screen w-full font-terminal" style={{ background: THEME.osBg, color: CRT_GREEN }}>
+      <div className="max-w-lg mx-auto px-5 py-8">
+        <img src="./assets/zuper-wordmark.png" alt="Zuper Labs" className="mb-5" style={{ width: "min(70vw, 280px)" }} />
+        <p className="text-[15px] leading-relaxed mb-1" style={{ color: "#ffd98a" }}>ZUPER OS [concept build]</p>
+        <p className="text-[14px] leading-relaxed mb-7" style={{ color: "#c98a2e" }}>
+          This is an interactive concept desktop OS — draggable windows, a real terminal,
+          a hidden DevTools puzzle — built for a mouse and a bigger screen. Here's the
+          short version instead.
+        </p>
+
+        <div className="mb-7 p-4" style={{ background: "rgba(20,10,0,.4)", boxShadow: bevel("out-shallow", CRT_GREEN) }}>
+          <h2 className="m-0 mb-1.5 text-[15px] font-bold" style={{ color: "#ffd98a" }}>Interested in working with us?</h2>
+          <p className="m-0 text-[14px] leading-relaxed" style={{ color: "#c98a2e" }}>
+            Email <a href="mailto:careers@zuper.co" className="underline" style={{ color: CRT_GREEN }}>careers@zuper.co</a> — same
+            address the full challenge (on desktop) sends candidates to at the end.
+          </p>
+        </div>
+
+        <h3 className="text-[12px] font-semibold uppercase tracking-wide mb-3" style={{ color: "#c98a2e", opacity: .8 }}>
+          What Zuper actually builds — {worldData ? worldData.length : "…"} real product clusters
+        </h3>
+        {!worldData && <p className="text-[13px]" style={{ color: "#c98a2e" }}>Loading…</p>}
+        <div className="flex flex-col gap-2 mb-8">
+          {worldData && worldData.map((c) => (
+            <div key={c.id} className="p-3" style={{ background: "rgba(20,10,0,.3)", boxShadow: bevel("out-shallow", CRT_GREEN) }}>
+              <div className="text-[13px] font-bold mb-0.5" style={{ color: "#ffd98a" }}>{c.name || c.id}</div>
+              {c.entities && c.entities.length > 0 && (
+                <div className="text-[12px] leading-relaxed" style={{ color: "#c98a2e" }}>{c.entities.map((e) => e.name).join(" · ")}</div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <button type="button" onClick={onContinue} className="text-[13px] underline" style={{ color: "#c98a2e" }}>
+          Continue to the desktop version anyway →
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ================= Root: load real data, then boot ================= */
 function Root() {
   const [worldData, setWorldData] = useState(null);
   const [bootDone, setBootDone] = useState(false);
   const [bootKey, setBootKey] = useState(0);
+  const isNarrow = useIsNarrowViewport();
+  const [forceDesktop, setForceDesktop] = useState(false);
 
   useEffect(() => {
     fetch("./zuper-world-data.json").then((r) => r.json()).then(setWorldData).catch(() => setWorldData([]));
   }, []);
 
   function reboot() { setBootDone(false); setBootKey((k) => k + 1); }
+
+  if (isNarrow && !forceDesktop) return <MobileFallback worldData={worldData} onContinue={() => setForceDesktop(true)} />;
 
   const ready = bootDone && worldData;
   return (
