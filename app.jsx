@@ -41,15 +41,12 @@ function shade(hex, percent) {
   return "rgb(" + nr + "," + ng + "," + nb + ")";
 }
 
-/* ---------- Assistant mascot sound effects — synthesized entirely from scratch with
-   the Web Audio API, not a single sampled/recorded audio clip, so there's nothing to
-   license. A flat pitch-glide (the first version of this) read as a plain notification
-   "ping," not a character — fixed by giving every note a fast vibrato wobble (a low-
-   frequency oscillator modulating the note's own pitch) and playing short multi-note
-   runs instead of one glide, which is what actually reads as a cute chirpy little robot
-   (think R2-D2-style trills) rather than a UI chime. A lazily-created singleton
-   AudioContext (browsers require a user gesture before audio can play — the mascot's
-   own click-to-open is always the first one). */
+/* ---------- Arcade/game sound effects — synthesized entirely from scratch with the Web
+   Audio API, not a single sampled/recorded audio clip, so there's nothing to license.
+   A lazily-created singleton AudioContext (browsers require a user gesture before audio
+   can play — an arcade game's own click-to-start is always the first one). The
+   assistant mascot used to have its own vibrato-chirp sounds built the same way —
+   removed per direct request (no sound for the assistant). */
 let sharedAudioCtx = null;
 function getSharedAudioCtx() {
   if (typeof window === "undefined") return null;
@@ -59,33 +56,6 @@ function getSharedAudioCtx() {
   if (sharedAudioCtx.state === "suspended") sharedAudioCtx.resume();
   return sharedAudioCtx;
 }
-function synthNote(ctx, freq, startTime, duration, gainPeak, type) {
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = type || "triangle";
-  osc.frequency.setValueAtTime(freq, startTime);
-
-  const lfo = ctx.createOscillator();
-  const lfoGain = ctx.createGain();
-  lfo.type = "sine";
-  lfo.frequency.setValueAtTime(30, startTime);
-  lfoGain.gain.setValueAtTime(freq * 0.07, startTime);
-  lfo.connect(lfoGain);
-  lfoGain.connect(osc.frequency);
-
-  gain.gain.setValueAtTime(0, startTime);
-  gain.gain.linearRampToValueAtTime(gainPeak, startTime + 0.01);
-  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  lfo.start(startTime);
-  osc.start(startTime);
-  lfo.stop(startTime + duration + 0.02);
-  osc.stop(startTime + duration + 0.02);
-}
-/* A flat tone (no vibrato) for arcade feedback — punchier/more "8-bit" than the
-   assistant's cute wobble, appropriate for quick win/lose game cues. */
 function synthBeep(ctx, freq, startTime, duration, gainPeak, type) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -99,32 +69,11 @@ function synthBeep(ctx, freq, startTime, duration, gainPeak, type) {
   osc.start(startTime);
   osc.stop(startTime + duration + 0.02);
 }
-function playAssistantGreetSound() {
-  const ctx = getSharedAudioCtx();
-  if (!ctx) return;
-  const t0 = ctx.currentTime;
-  synthNote(ctx, 587, t0, 0.1, 0.055, "triangle");
-  synthNote(ctx, 740, t0 + 0.09, 0.1, 0.055, "triangle");
-  synthNote(ctx, 880, t0 + 0.18, 0.15, 0.055, "triangle");
-}
-function playAssistantByeSound() {
-  const ctx = getSharedAudioCtx();
-  if (!ctx) return;
-  const t0 = ctx.currentTime;
-  synthNote(ctx, 784, t0, 0.1, 0.05, "triangle");
-  synthNote(ctx, 587, t0 + 0.1, 0.1, 0.05, "triangle");
-  synthNote(ctx, 392, t0 + 0.2, 0.22, 0.045, "triangle");
-}
-function playAssistantGlitchSound() {
-  const ctx = getSharedAudioCtx();
-  if (!ctx) return;
-  const t0 = ctx.currentTime;
-  const notes = [660, 740, 880, 990, 740];
-  notes.forEach((f, i) => synthNote(ctx, f, t0 + i * 0.05, 0.05, 0.035, "triangle"));
-}
 /* Arcade game feedback sounds — same synthesis discipline (Web Audio only, nothing
-   sampled), but square/sawtooth flat tones for a punchier 8-bit arcade feel, distinct
-   from the assistant's cute vibrato chirps. */
+   sampled), but square/sawtooth flat tones for a punchier 8-bit arcade feel. The
+   assistant mascot used to have its own greet/bye/hover chirps here too — removed per
+   direct request (no sound for the assistant); the mascot's visual reactions
+   (greet/bye pose, hover glitch) are untouched, just silent now. */
 function playArcadeSuccessSound() {
   const ctx = getSharedAudioCtx();
   if (!ctx) return;
@@ -241,6 +190,7 @@ const CLUSTER_ICONS = {
   "predictive-analytics": minimalIcon("predictive-analytics", "\u{1F52E}"),
   "zuper-arcade": minimalIcon("zuper-arcade", "\u{1F3AE}"),
   "terminal": minimalIcon("terminal", "⌨️"),
+  "more-apps": minimalIcon("more-apps", "\u{2795}"),
 };
 
 /* One shape array per cluster, in the same [tag, attrs] tuple format PixelIcon already
@@ -325,6 +275,11 @@ const MINIMAL_ICON_SHAPES = {
     ["rect", { x: 3, y: 4.5, width: 18, height: 15, rx: 1.8 }],
     ["polyline", { points: "7.5 10 10.5 12.5 7.5 15" }],
     ["line", { x1: 12.3, y1: 15, x2: 16, y2: 15 }],
+  ],
+  "more-apps": [ // dashed box with a plus — a placeholder standing in for apps not built yet
+    ["rect", { x: 4, y: 4, width: 16, height: 16, rx: 2, strokeDasharray: "3 2.5" }],
+    ["line", { x1: 12, y1: 9, x2: 12, y2: 15 }],
+    ["line", { x1: 9, y1: 12, x2: 15, y2: 12 }],
   ],
 };
 
@@ -635,19 +590,15 @@ function BootScreen({ onDone, extraLine }) {
   const [visibleCount, setVisibleCount] = useState(0);
   const [fading, setFading] = useState(false);
 
+  /* Fixed for every visitor — direct request, after the first version read the real
+     navigator/screen data (browser, core count, language, resolution), so the boot log
+     looked different on every device and every visit. */
   function buildLines() {
-    var ua = navigator.userAgent;
-    var m = ua.match(/(Chrome|Firefox|Safari|Edg)\/[\d.]+/);
-    var cores = navigator.hardwareConcurrency || "?";
-    var lang = navigator.language || "en";
-    var w = window.screen.width, h = window.screen.height;
-    var conn = navigator.connection && navigator.connection.effectiveType;
     return [
       "ZUPER OS [concept build]",
       "────────────────────────────",
       "> checking runtime...",
-      "  " + (m ? m[0] : "browser") + " · " + cores + " threads · " + lang,
-      "  display " + w + "x" + h + (conn ? " · " + conn : ""),
+      "  runtime OK",
       "> fetching real cluster data from labs.zuper.co/assets/js/zuper-world.js...",
       "  14 clusters · 39 entities · OK",
       "> mounting virtual file system...",
@@ -1718,6 +1669,13 @@ const GAMES = [
    the terminal (`cd <cluster>` then `ls`), this only removes the desktop icon. */
 const ARCADE_CLUSTER_IDS = new Set(GAMES.filter((g) => g.cluster).map((g) => g.cluster));
 
+/* Per Sameer, direct request: the desktop itself should only ever show these four
+   icons, no matter how many real clusters worldData has. Everything else (every other
+   real cluster, Terminal.app) stays fully reachable — Start Menu and the QuickLauncher
+   ("Find"/"Run") still list the full app set (see desktopIcons vs visibleDesktopIcons in
+   App below) — this only trims what's visible directly on the desktop surface. */
+const DESKTOP_VISIBLE_IDS = new Set(["careers", "blog", "zuper-arcade", "more-apps"]);
+
 function ArcadeWindow() {
   const [view, setView] = useState("menu");
   const [achievement, setAchievement] = useState(null);
@@ -2416,14 +2374,12 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
   useEffect(() => {
     if (open && !prevOpenRef.current) {
       setGreet(true);
-      playAssistantGreetSound();
       const id = setTimeout(() => setGreet(false), 700);
       prevOpenRef.current = open;
       return () => clearTimeout(id);
     }
     if (!open && prevOpenRef.current) {
       setBye(true);
-      playAssistantByeSound();
       const id = setTimeout(() => setBye(false), 700);
       prevOpenRef.current = open;
       return () => clearTimeout(id);
@@ -2644,7 +2600,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
         </button>
       )}
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}
-        onMouseEnter={() => { setHover(true); bumpActivity(); playAssistantGlitchSound(); }} onMouseLeave={() => setHover(false)}
+        onMouseEnter={() => { setHover(true); bumpActivity(); }} onMouseLeave={() => setHover(false)}
         className="flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
         style={{ width: 80, height: 160, animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible" }}
         aria-label="Zuper OS assistant — real platform data, Claude when configured">
@@ -2809,6 +2765,9 @@ function App({ worldData, onReboot }) {
        intelligence$") wrap across 2-3 lines by default, cramped and awkward
        to read, requiring a manual resize every time just to use it comfortably. */
     { id: "terminal", title: "Terminal.app", icon: CLUSTER_ICONS["terminal"], kind: "terminal", rect: { x: 220, y: 60, w: 880, h: 520 } },
+    /* Never opens a window — handleIconOpen special-cases this id to just show a toast.
+       Stands in for the rest of Zuper's real product suite, which isn't built out here. */
+    { id: "more-apps", title: "More_Apps.exe", icon: CLUSTER_ICONS["more-apps"], kind: "coming-soon", rect: { x: 40, y: 40, w: 1, h: 1 } },
   ], []);
 
   const hiddenWindows = useMemo(() => [
@@ -2857,6 +2816,9 @@ function App({ worldData, onReboot }) {
   }
 
   const desktopIcons = useMemo(() => desktopIconDefs.filter((a) => !hiddenIconIds.has(a.id)), [desktopIconDefs, hiddenIconIds]);
+  /* The actual desktop icon grid only ever shows these four (see DESKTOP_VISIBLE_IDS) —
+     desktopIcons above stays the full reachable set for Start Menu / QuickLauncher. */
+  const visibleDesktopIcons = useMemo(() => desktopIcons.filter((a) => DESKTOP_VISIBLE_IDS.has(a.id)), [desktopIcons]);
 
   /* The terminal opens centered on the stage every time, no matter which app/icon
      triggered it (a cluster folder, the Terminal.app icon itself, or reopening from
@@ -2885,6 +2847,7 @@ function App({ worldData, onReboot }) {
   const jumpCounterRef = useRef(0);
   const [terminalJump, setTerminalJump] = useState(null);
   function handleIconOpen(id) {
+    if (id === "more-apps") { showToast("More Zuper apps are on the way — check back soon!"); return; }
     const def = winDefById[id];
     if (def && def.kind === "folder") {
       jumpCounterRef.current += 1;
@@ -2931,7 +2894,7 @@ function App({ worldData, onReboot }) {
         <GlitchWatermark />
         <ScreenGlitch color={theme.accent} />
 
-        {desktopIcons.map((a, i) => (
+        {visibleDesktopIcons.map((a, i) => (
           <DesktopIcon key={a.id} id={a.id} title={iconNames[a.id] || a.title} icon={a.icon} color={theme.accent}
             iconSize={iconSize} textSize={textSize} theme={theme}
             pos={iconPos[a.id] || defaultIconPos(i)} onMove={moveIcon} onOpen={handleIconOpen}
@@ -2974,7 +2937,7 @@ function App({ worldData, onReboot }) {
             { label: "Create Shortcut...", icon: "+", muted: true, onSelect: () => showToast("Not available in this concept build") },
             { divider: true },
             { label: "Paste", icon: "📋", disabled: true, onSelect: () => {} },
-            { label: "Select all", icon: "▦", onSelect: () => showToast(desktopIcons.length + " icon(s) on this desktop") },
+            { label: "Select all", icon: "▦", onSelect: () => showToast(visibleDesktopIcons.length + " icon(s) on this desktop") },
             { divider: true },
             { label: "Properties", icon: "ℹ️", onSelect: () => wm.open("desktop-properties") },
           ]} />
