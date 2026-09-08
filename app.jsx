@@ -1127,20 +1127,29 @@ function RouteRacerGame({ onComplete, accent }) {
     // eslint-disable-next-line
   }, []);
   const remaining = state.jobs.filter((j) => !j.visited).length;
+  /* Grid + d-pad used to stack vertically (canvas, then a 2-row d-pad, then the message
+     line, all centered) — tall enough that on a real ~650px-tall browser window the
+     d-pad and message text landed below the fold, confirmed live by a product-design
+     review. Side-by-side layout instead: same total content, well under half the
+     height, so it fits the arcade window's default size with room to spare instead of
+     depending on scroll (which a canvas element doesn't reliably forward wheel events
+     through anyway). */
   return (
-    <div className="flex flex-col items-center gap-3 p-4 relative">
+    <div className="flex flex-col gap-3 p-4 relative">
       <FloatPops pops={pops} />
       <div className="w-full flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
         <span>Moves: {state.moves} / {MOVE_LIMIT}</span><span>Jobs remaining: {remaining}</span>
         <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => setState(makeState())}>Restart</button>
       </div>
-      <canvas ref={canvasRef} tabIndex={0} width={GRID * CELL} height={GRID * CELL} className="outline-none" style={{ boxShadow: bevel("in-deep", a) }} aria-label="Route Racer grid. Use arrow keys to move."></canvas>
-      <div className="flex flex-col items-center gap-1">
-        <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => move("up")} aria-label="Move up">&#8593;</button>
-        <div className="flex gap-1">
-          <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => move("left")} aria-label="Move left">&#8592;</button>
-          <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => move("down")} aria-label="Move down">&#8595;</button>
-          <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => move("right")} aria-label="Move right">&#8594;</button>
+      <div className="flex items-center justify-center gap-5">
+        <canvas ref={canvasRef} tabIndex={0} width={GRID * CELL} height={GRID * CELL} className="outline-none flex-shrink-0" style={{ boxShadow: bevel("in-deep", a) }} aria-label="Route Racer grid. Use arrow keys to move."></canvas>
+        <div className="flex flex-col items-center gap-1 flex-shrink-0">
+          <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => move("up")} aria-label="Move up">&#8593;</button>
+          <div className="flex gap-1">
+            <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => move("left")} aria-label="Move left">&#8592;</button>
+            <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => move("down")} aria-label="Move down">&#8595;</button>
+            <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => move("right")} aria-label="Move right">&#8594;</button>
+          </div>
         </div>
       </div>
       <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{state.message}</p>
@@ -1996,7 +2005,12 @@ function careersQuizQuestionLines(index) {
 
 /* ================= Terminal.app (VFS-aware) ================= */
 function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
-  const [lines, setLines] = useState([{ text: "Zuper Web OS terminal (concept shell over real VFS data). Type 'help'.", kind: "out" }]);
+  /* Direct feedback from a product-design review: nothing anywhere told a first-time
+     visitor the careers challenge exists, let alone that it lives in here — discovery
+     depended entirely on someone instinctively running `ls`. The real entry point
+     (cd careers, then ls/cat readme.md, all of which already worked) just needed to be
+     said out loud once, right where people already land. */
+  const [lines, setLines] = useState([{ text: "Zuper Web OS terminal (concept shell over real VFS data). Type 'help', or 'cd careers' to see what we're hiring for.", kind: "out" }]);
   const [input, setInput] = useState("");
   const [cwd, setCwd] = useState(null); // null = /desktop root, "cluster", or "cluster/subdir" (careers only)
   const [careersProgress, setCareersProgress] = useState(loadCareersProgress);
@@ -2079,7 +2093,12 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
      repeat clicks on the same icon, so this effect always re-fires. */
   useEffect(() => {
     if (!jumpTo || !findCluster(worldData, jumpTo.cwd)) return;
-    setLines((prev) => prev.concat([{ text: "guest@zuper-web-os:/desktop$ cd " + jumpTo.cwd, kind: "cmd" }]));
+    const introLines = [{ text: "guest@zuper-web-os:/desktop$ cd " + jumpTo.cwd, kind: "cmd" }];
+    /* Clicking the careers icon lands you here already cd'd in — but nothing said what
+       to do next (a product-design review found this the single biggest discoverability
+       gap: no in-product hint that this is where the actual hiring challenge lives). */
+    if (jumpTo.cwd === "careers") introLines.push({ text: "Type 'ls' to look around, or 'cat readme.md' to see what this is about.", kind: "out" });
+    setLines((prev) => prev.concat(introLines));
     setCwd(jumpTo.cwd);
   }, [jumpTo]);
 
@@ -2674,6 +2693,16 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
   }
   const docked = !pos;
   const current = pos || dockTarget || defaultPos();
+  /* Both popups (chat panel, nudge bubble) used to always open UPWARD from the mascot
+     by a fixed offset — correct only when the mascot sits near the bottom of the
+     screen (its old default position, before "dock next to whichever window is
+     focused" was added). Once docked next to a window opened near the top of the
+     viewport, opening upward pushed the whole panel off-screen above y=0 — confirmed
+     live (a real product-design review measured its computed bounding box at
+     roughly y:-304, i.e. entirely invisible, every time). Flip to open downward
+     instead whenever there isn't enough room above. */
+  const openUpward = current.y > 340;
+  const nudgeUpward = current.y > 200;
 
   useEffect(() => {
     function onMove(e) {
@@ -2707,7 +2736,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
     <div className="absolute pointer-events-auto" style={{ left: current.x, top: current.y, zIndex: 500, transition: docked ? "left .4s ease, top .4s ease" : "none" }}
       onPointerDown={onPointerDown}>
       {open && (
-        <div className="absolute bottom-[166px] right-0 w-72 p-3 font-mono font-medium text-[13px] flex flex-col"
+        <div className={"absolute right-0 w-72 p-3 font-mono font-medium text-[13px] flex flex-col " + (openUpward ? "bottom-[166px]" : "top-[176px]")}
           style={{ background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "10px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 16px 40px rgba(0,0,0,.5)" }}>
           <div className="flex items-start justify-end">
             <button type="button" onClick={() => setOpen(false)} className="text-[0.9rem] leading-none px-1" style={{ color: t.chromeTextDim }} aria-label="Hide assistant">×</button>
@@ -2743,7 +2772,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
       )}
       {nudge && !open && (
         <button type="button" onClick={onNudgeClick} aria-label={"Ask: " + nudge.label}
-          className="absolute bottom-[128px] right-3 w-[180px] px-3.5 py-3 text-[12px] font-bold text-left leading-snug"
+          className={"absolute right-3 w-[180px] px-3.5 py-3 text-[12px] font-bold text-left leading-snug " + (nudgeUpward ? "bottom-[128px]" : "top-[172px]")}
           style={{
             background: "#fff3e0", color: "#2a1608",
             border: "2.5px solid " + t.accent,
@@ -2758,12 +2787,21 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
             backgroundSize: "7px 7px", opacity: 0.5,
           }} />
           <span style={{ position: "relative" }}>{nudge.label}</span>
-          {/* speech-bubble tail, pointing down toward the mascot */}
-          <span aria-hidden="true" style={{
-            position: "absolute", right: 16, bottom: -8, width: 16, height: 16,
-            background: "#fff3e0", borderRight: "2.5px solid " + t.accent, borderBottom: "2.5px solid " + t.accent,
-            transform: "rotate(45deg)", borderRadius: "0 0 3px 0",
-          }} />
+          {/* speech-bubble tail — points down toward the mascot when the bubble opens
+              above it, or up toward the mascot when flipped below it (see nudgeUpward) */}
+          {nudgeUpward ? (
+            <span aria-hidden="true" style={{
+              position: "absolute", right: 16, bottom: -8, width: 16, height: 16,
+              background: "#fff3e0", borderRight: "2.5px solid " + t.accent, borderBottom: "2.5px solid " + t.accent,
+              transform: "rotate(45deg)", borderRadius: "0 0 3px 0",
+            }} />
+          ) : (
+            <span aria-hidden="true" style={{
+              position: "absolute", right: 16, top: -8, width: 16, height: 16,
+              background: "#fff3e0", borderLeft: "2.5px solid " + t.accent, borderTop: "2.5px solid " + t.accent,
+              transform: "rotate(45deg)", borderRadius: "3px 0 0 0",
+            }} />
+          )}
         </button>
       )}
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}
@@ -3050,8 +3088,17 @@ function App({ worldData, onReboot }) {
 
   const runningWindows = allWindows.filter((a) => wm.state[a.id] && wm.state[a.id].open);
   const focusedWinState = wm.focusedId && wm.state[wm.focusedId] && wm.state[wm.focusedId].open ? wm.state[wm.focusedId] : null;
+  /* Docks the mascot just past a focused window's top-right corner — it used to sit
+     20px ABOVE the title bar at (win.x+win.w-60), which is exactly where the minimize/
+     maximize/close button cluster lives (that cluster is the rightmost ~85px of the
+     title bar), so the mascot's own 80px-wide figure visually covered those buttons —
+     confirmed live, close (x) was unclickable on any window opened near the mascot.
+     Pushed further right (past the window's edge, not into it) and down (below the
+     title bar's ~36px height, not above it) so it no longer overlaps window chrome at
+     all, on either axis. */
+  const stageW = stageRef.current ? stageRef.current.getBoundingClientRect().width : 4000;
   const assistantDockTarget = focusedWinState && !focusedWinState.maximized
-    ? { x: clamp(focusedWinState.x + focusedWinState.w - 60, 4, 4000), y: Math.max(4, focusedWinState.y - 20) }
+    ? { x: clamp(focusedWinState.x + focusedWinState.w - 20, 4, stageW - 90), y: Math.max(44, focusedWinState.y + 44) }
     : null;
   const winDefById = useMemo(() => { const m = {}; allWindows.forEach((w) => { m[w.id] = w; }); return m; }, [allWindows]);
 
