@@ -238,61 +238,69 @@ the app never breaks, it just answers from the local data instead.
 
 ## Careers challenge (Zuper_Careers.exe)
 
-A 2-question key-hunt flow, spec'd directly by Sameer: each question
-gives the candidate real-world instructions, they find a 16-character
-key and paste it into the app, it's validated, and once both are solved
-they leave an email that triggers a notification to Raghav and Sameer.
+A terminal-native DevTools scavenger hunt, lived behind the real
+`careers/` desktop icon (not a separate one — `cd careers` / `ls` still
+shows the real cluster too, plus `server/`, `agent/`, `database/` as
+flavor-only dirs and `solve.sh` / `quiz.sh` / `submit.sh`, run the same
+way `status.sh` / `connections.sh` already are: `bash <file>.sh`).
 
-**Lives behind the real `careers/` desktop icon, not a separate one.**
-First pass gave it its own "Zuper_Careers.exe" icon, sitting right next
-to the existing `careers/` cluster icon — direct correction after that
-read as two confusing, redundant "careers" things side by side, since
-they mean genuinely different content (`careers/` is one of Zuper's 14
-*real* product clusters — an actual product Zuper builds, not "apply to
-work here"). Merged: double-clicking `careers/` now opens this challenge
-directly (see the `id === "careers"` special-case in `handleIconOpen`,
-app.jsx) instead of the generic folder-opens-Terminal behavior every
-other cluster gets. The real cluster data isn't lost — `cd careers` /
-`ls` in the terminal still works exactly as before, and `CareersWindow`
-itself has a "What does Zuper's real Careers product do? →" link that
-jumps straight there. `zuper-careers` is still a real, independently
-openable window (registered in `hiddenWindows`, same pattern as
-Properties/Display settings) — it just no longer has its own icon.
+**This is a faithful port of the challenge that actually ships on
+labs.zuper.co**, not an invented approximation — found in that site's
+own production JS bundle, then played start-to-finish for real
+(including live jsonplaceholder requests) to confirm every step before
+porting it here:
 
-**Current state — content is placeholder, mechanism is real.** The two
-`<PLACEHOLDER — Sameer's real Question N instructions go here.>` blocks
-in `CareersWindow` (app.jsx) are exactly where his actual Q1/Q2 copy
-goes; everything around them — key entry, validation, progression,
-email capture, the notification — is fully wired and functional.
+- **Level 1** (`bash solve.sh`) — Console (`window.__zuper_keys`, 16
+  base64 strings, a shuffled copy of a real 16-word list) → Elements/
+  Styles (a `--zuper-key-index` CSS custom property on `<html>` names
+  the correct one) → Network (5 real requests to
+  `jsonplaceholder.typicode.com/comments` — one guaranteed id in the
+  16–20 range plus 4 random ones, so exactly one response always has
+  `postId === 4`; that response's own `id` is the verification code).
+  Answer: `bash submit.sh <decoded_key>-<code>`.
+- **Level 2** auto-starts right after Level 1's correct submit (no
+  second `solve.sh`) — `window.__zuper_keys` becomes 16 real
+  crypto-random hex strings that re-roll every 2 seconds; the one at
+  the index named in `sessionStorage.__zuper_idx` stays fixed across
+  rerolls. Answer: `bash submit.sh <key>`.
+- **`bash quiz.sh`** — a separate, real 5-question technical
+  multiple-choice quiz (FSM, gRPC/HTTP2, CAP theorem, Observer pattern,
+  sorting complexity), scored out of 5.
 
-**Why validation happens server-side, never client-side:** this repo is
-public. If a valid key lived anywhere in the shipped JS, any candidate
-could just view the source on GitHub and read the answer straight off.
-So `api/careers-validate.js` checks a submitted key against
-`CAREER_KEY_1` / `CAREER_KEY_2` — Vercel environment variables, the same
-pattern as `ANTHROPIC_API_KEY` above — never committed to the repo, and
-never returned to the client on failure.
+Everything is generated fresh, client-side, at solve time — there's no
+fixed answer sitting in the shipped JS to read off GitHub, since each
+run's word/index/network-id selection and each Level 2 key are freshly
+randomized in the browser. That's why validation is client-side too
+(the earlier draft of this feature had a server-side
+`api/careers-validate.js` checking against `CAREER_KEY_1`/`2` env vars —
+removed, since there's nothing secret left to protect).
 
-**Email notification:** `api/careers-submit.js` sends the "candidate
-completed both keys" email via [Resend](https://resend.com), gated on a
-`RESEND_API_KEY` env var. Its `FROM_EMAIL` currently uses Resend's
-shared sandbox sender (`onboarding@resend.dev`), which can only deliver
-to the Resend account's own verified address — enough to test the wiring
-end to end, but to actually reach `raghav@zuper.co` / `sameer@zuper.co`
-in production, a real sending domain needs to be verified in the Resend
-dashboard and `FROM_EMAIL` updated to use it.
+**Where this build adds on top of the real site:** labs.zuper.co's own
+completion message just tells the candidate to manually email a
+screenshot to careers@zuper.co — there's no capture form or backend at
+all. Per direct discussion, this build keeps that real message *and*
+layers an automated path on top of it: `bash submit.sh <your email>`
+still hits `api/careers-submit.js`, which sends a notification to
+Raghav and Sameer via [Resend](https://resend.com), gated on a
+`RESEND_API_KEY` env var. `FROM_EMAIL` currently uses Resend's shared
+sandbox sender (`onboarding@resend.dev`), which can only deliver to the
+Resend account's own verified address — enough to test the wiring end
+to end, but reaching `raghav@zuper.co` / `sameer@zuper.co` in
+production needs a real sending domain verified in the Resend dashboard.
 
-**Progress persistence:** which step a candidate is on (and whether
-they've already submitted their email) is saved to `localStorage`
-(`zuper-os-careers-progress`) so a refresh mid-hunt doesn't lose
-progress — the same lightweight pattern already used for icon positions
-and arcade high scores. No real key or answer is ever stored client-side,
-only the step index.
+**Progress persistence:** which step a candidate is on is saved to
+`localStorage` (`zuper-os-careers-progress`) so a refresh mid-hunt
+doesn't lose progress — the same lightweight pattern already used for
+icon positions and arcade high scores. The in-progress answer itself
+(this run's word/code or hex key) lives only in a `useRef` inside
+`TerminalWindow`, not persisted — a refresh mid-level loses that
+specific run's generated answer and needs a fresh `bash solve.sh`.
 
-Without `CAREER_KEY_1`/`CAREER_KEY_2` or `RESEND_API_KEY` configured
-(e.g. running locally, or before they're set on Vercel), the relevant
-step shows an inline "isn't configured yet" message rather than
-breaking or silently succeeding.
+Without `RESEND_API_KEY` configured (e.g. running locally, or before
+it's set on Vercel), `bash submit.sh <email>` shows an inline "isn't
+configured yet" message rather than breaking or silently succeeding —
+the puzzle itself (solve/submit/quiz) needs no backend at all and
+always works.
 
 ## Icon licensing note
 

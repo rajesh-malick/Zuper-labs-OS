@@ -241,7 +241,6 @@ const CLUSTER_ICONS = {
   "predictive-analytics": minimalIcon("predictive-analytics", "\u{1F52E}"),
   "zuper-arcade": minimalIcon("zuper-arcade", "\u{1F3AE}"),
   "terminal": minimalIcon("terminal", "⌨️"),
-  "zuper-careers": minimalIcon("zuper-careers", "\u{1F511}"),
 };
 
 /* One shape array per cluster, in the same [tag, attrs] tuple format PixelIcon already
@@ -326,12 +325,6 @@ const MINIMAL_ICON_SHAPES = {
     ["rect", { x: 3, y: 4.5, width: 18, height: 15, rx: 1.8 }],
     ["polyline", { points: "7.5 10 10.5 12.5 7.5 15" }],
     ["line", { x1: 12.3, y1: 15, x2: 16, y2: 15 }],
-  ],
-  "zuper-careers": [ // key
-    ["circle", { cx: 8, cy: 16, r: 4 }],
-    ["line", { x1: 11, y1: 13, x2: 20, y2: 4 }],
-    ["line", { x1: 16, y1: 8, x2: 19, y2: 11 }],
-    ["line", { x1: 18, y1: 6, x2: 20.5, y2: 8.5 }],
   ],
 };
 
@@ -1773,14 +1766,215 @@ function ArcadeWindow() {
   );
 }
 
+/* ================= Careers challenge — terminal-native ("Zuper_Careers.exe" as a
+   VFS/CLI adventure under /desktop/careers, not a separate GUI window) =================
+   This is a faithful port of the challenge that actually ships on labs.zuper.co today
+   (found in its own production bundle, then played end-to-end for real to verify every
+   step) — run the same way status.sh/connections.sh already are (`bash <file>.sh`).
+
+   LEVEL 1 (bash solve.sh) — Console (window.__zuper_keys, 16 base64 strings, a shuffled
+   copy of CAREERS_WORDS below) -> Elements/Styles (a --zuper-key-index CSS custom
+   property on <html> names the correct index) -> Network (5 real requests to
+   jsonplaceholder.typicode.com/comments — one guaranteed id in the 16-20 range plus 4
+   random ones, so exactly one response always has postId===4; that response's own "id"
+   is the verification code). Answer: bash submit.sh <decoded_key>-<code>.
+
+   LEVEL 2 (auto-starts right after Level 1's correct submit, no separate solve step) —
+   window.__zuper_keys becomes 16 real crypto-random hex strings that re-roll every 2s
+   via setInterval; the one at the index named in sessionStorage.__zuper_idx is held
+   fixed across rerolls. Answer: bash submit.sh <key> (no dash/code this time).
+
+   All of this is generated fresh, client-side, at solve-time — there's no fixed answer
+   to leak by this being a public repo, so (unlike the first draft of this feature)
+   nothing is validated server-side anymore. What Sameer's real site does NOT do: once
+   both levels are solved it just tells the candidate to manually email a screenshot to
+   careers@zuper.co. Per direct discussion, we keep that real message but ALSO offer an
+   automated path on top of it — bash submit.sh <email> — which still hits
+   api/careers-submit.js to notify Raghav and Sameer via Resend.
+
+   There's also a real, separate `bash quiz.sh` (5 technical multiple-choice questions,
+   unrelated to solve/submit) — included here with its real questions/choices, captured
+   the same way: played live and transcribed. */
+const CAREERS_STORAGE_KEY = "zuper-os-careers-progress";
+function loadCareersProgress() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CAREERS_STORAGE_KEY));
+    if (saved && (saved.step === 1 || saved.step === 2 || saved.step === 3 || saved.step === 4)) return saved;
+  } catch (e) {}
+  return { step: 1 };
+}
+function saveCareersProgress(progress) {
+  try { localStorage.setItem(CAREERS_STORAGE_KEY, JSON.stringify(progress)); } catch (e) {}
+}
+
+const CAREERS_WORDS = ["access-granted", "hello-engineer", "debug-master", "code-breaker", "stack-trace", "event-loop", "async-await", "null-pointer", "race-condition", "dead-lock", "heap-overflow", "buffer-flush", "type-safety", "unit-tested", "code-review", "ship-it"];
+
+function shuffled(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function randomHex(len) {
+  const bytes = new Uint8Array(Math.ceil(len / 2));
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("").slice(0, len);
+}
+
+async function careersSolveLevel1(answerRef) {
+  document.documentElement.style.removeProperty("--zuper-key-index");
+  const words = shuffled(CAREERS_WORDS);
+  const correctIdx = Math.floor(Math.random() * words.length);
+  window.__zuper_keys = words.map((w) => btoa(w));
+  document.documentElement.style.setProperty("--zuper-key-index", String(correctIdx));
+
+  const guaranteedId = 16 + Math.floor(Math.random() * 5); // ceil(id/5) === 4 for ids 16-20
+  const decoyIds = [];
+  while (decoyIds.length < 4) {
+    const id = 1 + Math.floor(Math.random() * 500);
+    if (id !== guaranteedId && decoyIds.indexOf(id) === -1) decoyIds.push(id);
+  }
+  const ids = shuffled([guaranteedId, ...decoyIds]);
+  const responses = await Promise.all(ids.map((id) =>
+    fetch("https://jsonplaceholder.typicode.com/comments/" + id).then((r) => r.json()).catch(() => null)
+  ));
+  const target = responses.find((r) => r && r.postId === 4);
+  answerRef.current = { level: 1, key: words[correctIdx], code: String(target ? target.id : guaranteedId) };
+
+  return [
+    "ACCESS PROBE — LEVEL 1", "────────────────────────────────",
+    "Open DevTools (F12 / Cmd+Shift+I).", "",
+    "STEP 1 — Console tab", "  Run: window.__zuper_keys", "  Returns 16 strings. They are base64-encoded. Decode with: atob()", "",
+    "STEP 2 — Elements tab (Styles)", "  The correct array index is a CSS custom property on the <html> element.", "  Property: --zuper-key-index", "",
+    "STEP 3 — Network tab", "  5 requests were made to jsonplaceholder.", "  Find the response where postId === 4.", "  The \"id\" field of that response is your verification code.", "",
+    "STEP 4 — Submit", "  bash submit.sh <decoded_key>-<code>",
+  ];
+}
+
+function careersStartLevel2(answerRef, timerRef) {
+  document.documentElement.style.removeProperty("--zuper-key-index");
+  const keys = Array.from({ length: 16 }, () => randomHex(12));
+  const correctIdx = Math.floor(Math.random() * 16);
+  const correctKey = keys[correctIdx];
+  window.__zuper_keys = keys;
+  try { sessionStorage.setItem("__zuper_idx", String(correctIdx)); } catch (e) {}
+  if (timerRef.current) clearInterval(timerRef.current);
+  timerRef.current = setInterval(() => {
+    const next = Array.from({ length: 16 }, () => randomHex(12));
+    next[correctIdx] = correctKey;
+    window.__zuper_keys = next;
+  }, 2000);
+  window.__zuper_timer = timerRef.current;
+  answerRef.current = { level: 2, key: correctKey };
+
+  return [
+    "ACCESS PROBE — LEVEL 2", "────────────────────────────────", "",
+    "STEP 1 — Console tab", "  window.__zuper_keys has been reloaded.", "  16 new keys. They rotate every 2 seconds.", "  Stop the timer or snapshot the array.", "",
+    "STEP 2 — Application tab", "  Open Application > Session Storage.", "  The correct index is stored under key: __zuper_idx", "",
+    "STEP 3 — Submit", "  bash submit.sh <key>",
+  ];
+}
+
+function careersCleanupLevel2(timerRef) {
+  if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+  delete window.__zuper_timer;
+  delete window.__zuper_keys;
+  try { sessionStorage.removeItem("__zuper_idx"); } catch (e) {}
+  document.documentElement.style.removeProperty("--zuper-key-index");
+}
+
+const CAREERS_QUIZ = [
+  { q: "What does 'FSM' stand for in the roofing industry?", choices: ["Finite State Machine", "Full Stack Monitoring", "Field Service Management", "Fast Service Middleware"], correct: 2 },
+  { q: "Which protocol does gRPC use under the hood?", choices: ["HTTP/1.1", "WebSocket", "HTTP/2", "MQTT"], correct: 2 },
+  { q: "In the CAP theorem, what does the 'P' stand for?", choices: ["Performance", "Persistence", "Partition Tolerance", "Parallel Processing"], correct: 2 },
+  { q: "Which design pattern lets one object notify many observers?", choices: ["Singleton", "Observer", "Factory", "Strategy"], correct: 1 },
+  { q: "What sorting algorithm has O(n log n) average and O(n²) worst case?", choices: ["Mergesort", "Heapsort", "Bubblesort", "Quicksort"], correct: 3 },
+];
+function careersQuizQuestionLines(index) {
+  const q = CAREERS_QUIZ[index];
+  const lines = ["Q" + (index + 1) + ": " + q.q];
+  ["a", "b", "c", "d"].forEach((l, i) => lines.push("  " + l + ") " + q.choices[i]));
+  return lines;
+}
+
 /* ================= Terminal.app (VFS-aware) ================= */
 function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   const [lines, setLines] = useState([{ text: "Zuper Web OS terminal (concept shell over real VFS data). Type 'help'.", kind: "out" }]);
   const [input, setInput] = useState("");
-  const [cwd, setCwd] = useState(null); // null = /desktop root, else cluster id
+  const [cwd, setCwd] = useState(null); // null = /desktop root, "cluster", or "cluster/subdir" (careers only)
+  const [careersProgress, setCareersProgress] = useState(loadCareersProgress);
+  const [quizState, setQuizState] = useState(null); // null | {index, score}
+  const careersAnswerRef = useRef(null);
+  const careersTimerRef = useRef(null);
   const logRef = useRef(null);
   const inputRef = useRef(null);
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [lines, input]);
+  useEffect(() => () => { if (careersTimerRef.current) clearInterval(careersTimerRef.current); }, []);
+
+  function pushLines(newLines) { setLines((prev) => prev.concat(newLines.map((t) => ({ text: t, kind: "out" })))); }
+
+  function careersSubmitAnswer(answer) {
+    const trimmed = (answer || "").trim();
+    const expected = careersAnswerRef.current;
+    if (!trimmed) { setLines((prev) => prev.concat([{ text: "usage: bash submit.sh <answer>", kind: "err" }])); return; }
+    if (!expected) { setLines((prev) => prev.concat([{ text: "Nothing to submit yet — run: bash solve.sh", kind: "err" }])); return; }
+
+    if (expected.level === 1) {
+      const dash = trimmed.lastIndexOf("-");
+      const key = dash === -1 ? trimmed : trimmed.slice(0, dash);
+      const code = dash === -1 ? "" : trimmed.slice(dash + 1);
+      if (key === expected.key && code === expected.code) {
+        playArcadeSuccessSound();
+        const level2Lines = careersStartLevel2(careersAnswerRef, careersTimerRef);
+        const next = { step: 2 }; setCareersProgress(next); saveCareersProgress(next);
+        pushLines(["LEVEL 1 COMPLETE", "────────────────────────────────", ""].concat(level2Lines));
+      } else {
+        playArcadeFailSound();
+        setLines((prev) => prev.concat([{ text: "That answer didn't check out. Double-check it and try again.", kind: "err" }]));
+      }
+    } else {
+      if (trimmed === expected.key) {
+        playArcadeSuccessSound();
+        careersCleanupLevel2(careersTimerRef);
+        careersAnswerRef.current = null;
+        const next = { step: 3 }; setCareersProgress(next); saveCareersProgress(next);
+        pushLines([
+          "CHALLENGE COMPLETE", "────────────────────────────────", "Both levels verified.", "",
+          "You decoded base64 keys, read CSS custom properties, filtered network",
+          "responses, stopped a rotating timer, and found a value in sessionStorage.",
+          "That's the kind of engineer we're looking for.", "",
+          "Reach out to careers@zuper.co with a screenshot of this terminal —",
+          "or run: bash submit.sh <your email> and we'll reach out to you directly.",
+        ]);
+      } else {
+        playArcadeFailSound();
+        setLines((prev) => prev.concat([{ text: "That answer didn't check out. Double-check it and try again.", kind: "err" }]));
+      }
+    }
+  }
+
+  async function careersSubmitEmail(email) {
+    const trimmed = (email || "").trim();
+    if (!trimmed) { setLines((prev) => prev.concat([{ text: "usage: bash submit.sh <your email>", kind: "err" }])); return; }
+    try {
+      const r = await fetch("/api/careers-submit", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
+      });
+      const data = await r.json().catch(() => null);
+      if (r.ok && data && data.ok) {
+        const next = { step: 4 };
+        setCareersProgress(next); saveCareersProgress(next);
+        pushLines(["🎉 Thanks — we've got your details and someone from the team will be in touch."]);
+      } else {
+        setLines((prev) => prev.concat([{ text: r.status === 503 ? "Email notifications aren't configured yet — check back soon." : "Couldn't send that — double-check your email and try again.", kind: "err" }]));
+      }
+    } catch (err) {
+      setLines((prev) => prev.concat([{ text: "Couldn't reach the server. Check your connection and try again.", kind: "err" }]));
+    }
+  }
 
   /* Desktop icons open this terminal already cd'd into the clicked cluster (see
      handleIconOpen in App) — jumpTo is a fresh {cwd, nonce} object each time, even for
@@ -1798,6 +1992,41 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
     const trimmed = cmd.trim();
     if (trimmed === "") return;
     const out = [{ text: promptString() + " " + trimmed, kind: "cmd" }];
+
+    if (quizState) {
+      if (trimmed.toLowerCase() === "cancel") {
+        setQuizState(null);
+        out.push({ text: "Quiz cancelled.", kind: "out" });
+        setLines((prev) => prev.concat(out));
+        return;
+      }
+      const letters = ["a", "b", "c", "d"];
+      const li = letters.indexOf(trimmed.toLowerCase());
+      if (li === -1) {
+        out.push({ text: "answer a, b, c, or d (or 'cancel')", kind: "err" });
+        setLines((prev) => prev.concat(out));
+        return;
+      }
+      const q = CAREERS_QUIZ[quizState.index];
+      const correct = li === q.correct;
+      out.push({ text: correct ? "Correct!" : "Incorrect. Correct answer: " + letters[q.correct] + ") " + q.choices[q.correct], kind: correct ? "out" : "err" });
+      const nextIndex = quizState.index + 1;
+      const nextScore = quizState.score + (correct ? 1 : 0);
+      out.push({ text: "", kind: "out" });
+      if (nextIndex >= CAREERS_QUIZ.length) {
+        out.push({ text: "QUIZ COMPLETE", kind: "out" });
+        out.push({ text: "────────────────────────────────", kind: "out" });
+        out.push({ text: "Score: " + nextScore + "/" + CAREERS_QUIZ.length, kind: "out" });
+        out.push({ text: nextScore >= 3 ? "Great job! You know your stuff." : "Keep learning — technical depth is trainable.", kind: "out" });
+        setQuizState(null);
+      } else {
+        careersQuizQuestionLines(nextIndex).forEach((t) => out.push({ text: t, kind: "out" }));
+        setQuizState({ index: nextIndex, score: nextScore });
+      }
+      setLines((prev) => prev.concat(out));
+      return;
+    }
+
     const [verb, ...rest] = trimmed.split(/\s+/);
     const arg = rest.join(" ");
 
@@ -1808,24 +2037,84 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
     else if (verb === "date") { out.push({ text: new Date().toString(), kind: "out" }); }
     else if (verb === "ls") {
       if (!cwd) out.push({ text: worldData.map((c) => c.id + "/").join("  "), kind: "out" });
+      else if (cwd === "careers") out.push({ text: "server/  agent/  database/  readme.md  product.md  solve.sh  quiz.sh  submit.sh", kind: "out" });
+      else if (cwd === "careers/server") out.push({ text: "access.log", kind: "out" });
+      else if (cwd === "careers/agent") out.push({ text: "agent.log", kind: "out" });
+      else if (cwd === "careers/database") out.push({ text: "candidates.db", kind: "out" });
       else {
         out.push({ text: "opening " + cwd + "/ …", kind: "out" });
         if (onOpenFolder) onOpenFolder(cwd);
       }
     } else if (verb === "cd") {
-      if (arg === ".." || arg === "") setCwd(null);
-      else if (findCluster(worldData, arg)) setCwd(arg);
+      if (arg === ".." || arg === "") {
+        if (cwd && cwd.indexOf("/") !== -1) setCwd(cwd.slice(0, cwd.indexOf("/")));
+        else setCwd(null);
+      } else if (cwd === "careers" && (arg === "server" || arg === "agent" || arg === "database")) {
+        setCwd("careers/" + arg);
+      } else if (findCluster(worldData, arg)) setCwd(arg);
       else out.push({ text: "cd: no such directory: " + arg, kind: "err" });
     } else if (verb === "cat") {
-      if (!cwd) out.push({ text: "cat: not inside a cluster directory", kind: "err" });
-      else if (arg === "readme.md") {
+      if (cwd === "careers" && arg === "readme.md") {
+        out.push({ text: "Zuper Careers Challenge — two access-probe levels stand between you and the team.", kind: "out" });
+        out.push({ text: "Run: bash solve.sh", kind: "out" });
+        out.push({ text: "(Looking for Zuper's real Careers product instead? cat product.md)", kind: "out" });
+      } else if (cwd === "careers" && arg === "product.md") {
+        const c = findCluster(worldData, "careers");
+        out.push({ text: "# " + c.name, kind: "out" });
+        c.entities.forEach((e) => { out.push({ text: "- " + e.name + " (" + e.type + "): " + e.description, kind: "out" }); });
+      } else if (cwd === "careers/server" && arg === "access.log") {
+        out.push({ text: "info: connection established from 10.0.4.12 — nothing else logged here.", kind: "out" });
+      } else if (cwd === "careers/agent" && arg === "agent.log") {
+        out.push({ text: "info: field agent daemon idle. the real challenge lives in /careers, not in here.", kind: "out" });
+      } else if (cwd === "careers/database" && arg === "candidates.db") {
+        out.push({ text: "cat: candidates.db: binary file, not readable. try solve.sh instead.", kind: "err" });
+      } else if (!cwd) {
+        out.push({ text: "cat: not inside a cluster directory", kind: "err" });
+      } else if (arg === "readme.md") {
         const c = findCluster(worldData, cwd);
         out.push({ text: "# " + c.name, kind: "out" });
         c.entities.forEach((e) => { out.push({ text: "- " + e.name + " (" + e.type + "): " + e.description, kind: "out" }); });
       } else out.push({ text: "cat: no such file: " + arg, kind: "err" });
     } else if (verb === "bash") {
-      if (!cwd) out.push({ text: "bash: not inside a cluster directory", kind: "err" });
-      else if (arg === "status.sh") {
+      const [scriptName, ...scriptArgsArr] = arg.split(/\s+/);
+      const scriptArgs = scriptArgsArr.join(" ");
+      if (cwd === "careers" && scriptName === "solve.sh") {
+        if (careersProgress.step === 1) {
+          out.push({ text: "Connecting to jsonplaceholder…", kind: "out" });
+          setLines((prev) => prev.concat(out));
+          careersSolveLevel1(careersAnswerRef).then((introLines) => pushLines(introLines));
+          return;
+        } else if (careersProgress.step === 2) {
+          out.push({ text: "Level 2 is already active — solve it via DevTools, then: bash submit.sh <key>", kind: "out" });
+        } else {
+          out.push({ text: "Both levels already solved.", kind: "out" });
+        }
+      } else if (cwd === "careers" && scriptName === "quiz.sh") {
+        out.push({ text: "", kind: "out" });
+        out.push({ text: "TECHNICAL QUIZ", kind: "out" });
+        out.push({ text: "────────────────────────────────", kind: "out" });
+        out.push({ text: "Answer 5 questions (a/b/c/d). Type 'cancel' to quit.", kind: "out" });
+        out.push({ text: "", kind: "out" });
+        careersQuizQuestionLines(0).forEach((t) => out.push({ text: t, kind: "out" }));
+        setQuizState({ index: 0, score: 0 });
+      } else if (cwd === "careers" && scriptName === "submit.sh") {
+        if (careersProgress.step === 4) {
+          out.push({ text: "You've already completed this challenge. Thanks!", kind: "out" });
+        } else if (!scriptArgs) {
+          out.push({ text: "usage: bash submit.sh <answer>", kind: "err" });
+        } else if (careersProgress.step === 3) {
+          out.push({ text: "Sending…", kind: "out" });
+          setLines((prev) => prev.concat(out));
+          careersSubmitEmail(scriptArgs);
+          return;
+        } else {
+          setLines((prev) => prev.concat(out));
+          careersSubmitAnswer(scriptArgs);
+          return;
+        }
+      } else if (!cwd) {
+        out.push({ text: "bash: not inside a cluster directory", kind: "err" });
+      } else if (arg === "status.sh") {
         const c = findCluster(worldData, cwd);
         c.entities.forEach((e) => { out.push({ text: "[OK] " + e.id + " (" + e.type + ") responding…", kind: "out" }); });
         out.push({ text: "[OK] all nodes nominal.", kind: "out" });
@@ -1870,165 +2159,6 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ================= Careers puzzle (Zuper_Careers.exe) =================
-   A 2-question key-hunt: each question gives the candidate real-world instructions
-   (content TBD from Sameer — the two <PLACEHOLDER> blocks below are exactly where
-   his real Q1/Q2 copy goes), they find a 16-char key and paste it in below, it's
-   validated server-side (api/careers-validate.js — never client-side, since a
-   valid key sitting anywhere in this public repo's shipped JS would let anyone
-   just view-source the answer), and once both are solved they leave an email,
-   which triggers a notification to Raghav and Sameer (api/careers-submit.js, via
-   Resend). Progress (which step, and whether the email step is already done)
-   persists to localStorage so refreshing mid-hunt doesn't lose it — the same
-   lightweight-persistence pattern the rest of this app already uses for icon
-   positions and arcade high scores; no real answer/key is ever stored client-side. */
-const CAREERS_STORAGE_KEY = "zuper-os-careers-progress";
-function loadCareersProgress() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(CAREERS_STORAGE_KEY));
-    if (saved && (saved.step === 1 || saved.step === 2 || saved.step === 3 || saved.step === 4)) return saved;
-  } catch (e) {}
-  return { step: 1 };
-}
-function saveCareersProgress(progress) {
-  try { localStorage.setItem(CAREERS_STORAGE_KEY, JSON.stringify(progress)); } catch (e) {}
-}
-
-const CAREERS_QUESTIONS = {
-  1: "<PLACEHOLDER — Sameer's real Question 1 instructions go here.> Follow the instructions you were given, then paste the 16-character key you find below.",
-  2: "<PLACEHOLDER — Sameer's real Question 2 instructions go here.> Follow the instructions you were given, then paste the 16-character key you find below.",
-};
-
-function CareersWindow({ onViewRealCareers }) {
-  const [progress, setProgress] = useState(loadCareersProgress);
-  const [key, setKey] = useState("");
-  const [email, setEmail] = useState("");
-  const [checking, setChecking] = useState(false);
-  const [error, setError] = useState(null);
-  const [shake, setShake] = useState(false);
-  const inputRef = useRef(null);
-  useEffect(() => { inputRef.current && inputRef.current.focus(); }, [progress.step]);
-
-  function fail(message) {
-    setError(message);
-    setShake(true);
-    playArcadeFailSound();
-    setTimeout(() => setShake(false), 400);
-  }
-
-  async function submitKey(e) {
-    e.preventDefault();
-    const trimmed = key.trim();
-    if (!trimmed || checking) return;
-    setChecking(true);
-    setError(null);
-    try {
-      const r = await fetch("/api/careers-validate", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ step: progress.step, key: trimmed }),
-      });
-      const data = await r.json().catch(() => null);
-      if (r.ok && data && data.valid) {
-        playArcadeSuccessSound();
-        const next = { step: progress.step === 1 ? 2 : 3 };
-        setProgress(next);
-        saveCareersProgress(next);
-        setKey("");
-      } else if (r.status === 503) {
-        fail("This challenge isn't configured yet — check back soon.");
-      } else {
-        fail("That key didn't check out. Double-check it and try again.");
-      }
-    } catch (err) {
-      fail("Couldn't reach the server. Check your connection and try again.");
-    } finally {
-      setChecking(false);
-    }
-  }
-
-  async function submitEmail(e) {
-    e.preventDefault();
-    const trimmed = email.trim();
-    if (!trimmed || checking) return;
-    setChecking(true);
-    setError(null);
-    try {
-      const r = await fetch("/api/careers-submit", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: trimmed }),
-      });
-      const data = await r.json().catch(() => null);
-      if (r.ok && data && data.ok) {
-        const next = { step: 4 };
-        setProgress(next);
-        saveCareersProgress(next);
-      } else if (r.status === 503) {
-        fail("Email notifications aren't configured yet — check back soon.");
-      } else {
-        fail("Couldn't send that — double-check your email and try again.");
-      }
-    } catch (err) {
-      fail("Couldn't reach the server. Check your connection and try again.");
-    } finally {
-      setChecking(false);
-    }
-  }
-
-  return (
-    <div className="p-5 flex flex-col h-full font-mono" style={{ animation: shake ? "arcade-shake .4s ease-in-out" : "none" }}>
-      <h1 className="text-white text-[18px] font-bold mb-1">Zuper Careers Challenge</h1>
-      <p className="text-[12px] font-medium mb-1" style={{ color: "#c98a2e" }}>
-        {progress.step <= 2 ? "Question " + progress.step + " of 2" : progress.step === 3 ? "Both keys solved" : "Submitted"}
-      </p>
-      {onViewRealCareers && (
-        <button type="button" onClick={onViewRealCareers} className="self-start text-[11px] font-semibold underline mb-4" style={{ color: "#c98a2e" }}>
-          What does Zuper's real Careers product do? →
-        </button>
-      )}
-
-      {(progress.step === 1 || progress.step === 2) && (
-        <form onSubmit={submitKey} className="flex flex-col gap-3">
-          <p className="text-[14px] font-medium leading-relaxed" style={{ color: CRT_GREEN }}>{CAREERS_QUESTIONS[progress.step]}</p>
-          <input ref={inputRef} value={key} onChange={(e) => setKey(e.target.value)} disabled={checking}
-            placeholder="16-character key" maxLength={64} spellCheck={false} autoComplete="off"
-            className="px-2.5 py-2 text-[14px] font-medium bg-transparent outline-none disabled:opacity-40 tracking-widest"
-            style={{ border: "none", boxShadow: bevel("in-shallow", CRT_GREEN), color: "#fff", caretColor: CRT_GREEN }} />
-          {error && <p className="text-[12px] font-semibold" style={{ color: "#fff3e0" }}>{error}</p>}
-          <button type="submit" disabled={checking || !key.trim()} className="self-start px-3 py-1.5 text-[13px] font-semibold disabled:opacity-40"
-            style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }}>
-            {checking ? "Checking…" : "Submit key"}
-          </button>
-        </form>
-      )}
-
-      {progress.step === 3 && (
-        <form onSubmit={submitEmail} className="flex flex-col gap-3">
-          <p className="text-[14px] font-medium leading-relaxed" style={{ color: CRT_GREEN }}>
-            Nice work — both keys check out. Leave your email and we'll follow up.
-          </p>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} disabled={checking}
-            type="email" placeholder="you@example.com" spellCheck={false} autoComplete="off"
-            className="px-2.5 py-2 text-[14px] font-medium bg-transparent outline-none disabled:opacity-40"
-            style={{ border: "none", boxShadow: bevel("in-shallow", CRT_GREEN), color: "#fff", caretColor: CRT_GREEN }} />
-          {error && <p className="text-[12px] font-semibold" style={{ color: "#fff3e0" }}>{error}</p>}
-          <button type="submit" disabled={checking || !email.trim()} className="self-start px-3 py-1.5 text-[13px] font-semibold disabled:opacity-40"
-            style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }}>
-            {checking ? "Sending…" : "Submit"}
-          </button>
-        </form>
-      )}
-
-      {progress.step === 4 && (
-        <p className="text-[14px] font-medium leading-relaxed" style={{ color: CRT_GREEN }}>
-          🎉 Thanks — we've got your details and someone from the team will be in touch.
-        </p>
-      )}
     </div>
   );
 }
@@ -2681,20 +2811,9 @@ function App({ worldData, onReboot }) {
     { id: "terminal", title: "Terminal.app", icon: CLUSTER_ICONS["terminal"], kind: "terminal", rect: { x: 220, y: 60, w: 880, h: 520 } },
   ], []);
 
-  /* zuper-careers has no desktop icon of its own — direct request/correction after
-     having both a real "careers" cluster icon (Zuper's own real product cluster
-     data) AND a separate "Zuper_Careers.exe" icon read as two confusing, redundant
-     "careers" things sitting side by side. Merged: the existing careers/ desktop
-     icon now opens this challenge directly (see the id === "careers" special-case
-     in handleIconOpen below) instead of the generic folder-opens-Terminal behavior
-     every other cluster gets; the real cluster data isn't lost, just one click
-     further away — CareersWindow links out to it. Still a real, independently
-     openable window (hence living in hiddenWindows, the same pattern used for
-     Properties/Display settings), just not its own icon. */
   const hiddenWindows = useMemo(() => [
     { id: "desktop-properties", title: "Properties", kind: "properties", rect: { x: 300, y: 160, w: 380, h: 320 } },
     { id: "display-settings", title: "Display settings", kind: "display-settings", rect: { x: 340, y: 140, w: 360, h: 320 } },
-    { id: "zuper-careers", title: "Zuper_Careers.exe", icon: CLUSTER_ICONS["zuper-careers"], kind: "careers-puzzle", rect: { x: 340, y: 60, w: 460, h: 480 } },
   ], []);
 
   const allWindows = useMemo(() => clusterApps.concat(fileWindows, staticApps, hiddenWindows), [clusterApps, fileWindows, staticApps, hiddenWindows]);
@@ -2752,17 +2871,6 @@ function App({ worldData, onReboot }) {
     wm.focus("terminal");
   }
 
-  /* Reaches the real careers/ cluster data (readme.md etc.) from inside
-     CareersWindow — same jump-to-terminal mechanism a folder icon's own
-     double-click uses, since the careers desktop icon itself now opens the
-     challenge instead (see handleIconOpen). Keeps the real data one click away
-     rather than gone. */
-  function openRealCareersCluster() {
-    jumpCounterRef.current += 1;
-    setTerminalJump({ cwd: "careers", nonce: jumpCounterRef.current });
-    openTerminalCentered();
-  }
-
   function toggleFromTaskbar(id) {
     const w = wm.state[id];
     if (!w.open || w.minimized) { if (id === "terminal") openTerminalCentered(); else wm.open(id); }
@@ -2778,14 +2886,7 @@ function App({ worldData, onReboot }) {
   const [terminalJump, setTerminalJump] = useState(null);
   function handleIconOpen(id) {
     const def = winDefById[id];
-    if (id === "careers") {
-      // The one cluster whose icon opens straight into the real "apply to Zuper"
-      // challenge instead of the generic folder-opens-Terminal every other cluster
-      // gets — see the hiddenWindows comment above for why. The real careers/
-      // cluster data (readme.md etc.) is still just as reachable as before via
-      // `cd careers` / `ls` in the terminal, and CareersWindow links to it too.
-      wm.open("zuper-careers");
-    } else if (def && def.kind === "folder") {
+    if (def && def.kind === "folder") {
       jumpCounterRef.current += 1;
       setTerminalJump({ cwd: def.id, nonce: jumpCounterRef.current });
       openTerminalCentered();
@@ -2851,7 +2952,6 @@ function App({ worldData, onReboot }) {
               {w.kind === "dashboard" && <DashboardWindow clusterId={w.clusterId} worldData={worldData} />}
               {w.kind === "arcade" && <ArcadeWindow />}
               {w.kind === "terminal" && <TerminalWindow worldData={worldData} jumpTo={terminalJump} onOpenFolder={wm.open} />}
-              {w.kind === "careers-puzzle" && <CareersWindow onViewRealCareers={openRealCareersCluster} />}
               {w.kind === "properties" && <PropertiesWindow worldData={worldData} />}
               {w.kind === "display-settings" && <DisplaySettingsWindow iconSize={iconSize} setIconSize={setIconSize} textSize={textSize} setTextSize={setTextSize} />}
             </Window>

@@ -1,7 +1,9 @@
-// Vercel serverless function — final step of the Zuper_Careers.exe puzzle flow
-// (CareersWindow in app.jsx). Once a candidate has solved both keys (validated
-// separately by careers-validate.js), the frontend POSTs their email here; this
-// sends a notification email to Raghav and Sameer with those details, via Resend
+// Vercel serverless function — optional last step of the terminal-native Zuper Careers
+// challenge (app.jsx, TerminalWindow's careers* helpers). Both puzzle levels are
+// generated and checked entirely client-side now (there's no fixed answer to protect —
+// each solve is fresh random data), so this is the only server call left in the flow:
+// once a candidate finishes, they can run `bash submit.sh <email>` and this sends a
+// notification email to Raghav and Sameer with those details, via Resend
 // (https://resend.com). RESEND_API_KEY lives only in this server-side env var,
 // same pattern as ANTHROPIC_API_KEY in api/ask.js.
 //
