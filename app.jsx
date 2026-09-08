@@ -265,11 +265,11 @@ const MINIMAL_ICON_SHAPES = {
     ["polyline", { points: "4.5 15.5 9.5 10.5 13 13.5 19.5 6.5" }],
     ["polyline", { points: "14.5 6.5 19.5 6.5 19.5 11.5" }],
   ],
-  "zuper-arcade": [ // joystick
-    ["rect", { x: 5, y: 13, width: 14, height: 7, rx: 2.5 }],
-    ["circle", { cx: 9.5, cy: 16.5, r: 1, fill: "currentColor" }],
-    ["circle", { cx: 14.5, cy: 16.5, r: 1, fill: "currentColor" }],
-    ["path", { d: "M9 13V9.5a3 3 0 0 1 6 0V13" }],
+  "zuper-arcade": [ // joystick — ball grip + stick rising from a wide base (previous
+    // version, an arch over a two-button base, read as a padlock at small sizes)
+    ["ellipse", { cx: 12, cy: 19, rx: 7, ry: 2 }],
+    ["line", { x1: 12, y1: 17.5, x2: 12, y2: 9 }],
+    ["circle", { cx: 12, cy: 6.3, r: 3.1, fill: "currentColor" }],
   ],
   terminal: [ // prompt
     ["rect", { x: 3, y: 4.5, width: 18, height: 15, rx: 1.8 }],
