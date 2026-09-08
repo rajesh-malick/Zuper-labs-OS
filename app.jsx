@@ -1684,20 +1684,42 @@ function ArcadeWindow() {
   function skip(game) { setSummaryText(game.summary); setView("summary"); setAchievement(null); }
   function backToMenu() { setView("menu"); setAchievement(null); }
   return (
-    <div className="p-4">
+    <div className="p-4 h-full flex flex-col">
       {view === "menu" && (
-        <div className="grid gap-3 mt-3">
-          {GAMES.map((g) => (
-            <div key={g.id} className="p-3.5 flex flex-col gap-2" style={{ background: "rgba(20,10,0,.4)", boxShadow: bevel("out-shallow", CRT_GREEN) }}>
-              <h3 className="text-[16px] font-bold m-0 font-mono" style={{ color: "#ffd98a" }}>{g.title}{g.cluster && <span className="ml-2 text-[10px] font-medium" style={{ color: "#c98a2e" }}>({g.cluster})</span>}</h3>
-              <p className="text-[14px] font-medium leading-relaxed m-0" style={{ color: "#c98a2e" }}>{g.desc}</p>
-              <div className="flex gap-2 mt-1">
-                <button type="button" className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#040200", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={() => { setAchievement(null); setView(g.id); }}>Play</button>
-                <button type="button" className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => skip(g)}>Skip &amp; Read Summary</button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <React.Fragment>
+          <div className="flex items-center justify-between mb-3 flex-shrink-0">
+            <h2 className="m-0 text-[15px] font-bold font-mono tracking-wide" style={{ color: "#ffd98a" }}>SELECT A CABINET</h2>
+            <span className="text-[11px] font-semibold font-mono" style={{ color: "#c98a2e" }}>{GAMES.length} games</span>
+          </div>
+          {/* Arcade-row layout, cabinets side by side — direct request: no vertical
+              scrolling through a stacked list, everything reachable in one horizontal
+              sweep instead (scrolls sideways only if the window's narrower than all
+              seven cabinets at once). Each cabinet plays on a single click now, matching
+              the rest of the desktop; the small (i) badge is the only way to read the
+              summary without launching the game. */}
+          <div className="flex-1 min-h-0 flex gap-3 overflow-x-auto overflow-y-hidden pb-2">
+            {GAMES.map((g, i) => {
+              const hue = (i * 51) % 360;
+              const accent = "hsl(" + hue + ", 70%, 62%)";
+              return (
+                <div key={g.id} role="button" tabIndex={0} onClick={() => { setAchievement(null); setView(g.id); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setAchievement(null); setView(g.id); } }}
+                  className="group relative flex-shrink-0 w-[150px] flex flex-col items-center gap-2 p-3 text-center cursor-pointer transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2"
+                  style={{ background: "rgba(20,10,0,.45)", boxShadow: bevel("out-shallow", accent), outlineColor: accent }}>
+                  <button type="button" title="Read summary without playing" onClick={(e) => { e.stopPropagation(); skip(g); }}
+                    className="absolute top-1.5 right-1.5 w-5 h-5 flex items-center justify-center text-[11px] font-bold opacity-60 hover:opacity-100"
+                    style={{ background: "rgba(20,10,0,.6)", boxShadow: bevel("out-shallow", accent), color: accent }}>i</button>
+                  <span className="flex items-center justify-center rounded-full" style={{ width: 46, height: 46, background: accent + "22", boxShadow: bevel("in-shallow", accent) }}>
+                    <MinimalIcon shapeKey={g.cluster || "zuper-arcade"} size={24} color={accent} />
+                  </span>
+                  <h3 className="text-[13px] font-bold m-0 font-mono leading-tight" style={{ color: "#ffd98a" }}>{g.title}</h3>
+                  <p className="text-[11px] font-medium leading-snug m-0 line-clamp-3" style={{ color: "#c98a2e" }}>{g.desc}</p>
+                  <span className="mt-auto pt-1 text-[10px] font-bold font-mono tracking-wide opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: accent }}>▸ PLAY</span>
+                </div>
+              );
+            })}
+          </div>
+        </React.Fragment>
       )}
       {view !== "menu" && (
         <div className="mt-3">
@@ -2703,7 +2725,7 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
       <button type="button" onClickCapture={onClickCapture}
         className="flex flex-col items-center gap-1.5 p-2 hover:bg-white/10 transition-transform focus-visible:outline focus-visible:outline-2"
         style={{ width: Math.max(92, tile + 24), outlineColor: color, transform: pressed ? "scale(.93)" : "scale(1)" }}
-        onDoubleClick={() => onOpen(id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(id); } }}>
+        onClick={() => onOpen(id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(id); } }}>
         {/* Just the icon itself now — no bordered/background tile behind it (that
             square "window" frame was the actual ask to remove; the icon's own
             drop-shadow glow still ties it into the CRT theme). The icon box has an
@@ -2759,7 +2781,10 @@ function App({ worldData, onReboot }) {
   }, [worldData]);
 
   const staticApps = useMemo(() => [
-    { id: "zuper-arcade", title: "Zuper_Arcade.exe", icon: CLUSTER_ICONS["zuper-arcade"], kind: "arcade", rect: { x: 480, y: 30, w: 480, h: 580 } },
+    /* Wider default than most windows on purpose — the arcade menu is a horizontal row
+       of cabinets now (no vertical scrolling through a stacked list), so it needs the
+       width to show most of them without a sideways scroll too. */
+    { id: "zuper-arcade", title: "Zuper_Arcade.exe", icon: CLUSTER_ICONS["zuper-arcade"], kind: "arcade", rect: { x: 260, y: 30, w: 860, h: 560 } },
     /* Wider/taller default open size — direct request, after the old 380x340
        default made the prompt path (e.g. "guest@zuper-web-os:/desktop/ai-
        intelligence$") wrap across 2-3 lines by default, cramped and awkward
