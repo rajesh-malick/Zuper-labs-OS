@@ -999,6 +999,42 @@ function DisplaySettingsWindow({ iconSize, setIconSize, textSize, setTextSize })
   );
 }
 
+/* "Move to Trash" on a desktop icon only ever hid it (added the id to hiddenIconIds) —
+   nothing was ever actually deleted, but there was no dedicated place to SEE or restore
+   what's in there beyond a one-line toast ("Arrange icons restores it", which also
+   resets every icon's position, not just the trashed ones). Direct request: a real,
+   discoverable Recycle Bin, reachable from the Start menu, that lists exactly what's
+   trashed and restores it one item at a time (or all at once) without touching anyone's
+   arranged layout. */
+function RecycleBinWindow({ trashedItems, onRestore, onRestoreAll }) {
+  return (
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-white text-[18px] font-bold m-0 font-mono">Recycle Bin</h1>
+        {trashedItems.length > 0 && (
+          <button type="button" onClick={onRestoreAll} className="px-2.5 py-1 text-[12px] font-semibold rounded" style={{ background: ACCENT + "26", color: ACCENT }}>Restore all</button>
+        )}
+      </div>
+      {trashedItems.length === 0 ? (
+        <p className="text-white/48 text-[13px] font-medium italic">Empty — nothing's been moved to Trash.</p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {trashedItems.map((a) => (
+            <div key={a.id} className="flex items-center justify-between gap-2 px-2.5 py-2 rounded" style={{ background: "rgba(255,255,255,.05)" }}>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <IconImg icon={a.icon} size={20} className="w-5 text-center flex-shrink-0" color={ACCENT} />
+                <span className="text-white/85 text-[13px] font-medium truncate">{a.title}</span>
+              </div>
+              <button type="button" onClick={() => onRestore(a.id)} className="px-2.5 py-1 text-[12px] font-semibold rounded flex-shrink-0" style={{ background: "rgba(255,255,255,.1)", color: "#fff" }}>Restore</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-white/48 text-[10px] font-medium italic mt-4">Nothing here is ever actually deleted — "Trash" only hides an icon from the desktop. Restoring puts it back where it was.</p>
+    </div>
+  );
+}
+
 /* ================= Games (unchanged mechanics, real cluster tags) ================= */
 function RouteRacerGame({ onComplete }) {
   const GRID = 8, MOVE_LIMIT = 34, CELL = 42;
@@ -2115,7 +2151,17 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
      you type, and it scrolls up into history once you hit Enter. Clicking anywhere in
      the terminal refocuses the (invisible, borderless) input, same as a real one. */
   return (
-    <div className="p-3 flex flex-col h-full font-terminal font-medium text-[14px]" onClick={() => inputRef.current && inputRef.current.focus()}>
+    <div className="p-3 flex flex-col h-full font-terminal font-medium text-[14px]" onClick={() => inputRef.current && inputRef.current.focus()}
+      /* Direct request: the careers challenge needs real DevTools access (Network tab,
+         Elements, sessionStorage), and this OS's own right-click menu (see the
+         desktop's onContextMenu below) was silently eating every right-click before the
+         real browser menu — including "Inspect" — ever got a chance to show. A page
+         can't show its own custom menu AND the browser's native one on the same click,
+         so this is a deliberate exception carved out for exactly this one window:
+         stopPropagation (not preventDefault) here means the event never reaches the
+         desktop's handler, so the browser's real context menu appears instead. Every
+         other window/the desktop itself is unaffected — still gets the custom OS menu. */
+      onContextMenu={(e) => e.stopPropagation()}>
       <div ref={logRef} className="flex-1 overflow-y-auto space-y-1">
         {lines.map((l, i) => (
           <div key={i} className={l.kind === "err" ? "text-red-400" : l.kind === "cmd" ? "text-white" : ""} style={l.kind === "out" ? { color: CRT_GREEN, opacity: 0.85 } : undefined}>{l.text}</div>
@@ -2215,7 +2261,7 @@ function Taskbar({ onStartClick, running, onRunningClick, theme }) {
   );
 }
 
-function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun, onReboot, onSession, theme }) {
+function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun, onReboot, onSession, onRecycleBin, trashedCount, theme }) {
   if (!open) return null;
   const t = theme || THEME;
   function item(label, fn) {
@@ -2247,6 +2293,7 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
         {item("🖥️ Fullscreen", onFullscreen)}
         {item("🔎 Find", onFind)}
         {item("▶ Run...", onRun)}
+        {item("🗑️ Recycle Bin" + (trashedCount > 0 ? " (" + trashedCount + ")" : ""), onRecycleBin)}
         {item("🔄 Reboot", onReboot)}
         {item("👤 Session", onSession)}
       </div>
@@ -2798,6 +2845,7 @@ function App({ worldData, onReboot }) {
   const hiddenWindows = useMemo(() => [
     { id: "desktop-properties", title: "Properties", kind: "properties", rect: { x: 300, y: 160, w: 380, h: 320 } },
     { id: "display-settings", title: "Display settings", kind: "display-settings", rect: { x: 340, y: 140, w: 360, h: 320 } },
+    { id: "recycle-bin", title: "Recycle Bin", kind: "recycle-bin", rect: { x: 320, y: 120, w: 400, h: 380 } },
   ], []);
 
   const allWindows = useMemo(() => clusterApps.concat(fileWindows, staticApps, hiddenWindows), [clusterApps, fileWindows, staticApps, hiddenWindows]);
@@ -2837,8 +2885,14 @@ function App({ worldData, onReboot }) {
   function renameIcon(id, name) { setIconNames((prev) => Object.assign({}, prev, { [id]: name })); showToast("Renamed to “" + name + "”"); }
   function trashIcon(id) {
     setHiddenIconIds((prev) => { const next = new Set(prev); next.add(id); return next; });
-    showToast("Moved to Trash — “Arrange icons” restores it");
+    showToast("Moved to Trash — see it in Start menu → Recycle Bin");
   }
+  function restoreIcon(id) {
+    setHiddenIconIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    showToast("Restored to desktop");
+  }
+  function restoreAllIcons() { setHiddenIconIds(new Set()); showToast("Restored everything from Trash"); }
+  const trashedItems = useMemo(() => desktopIconDefs.filter((a) => hiddenIconIds.has(a.id)), [desktopIconDefs, hiddenIconIds]);
 
   const desktopIcons = useMemo(() => desktopIconDefs.filter((a) => !hiddenIconIds.has(a.id)), [desktopIconDefs, hiddenIconIds]);
   /* The actual desktop icon grid only ever shows these four (see DESKTOP_VISIBLE_IDS) —
@@ -2942,6 +2996,7 @@ function App({ worldData, onReboot }) {
               {w.kind === "terminal" && <TerminalWindow worldData={worldData} jumpTo={terminalJump} onOpenFolder={wm.open} />}
               {w.kind === "properties" && <PropertiesWindow worldData={worldData} />}
               {w.kind === "display-settings" && <DisplaySettingsWindow iconSize={iconSize} setIconSize={setIconSize} textSize={textSize} setTextSize={setTextSize} />}
+              {w.kind === "recycle-bin" && <RecycleBinWindow trashedItems={trashedItems} onRestore={restoreIcon} onRestoreAll={restoreAllIcons} />}
             </Window>
           );
         })}
@@ -2983,7 +3038,8 @@ function App({ worldData, onReboot }) {
         onFind={() => setLauncher({ title: "Find", placeholder: "Search apps…" })}
         onRun={() => setLauncher({ title: "Run", placeholder: "Type the name of an app to open…" })}
         onReboot={onReboot}
-        onSession={closeAllWindows} />
+        onSession={closeAllWindows}
+        onRecycleBin={() => wm.open("recycle-bin")} trashedCount={trashedItems.length} />
 
       <Taskbar onStartClick={() => setStartOpen((o) => !o)} theme={theme}
         running={runningWindows.map((a) => ({ id: a.id, title: iconNames[a.id] || winDefById[a.id].title, focused: wm.focusedId === a.id }))}
