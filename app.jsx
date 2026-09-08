@@ -1939,12 +1939,12 @@ async function careersSolveLevel1(answerRef) {
   answerRef.current = { level: 1, key: words[correctIdx], code: String(target ? target.id : guaranteedId) };
 
   return [
-    "ACCESS PROBE — LEVEL 1", "────────────────────────────────",
+    { text: "ACCESS PROBE — LEVEL 1", kind: "heading" }, "────────────────────────────────",
     "Open DevTools (F12 / Cmd+Shift+I).", "",
-    "STEP 1 — Console tab", "  Run: window.__zuper_keys", "  Returns 16 strings. They are base64-encoded. Decode with: atob()", "",
-    "STEP 2 — Elements tab (Styles)", "  The correct array index is a CSS custom property on the <html> element.", "  Property: --zuper-key-index", "",
-    "STEP 3 — Network tab", "  5 requests were made to jsonplaceholder.", "  Find the response where postId === 4.", "  The \"id\" field of that response is your verification code.", "",
-    "STEP 4 — Submit", "  bash submit.sh <decoded_key>-<code>",
+    { text: "STEP 1 — Console tab", kind: "label" }, "  Run: window.__zuper_keys", "  Returns 16 strings. They are base64-encoded. Decode with: atob()", "",
+    { text: "STEP 2 — Elements tab (Styles)", kind: "label" }, "  The correct array index is a CSS custom property on the <html> element.", "  Property: --zuper-key-index", "",
+    { text: "STEP 3 — Network tab", kind: "label" }, "  5 requests were made to jsonplaceholder.", "  Find the response where postId === 4.", "  The \"id\" field of that response is your verification code.", "",
+    { text: "STEP 4 — Submit", kind: "label" }, "  bash submit.sh <decoded_key>-<code>",
   ];
 }
 
@@ -1965,10 +1965,10 @@ function careersStartLevel2(answerRef, timerRef) {
   answerRef.current = { level: 2, key: correctKey };
 
   return [
-    "ACCESS PROBE — LEVEL 2", "────────────────────────────────", "",
-    "STEP 1 — Console tab", "  window.__zuper_keys has been reloaded.", "  16 new keys. They rotate every 2 seconds.", "  Stop the timer or snapshot the array.", "",
-    "STEP 2 — Application tab", "  Open Application > Session Storage.", "  The correct index is stored under key: __zuper_idx", "",
-    "STEP 3 — Submit", "  bash submit.sh <key>",
+    { text: "ACCESS PROBE — LEVEL 2", kind: "heading" }, "────────────────────────────────", "",
+    { text: "STEP 1 — Console tab", kind: "label" }, "  window.__zuper_keys has been reloaded.", "  16 new keys. They rotate every 2 seconds.", "  Stop the timer or snapshot the array.", "",
+    { text: "STEP 2 — Application tab", kind: "label" }, "  Open Application > Session Storage.", "  The correct index is stored under key: __zuper_idx", "",
+    { text: "STEP 3 — Submit", kind: "label" }, "  bash submit.sh <key>",
   ];
 }
 
@@ -1989,8 +1989,8 @@ const CAREERS_QUIZ = [
 ];
 function careersQuizQuestionLines(index) {
   const q = CAREERS_QUIZ[index];
-  const lines = ["Q" + (index + 1) + ": " + q.q];
-  ["a", "b", "c", "d"].forEach((l, i) => lines.push("  " + l + ") " + q.choices[i]));
+  const lines = [{ text: "Q" + (index + 1) + ": " + q.q, kind: "label" }];
+  ["a", "b", "c", "d"].forEach((l, i) => lines.push({ text: "  " + l + ") " + q.choices[i], kind: "choice" }));
   return lines;
 }
 
@@ -2008,7 +2008,10 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [lines, input]);
   useEffect(() => () => { if (careersTimerRef.current) clearInterval(careersTimerRef.current); }, []);
 
-  function pushLines(newLines) { setLines((prev) => prev.concat(newLines.map((t) => ({ text: t, kind: "out" })))); }
+  /* Accepts either plain strings (default to kind "out", same as before) or
+     {text, kind} objects — lets careers* helpers tag their own headings/labels/choices
+     without every caller having to build the full object shape by hand. */
+  function pushLines(newLines) { setLines((prev) => prev.concat(newLines.map((t) => (typeof t === "string" ? { text: t, kind: "out" } : t)))); }
 
   function careersSubmitAnswer(answer) {
     const trimmed = (answer || "").trim();
@@ -2024,7 +2027,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         playArcadeSuccessSound();
         const level2Lines = careersStartLevel2(careersAnswerRef, careersTimerRef);
         const next = { step: 2 }; setCareersProgress(next); saveCareersProgress(next);
-        pushLines(["LEVEL 1 COMPLETE", "────────────────────────────────", ""].concat(level2Lines));
+        pushLines([{ text: "LEVEL 1 COMPLETE", kind: "heading" }, "────────────────────────────────", ""].concat(level2Lines));
       } else {
         playArcadeFailSound();
         setLines((prev) => prev.concat([{ text: "That answer didn't check out. Double-check it and try again.", kind: "err" }]));
@@ -2036,7 +2039,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         careersAnswerRef.current = null;
         const next = { step: 3 }; setCareersProgress(next); saveCareersProgress(next);
         pushLines([
-          "CHALLENGE COMPLETE", "────────────────────────────────", "Both levels verified.", "",
+          { text: "CHALLENGE COMPLETE", kind: "heading" }, "────────────────────────────────", "Both levels verified.", "",
           "You decoded base64 keys, read CSS custom properties, filtered network",
           "responses, stopped a rotating timer, and found a value in sessionStorage.",
           "That's the kind of engineer we're looking for.", "",
@@ -2109,13 +2112,13 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
       const nextScore = quizState.score + (correct ? 1 : 0);
       out.push({ text: "", kind: "out" });
       if (nextIndex >= CAREERS_QUIZ.length) {
-        out.push({ text: "QUIZ COMPLETE", kind: "out" });
+        out.push({ text: "QUIZ COMPLETE", kind: "heading" });
         out.push({ text: "────────────────────────────────", kind: "out" });
         out.push({ text: "Score: " + nextScore + "/" + CAREERS_QUIZ.length, kind: "out" });
         out.push({ text: nextScore >= 3 ? "Great job! You know your stuff." : "Keep learning — technical depth is trainable.", kind: "out" });
         setQuizState(null);
       } else {
-        careersQuizQuestionLines(nextIndex).forEach((t) => out.push({ text: t, kind: "out" }));
+        careersQuizQuestionLines(nextIndex).forEach((t) => out.push(t));
         setQuizState({ index: nextIndex, score: nextScore });
       }
       setLines((prev) => prev.concat(out));
@@ -2186,11 +2189,11 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         }
       } else if (cwd === "careers" && scriptName === "quiz.sh") {
         out.push({ text: "", kind: "out" });
-        out.push({ text: "TECHNICAL QUIZ", kind: "out" });
+        out.push({ text: "TECHNICAL QUIZ", kind: "heading" });
         out.push({ text: "────────────────────────────────", kind: "out" });
         out.push({ text: "Answer 5 questions (a/b/c/d). Type 'cancel' to quit.", kind: "out" });
         out.push({ text: "", kind: "out" });
-        careersQuizQuestionLines(0).forEach((t) => out.push({ text: t, kind: "out" }));
+        careersQuizQuestionLines(0).forEach((t) => out.push(t));
         setQuizState({ index: 0, score: 0 });
       } else if (cwd === "careers" && scriptName === "submit.sh") {
         if (careersProgress.step === 4) {
@@ -2242,8 +2245,24 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
          other window/the desktop itself is unaffected — still gets the custom OS menu. */
       onContextMenu={(e) => e.stopPropagation()}>
       <div ref={logRef} className="flex-1 overflow-y-auto space-y-1">
+        {/* Careers-challenge content (solve/submit/quiz output) used to render as plain
+           "out" lines like everything else — a STEP label, a quiz question, its a/b/c/d
+           choices, and ordinary instruction text were all identical CRT green, direct
+           feedback that they "look alike" and are hard to tell apart at a glance. Three
+           extra kinds give it real hierarchy: "heading" for section titles (ACCESS
+           PROBE — LEVEL N, CHALLENGE COMPLETE, TECHNICAL QUIZ), "label" for STEP N / QN
+           sub-headers, "choice" for the a/b/c/d quiz options — each its own color/weight,
+           ordinary body text stays plain CRT green. */}
         {lines.map((l, i) => (
-          <div key={i} className={l.kind === "err" ? "text-red-400" : l.kind === "cmd" ? "text-white" : ""} style={l.kind === "out" ? { color: CRT_GREEN, opacity: 0.85 } : undefined}>{l.text}</div>
+          <div key={i}
+            className={l.kind === "err" ? "text-red-400" : l.kind === "cmd" ? "text-white" : l.kind === "heading" || l.kind === "label" ? "font-bold tracking-wide" : ""}
+            style={
+              l.kind === "out" ? { color: CRT_GREEN, opacity: 0.85 }
+              : l.kind === "heading" ? { color: CONCEPT }
+              : l.kind === "label" ? { color: "#ffd98a" }
+              : l.kind === "choice" ? { color: "#ffd98a", opacity: 0.85 }
+              : undefined
+            }>{l.text}</div>
         ))}
         <div className="flex items-center gap-2">
           <span style={{ color: CRT_GREEN }}>{promptString()}</span>
