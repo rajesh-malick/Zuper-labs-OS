@@ -276,7 +276,7 @@ const MINIMAL_ICON_SHAPES = {
     ["polyline", { points: "7.5 10 10.5 12.5 7.5 15" }],
     ["line", { x1: 12.3, y1: 15, x2: 16, y2: 15 }],
   ],
-  "more-apps": [ // dashed box with a plus — a placeholder standing in for apps not built yet
+  "more-apps": [ // dashed box with a plus — opens a drawer of every app not on the desktop
     ["rect", { x: 4, y: 4, width: 16, height: 16, rx: 2, strokeDasharray: "3 2.5" }],
     ["line", { x1: 12, y1: 9, x2: 12, y2: 15 }],
     ["line", { x1: 9, y1: 12, x2: 15, y2: 12 }],
@@ -420,10 +420,14 @@ function IconImg({ icon, size, className, color }) {
 /* ---------- Per-cluster accent color — purely cosmetic variety, not real Zuper branding ---------- */
 
 /* ---------- Desktop display settings (icon/text size) — persisted, purely cosmetic ---------- */
-const ICON_TILE_PX = { sm: 38, md: 52, lg: 70 };
-const ICON_GLYPH_REM = { sm: "1.05rem", md: "1.35rem", lg: "1.75rem" };
-const ICON_LABEL_REM = { sm: "11px", md: "13px", lg: "15px" };
-const ICON_CELL_PX = { sm: 78, md: 100, lg: 128 };
+/* "lg" bumped up further (was 70/1.75rem/15px/128) - direct follow-up after the desktop
+   went from a dozen-plus icons down to 4 (see DESKTOP_VISIBLE_IDS): that much empty
+   space read as unfinished rather than spacious, so Large is now a lot larger, and it's
+   the new default (see iconSize's useState below) instead of Medium. */
+const ICON_TILE_PX = { sm: 38, md: 52, lg: 96 };
+const ICON_GLYPH_REM = { sm: "1.05rem", md: "1.35rem", lg: "2.4rem" };
+const ICON_LABEL_REM = { sm: "11px", md: "13px", lg: "17px" };
+const ICON_CELL_PX = { sm: 78, md: 100, lg: 168 };
 const SIZE_OPTIONS = [{ value: "sm", label: "Small" }, { value: "md", label: "Medium" }, { value: "lg", label: "Large" }];
 
 /* ---------- Mono CRT theme — the OS shell's only look. Reskins desktop bg, window
@@ -1031,6 +1035,28 @@ function RecycleBinWindow({ trashedItems, onRestore, onRestoreAll }) {
         </div>
       )}
       <p className="text-white/48 text-[10px] font-medium italic mt-4">Nothing here is ever actually deleted — "Trash" only hides an icon from the desktop. Restoring puts it back where it was.</p>
+    </div>
+  );
+}
+
+/* More_Apps.exe originally just showed a toast ("more apps on the way") standing in for
+   Zuper's wider product suite - direct follow-up: since the other 11 real clusters and
+   Terminal.app already exist and work (just not pinned to the 4-icon desktop, see
+   DESKTOP_VISIBLE_IDS), it makes more sense for this to actually open them than to fake
+   not having them. Single click, matching every other icon on the desktop now. */
+function AppDrawerWindow({ apps, onOpen }) {
+  return (
+    <div className="p-4 font-mono">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-white/58 mb-3">More apps — everything not pinned to the desktop</div>
+      <div className="grid grid-cols-3 gap-3">
+        {apps.map((a) => (
+          <button key={a.id} type="button" onClick={() => onOpen(a.id)}
+            className="flex flex-col items-center gap-1.5 p-2 rounded hover:bg-white/5">
+            <IconImg icon={a.icon} size={30} color={CRT_GREEN} />
+            <span className="text-[12px] font-semibold text-white/85 text-center leading-tight break-words">{a.title}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1727,30 +1753,27 @@ function ArcadeWindow() {
             <h2 className="m-0 text-[15px] font-bold font-mono tracking-wide" style={{ color: "#ffd98a" }}>SELECT A CABINET</h2>
             <span className="text-[11px] font-semibold font-mono" style={{ color: "#c98a2e" }}>{GAMES.length} games</span>
           </div>
-          {/* Arcade-row layout, cabinets side by side — direct request: no vertical
-              scrolling through a stacked list, everything reachable in one horizontal
-              sweep instead (scrolls sideways only if the window's narrower than all
-              seven cabinets at once). Each cabinet plays on a single click now, matching
-              the rest of the desktop; the small (i) badge is the only way to read the
-              summary without launching the game. */}
-          <div className="flex-1 min-h-0 flex gap-3 overflow-x-auto overflow-y-hidden pb-2">
+          {/* Grid, not a horizontal scroll — direct follow-up: wraps into rows so every
+              cabinet fits in the window at once, no scrolling in either direction at the
+              default window size. Each card has its own explicit Play / Skip & Read
+              Summary buttons again (the single-click-whole-tile + tiny corner "i" from
+              the previous pass was reduced back down per direct request). */}
+          <div className="flex-1 min-h-0 overflow-y-auto grid gap-3 content-start" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))" }}>
             {GAMES.map((g, i) => {
               const hue = (i * 51) % 360;
               const accent = "hsl(" + hue + ", 70%, 62%)";
               return (
-                <div key={g.id} role="button" tabIndex={0} onClick={() => { setAchievement(null); setView(g.id); }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setAchievement(null); setView(g.id); } }}
-                  className="group relative flex-shrink-0 w-[150px] flex flex-col items-center gap-2 p-3 text-center cursor-pointer transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2"
-                  style={{ background: "rgba(20,10,0,.45)", boxShadow: bevel("out-shallow", accent), outlineColor: accent }}>
-                  <button type="button" title="Read summary without playing" onClick={(e) => { e.stopPropagation(); skip(g); }}
-                    className="absolute top-1.5 right-1.5 w-5 h-5 flex items-center justify-center text-[11px] font-bold opacity-60 hover:opacity-100"
-                    style={{ background: "rgba(20,10,0,.6)", boxShadow: bevel("out-shallow", accent), color: accent }}>i</button>
-                  <span className="flex items-center justify-center rounded-full" style={{ width: 46, height: 46, background: accent + "22", boxShadow: bevel("in-shallow", accent) }}>
-                    <MinimalIcon shapeKey={g.cluster || "zuper-arcade"} size={24} color={accent} />
+                <div key={g.id} className="flex flex-col items-center gap-2 p-3 text-center"
+                  style={{ background: "rgba(20,10,0,.45)", boxShadow: bevel("out-shallow", accent) }}>
+                  <span className="flex items-center justify-center rounded-full flex-shrink-0" style={{ width: 42, height: 42, background: accent + "22", boxShadow: bevel("in-shallow", accent) }}>
+                    <MinimalIcon shapeKey={g.cluster || "zuper-arcade"} size={22} color={accent} />
                   </span>
                   <h3 className="text-[13px] font-bold m-0 font-mono leading-tight" style={{ color: "#ffd98a" }}>{g.title}</h3>
-                  <p className="text-[11px] font-medium leading-snug m-0 line-clamp-3" style={{ color: "#c98a2e" }}>{g.desc}</p>
-                  <span className="mt-auto pt-1 text-[10px] font-bold font-mono tracking-wide opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: accent }}>▸ PLAY</span>
+                  <p className="text-[11px] font-medium leading-snug m-0 line-clamp-2 flex-1" style={{ color: "#c98a2e" }}>{g.desc}</p>
+                  <div className="flex flex-col gap-1.5 w-full mt-1">
+                    <button type="button" className="px-2 py-1 text-[11px] font-semibold" style={{ background: accent, color: "#040200", boxShadow: bevel("out-shallow", accent) }} onClick={() => { setAchievement(null); setView(g.id); }}>Play</button>
+                    <button type="button" className="px-2 py-1 text-[11px] font-semibold" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", accent), color: "#ffd98a" }} onClick={() => skip(g)}>Skip &amp; Read Summary</button>
+                  </div>
                 </div>
               );
             })}
@@ -2837,9 +2860,10 @@ function App({ worldData, onReboot }) {
        intelligence$") wrap across 2-3 lines by default, cramped and awkward
        to read, requiring a manual resize every time just to use it comfortably. */
     { id: "terminal", title: "Terminal.app", icon: CLUSTER_ICONS["terminal"], kind: "terminal", rect: { x: 220, y: 60, w: 880, h: 520 } },
-    /* Never opens a window — handleIconOpen special-cases this id to just show a toast.
-       Stands in for the rest of Zuper's real product suite, which isn't built out here. */
-    { id: "more-apps", title: "More_Apps.exe", icon: CLUSTER_ICONS["more-apps"], kind: "coming-soon", rect: { x: 40, y: 40, w: 1, h: 1 } },
+    /* Opens a real app-drawer window listing every app not pinned to the 4-icon desktop
+       (see AppDrawerWindow / hiddenApps below) — every one of them already exists and
+       works, this is just where they live now that they're off the desktop itself. */
+    { id: "more-apps", title: "More_Apps.exe", icon: CLUSTER_ICONS["more-apps"], kind: "app-drawer", rect: { x: 300, y: 60, w: 420, h: 460 } },
   ], []);
 
   const hiddenWindows = useMemo(() => [
@@ -2862,7 +2886,7 @@ function App({ worldData, onReboot }) {
   const [hiddenIconIds, setHiddenIconIds] = useState(() => new Set());
   function showToast(text) { setToast(text); }
 
-  const [iconSize, setIconSize] = useState(() => { try { return localStorage.getItem("zuper-os-icon-size") || "md"; } catch (e) { return "md"; } });
+  const [iconSize, setIconSize] = useState(() => { try { return localStorage.getItem("zuper-os-icon-size") || "lg"; } catch (e) { return "lg"; } });
   const [textSize, setTextSize] = useState(() => { try { return localStorage.getItem("zuper-os-text-size") || "md"; } catch (e) { return "md"; } });
   useEffect(() => { try { localStorage.setItem("zuper-os-icon-size", iconSize); } catch (e) {} }, [iconSize]);
   useEffect(() => { try { localStorage.setItem("zuper-os-text-size", textSize); } catch (e) {} }, [textSize]);
@@ -2898,6 +2922,9 @@ function App({ worldData, onReboot }) {
   /* The actual desktop icon grid only ever shows these four (see DESKTOP_VISIBLE_IDS) —
      desktopIcons above stays the full reachable set for Start Menu / QuickLauncher. */
   const visibleDesktopIcons = useMemo(() => desktopIcons.filter((a) => DESKTOP_VISIBLE_IDS.has(a.id)), [desktopIcons]);
+  /* Everything reachable but NOT pinned to the desktop (every other real cluster,
+     Terminal.app) — this is what More_Apps.exe's drawer lists. */
+  const hiddenApps = useMemo(() => desktopIcons.filter((a) => !DESKTOP_VISIBLE_IDS.has(a.id) && a.id !== "more-apps"), [desktopIcons]);
 
   /* The terminal opens centered on the stage every time, no matter which app/icon
      triggered it (a cluster folder, the Terminal.app icon itself, or reopening from
@@ -2926,7 +2953,6 @@ function App({ worldData, onReboot }) {
   const jumpCounterRef = useRef(0);
   const [terminalJump, setTerminalJump] = useState(null);
   function handleIconOpen(id) {
-    if (id === "more-apps") { showToast("More Zuper apps are on the way — check back soon!"); return; }
     const def = winDefById[id];
     if (def && def.kind === "folder") {
       jumpCounterRef.current += 1;
@@ -2997,6 +3023,7 @@ function App({ worldData, onReboot }) {
               {w.kind === "properties" && <PropertiesWindow worldData={worldData} />}
               {w.kind === "display-settings" && <DisplaySettingsWindow iconSize={iconSize} setIconSize={setIconSize} textSize={textSize} setTextSize={setTextSize} />}
               {w.kind === "recycle-bin" && <RecycleBinWindow trashedItems={trashedItems} onRestore={restoreIcon} onRestoreAll={restoreAllIcons} />}
+              {w.kind === "app-drawer" && <AppDrawerWindow apps={hiddenApps} onOpen={handleIconOpen} />}
             </Window>
           );
         })}
