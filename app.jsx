@@ -1062,9 +1062,17 @@ function AppDrawerWindow({ apps, onOpen }) {
 }
 
 /* ================= Games (unchanged mechanics, real cluster tags) ================= */
-function RouteRacerGame({ onComplete }) {
+function RouteRacerGame({ onComplete, accent }) {
   const GRID = 8, MOVE_LIMIT = 34, CELL = 42;
+  const a = accent || CRT_GREEN;
   const canvasRef = useRef(null);
+  const [pops, setPops] = useState([]);
+  const popIdRef = useRef(0);
+  function pushPop(text, color) {
+    const id = popIdRef.current++;
+    setPops((p) => p.concat([{ id, text, color }]));
+    setTimeout(() => setPops((p) => p.filter((pp) => pp.id !== id)), 700);
+  }
   function makeState() {
     const blocked = [], jobs = []; const taken = new Set(["0,0"]);
     while (blocked.length < 9) { const bx = rand(GRID), by = rand(GRID), k = bx + "," + by; if (!taken.has(k)) { blocked.push({ x: bx, y: by }); taken.add(k); } }
@@ -1080,7 +1088,9 @@ function RouteRacerGame({ onComplete }) {
       const nx = prev.pos.x + dx, ny = prev.pos.y + dy;
       if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) return prev;
       if (prev.blocked.some((b) => b.x === nx && b.y === ny)) return prev;
+      const hitJob = prev.jobs.some((j) => j.x === nx && j.y === ny && !j.visited);
       const jobs = prev.jobs.map((j) => (j.x === nx && j.y === ny ? Object.assign({}, j, { visited: true }) : j));
+      if (hitJob) { pushPop("+1 JOB", a); playArcadeSuccessSound(); }
       const movesN = prev.moves + 1;
       const allVisited = jobs.every((j) => j.visited);
       let done = prev.done, message = prev.message;
@@ -1098,9 +1108,18 @@ function RouteRacerGame({ onComplete }) {
     for (let i = 0; i <= GRID; i++) { ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, GRID * CELL); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, i * CELL); ctx.lineTo(GRID * CELL, i * CELL); ctx.stroke(); }
     ctx.fillStyle = "rgba(20,10,2,0.9)"; ctx.strokeStyle = "rgba(255,176,0,0.4)";
     state.blocked.forEach((b) => { ctx.fillRect(b.x * CELL + 3, b.y * CELL + 3, CELL - 6, CELL - 6); ctx.strokeRect(b.x * CELL + 3, b.y * CELL + 3, CELL - 6, CELL - 6); });
-    state.jobs.forEach((j) => { ctx.fillStyle = j.visited ? "rgba(255,176,0,0.3)" : CRT_GREEN; ctx.beginPath(); ctx.arc(j.x * CELL + CELL / 2, j.y * CELL + CELL / 2, 10, 0, Math.PI * 2); ctx.fill(); });
+    state.jobs.forEach((j) => {
+      ctx.save();
+      ctx.fillStyle = j.visited ? "rgba(255,176,0,0.3)" : a;
+      if (!j.visited) { ctx.shadowColor = a; ctx.shadowBlur = 10; }
+      ctx.beginPath(); ctx.arc(j.x * CELL + CELL / 2, j.y * CELL + CELL / 2, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    });
+    ctx.save();
+    ctx.shadowColor = "#fff3e0"; ctx.shadowBlur = 8;
     ctx.fillStyle = "#fff3e0"; ctx.beginPath(); ctx.arc(state.pos.x * CELL + CELL / 2, state.pos.y * CELL + CELL / 2, 8, 0, Math.PI * 2); ctx.fill();
-  }, [state]);
+    ctx.restore();
+  }, [state, a]);
   useEffect(() => {
     function onKey(e) { const map = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" }; if (map[e.key]) { e.preventDefault(); move(map[e.key]); } }
     const el = canvasRef.current; if (el) el.addEventListener("keydown", onKey);
@@ -1109,18 +1128,19 @@ function RouteRacerGame({ onComplete }) {
   }, []);
   const remaining = state.jobs.filter((j) => !j.visited).length;
   return (
-    <div className="flex flex-col items-center gap-3 p-4">
+    <div className="flex flex-col items-center gap-3 p-4 relative">
+      <FloatPops pops={pops} />
       <div className="w-full flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
         <span>Moves: {state.moves} / {MOVE_LIMIT}</span><span>Jobs remaining: {remaining}</span>
-        <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => setState(makeState())}>Restart</button>
+        <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => setState(makeState())}>Restart</button>
       </div>
-      <canvas ref={canvasRef} tabIndex={0} width={GRID * CELL} height={GRID * CELL} className="outline-none" style={{ boxShadow: bevel("in-deep", CRT_GREEN) }} aria-label="Route Racer grid. Use arrow keys to move."></canvas>
+      <canvas ref={canvasRef} tabIndex={0} width={GRID * CELL} height={GRID * CELL} className="outline-none" style={{ boxShadow: bevel("in-deep", a) }} aria-label="Route Racer grid. Use arrow keys to move."></canvas>
       <div className="flex flex-col items-center gap-1">
-        <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => move("up")} aria-label="Move up">&#8593;</button>
+        <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => move("up")} aria-label="Move up">&#8593;</button>
         <div className="flex gap-1">
-          <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => move("left")} aria-label="Move left">&#8592;</button>
-          <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => move("down")} aria-label="Move down">&#8595;</button>
-          <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => move("right")} aria-label="Move right">&#8594;</button>
+          <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => move("left")} aria-label="Move left">&#8592;</button>
+          <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => move("down")} aria-label="Move down">&#8595;</button>
+          <button type="button" className="w-8 h-8" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => move("right")} aria-label="Move right">&#8594;</button>
         </div>
       </div>
       <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{state.message}</p>
@@ -1128,7 +1148,8 @@ function RouteRacerGame({ onComplete }) {
   );
 }
 
-function DispatchTetrisGame({ onComplete }) {
+function DispatchTetrisGame({ onComplete, accent }) {
+  const a = accent || CRT_GREEN;
   const TECHS = ["Tech A", "Tech B", "Tech C"], SLOTS = 8, TIME_LIMIT = 45;
   function makeQueue() { const q = []; for (let i = 0; i < 8; i++) q.push(Math.random() < 0.5 ? 1 : 2); return q; }
   function canPlace(sched, t, s, dur) { if (s + dur > SLOTS) return false; for (let i = s; i < s + dur; i++) if (sched[t][i]) return false; return true; }
@@ -1141,6 +1162,13 @@ function DispatchTetrisGame({ onComplete }) {
   const [done, setDone] = useState(false);
   const [message, setMessage] = useState("Click a slot to place the current job into that many consecutive open hours.");
   const [invalidCell, setInvalidCell] = useState(null);
+  const [pops, setPops] = useState([]);
+  const popIdRef = useRef(0);
+  function pushPop(text, color) {
+    const id = popIdRef.current++;
+    setPops((p) => p.concat([{ id, text, color }]));
+    setTimeout(() => setPops((p) => p.filter((pp) => pp.id !== id)), 700);
+  }
   useEffect(() => { if (done) return; const timer = setInterval(() => setTimeLeft((t) => (t <= 1 ? 0 : t - 1)), 1000); return () => clearInterval(timer); }, [done]);
   useEffect(() => { if (!done && timeLeft === 0) { setDone(true); setMessage("Time's up. " + score + " job(s) scheduled, " + misses + " skipped."); } /* eslint-disable-next-line */ }, [timeLeft]);
   function place(t, s) {
@@ -1150,6 +1178,7 @@ function DispatchTetrisGame({ onComplete }) {
     const next = schedule.map((row) => row.slice());
     for (let i = s; i < s + dur; i++) next[t][i] = true;
     setSchedule(next);
+    pushPop("+SCHEDULED", a); playArcadeSuccessSound();
     const newScore = score + 1; setScore(newScore);
     let nq = queue.slice(1); let nMisses = misses;
     if (nq.length > 0 && !anyValidSlot(next, nq[0])) { nMisses += 1; nq = nq.slice(1); }
@@ -1158,14 +1187,15 @@ function DispatchTetrisGame({ onComplete }) {
   }
   function restart() { setSchedule(TECHS.map(() => new Array(SLOTS).fill(false))); setQueue(makeQueue()); setScore(0); setMisses(0); setTimeLeft(TIME_LIMIT); setDone(false); setMessage("Click a slot to place the current job into that many consecutive open hours."); }
   return (
-    <div className="p-4 flex flex-col gap-3">
+    <div className="p-4 flex flex-col gap-3 relative">
+      <FloatPops pops={pops} />
       <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
         <span>Placed: {score}</span><span>Skipped: {misses}</span><span>Time: {timeLeft}s</span>
-        <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={restart}>Restart</button>
+        <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={restart}>Restart</button>
       </div>
       <div>
         <div className="text-[11px] font-medium mb-1.5 font-mono" style={{ color: "#c98a2e" }}>Next job:</div>
-        {queue.length > 0 && <div className="w-11 h-[34px] flex items-center justify-center font-mono font-semibold text-[13px]" style={{ background: CRT_GREEN, color: "#040200", boxShadow: bevel("out-shallow", CRT_GREEN) }}>{queue[0]}h</div>}
+        {queue.length > 0 && <div className="w-11 h-[34px] flex items-center justify-center font-mono font-semibold text-[13px]" style={{ background: a, color: "#040200", boxShadow: bevel("out-shallow", a) }}>{queue[0]}h</div>}
       </div>
       <div className="flex flex-col gap-1.5">
         {TECHS.map((name, t) => (
@@ -1176,10 +1206,10 @@ function DispatchTetrisGame({ onComplete }) {
                 const isInvalid = invalidCell === t + "," + s;
                 return (
                   <button key={s} type="button" aria-label={name + " hour " + (s + 1) + (schedule[t][s] ? " (booked)" : " (open)")} onClick={() => place(t, s)}
-                    className="w-8 h-8"
+                    className="w-8 h-8 transition-colors"
                     style={{
-                      background: isInvalid ? CRT_GREEN : schedule[t][s] ? "rgba(255,176,0,.25)" : "rgba(20,10,0,.4)",
-                      boxShadow: bevel(isInvalid || schedule[t][s] ? "in-shallow" : "out-shallow", CRT_GREEN),
+                      background: isInvalid ? "#fff3e0" : schedule[t][s] ? a + "40" : "rgba(20,10,0,.4)",
+                      boxShadow: bevel(isInvalid || schedule[t][s] ? "in-shallow" : "out-shallow", a),
                     }}></button>
                 );
               })}
@@ -1199,7 +1229,8 @@ const WIRING_PAIRS = [
   { trigger: "Inventory below threshold", action: "Create reorder task" },
 ];
 
-function WorkflowWiringGame({ onComplete }) {
+function WorkflowWiringGame({ onComplete, accent }) {
+  const a2 = accent || CRT_GREEN;
   const pairsRef = useRef(WIRING_PAIRS);
   const actionsRef = useRef(shuffle(WIRING_PAIRS.map((p) => p.action)));
   const [selected, setSelected] = useState(null);
@@ -1207,27 +1238,37 @@ function WorkflowWiringGame({ onComplete }) {
   const [mistakes, setMistakes] = useState(0);
   const [message, setMessage] = useState("Click a trigger, then click its matching action.");
   const [flashWrong, setFlashWrong] = useState(null);
+  const [pops, setPops] = useState([]);
+  const popIdRef = useRef(0);
+  function pushPop(text, color) {
+    const id = popIdRef.current++;
+    setPops((p) => p.concat([{ id, text, color }]));
+    setTimeout(() => setPops((p) => p.filter((pp) => pp.id !== id)), 700);
+  }
   function pickTrigger(t) { if (wired[t]) return; setSelected(t); setMessage("Now pick the action it should fire."); }
-  function pickAction(a) {
+  function pickAction(action) {
     if (!selected) return;
     const correct = pairsRef.current.find((p) => p.trigger === selected).action;
-    if (a === correct) {
-      const nextWired = Object.assign({}, wired, { [selected]: a });
+    if (action === correct) {
+      const nextWired = Object.assign({}, wired, { [selected]: action });
       setWired(nextWired); setSelected(null);
-      setMessage("Wired: “" + selected + "” → “" + a + "”.");
+      setMessage("Wired: “" + selected + "” → “" + action + "”.");
+      pushPop("+WIRED", a2); playArcadeSuccessSound();
       if (Object.keys(nextWired).length === pairsRef.current.length) {
         const summary = pairsRef.current.length + " trigger(s) wired, " + mistakes + " mistake(s).";
         setMessage("All triggers wired. " + summary);
         setTimeout(() => onComplete("Workflow Wiring complete", summary), 0);
       }
     } else {
-      setMistakes((m) => m + 1); setFlashWrong(a); setTimeout(() => setFlashWrong(null), 220);
+      setMistakes((m) => m + 1); setFlashWrong(action); setTimeout(() => setFlashWrong(null), 220);
+      playArcadeFailSound();
       setMessage("Not a match — try again.");
     }
   }
   const allWired = Object.keys(wired).length === pairsRef.current.length;
   return (
-    <div className="p-4 flex flex-col gap-3">
+    <div className="p-4 flex flex-col gap-3 relative">
+      <FloatPops pops={pops} />
       <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
         <span>Wired: {Object.keys(wired).length} / {pairsRef.current.length}</span><span>Mistakes: {mistakes}</span>
       </div>
@@ -1238,23 +1279,23 @@ function WorkflowWiringGame({ onComplete }) {
             <button key={p.trigger} type="button" disabled={!!wired[p.trigger]} onClick={() => pickTrigger(p.trigger)}
               className="text-left text-[12px] font-semibold px-2.5 py-2 disabled:opacity-40"
               style={{
-                background: "rgba(20,10,0,.4)", color: "#ffd98a",
-                boxShadow: bevel(wired[p.trigger] || selected === p.trigger ? "in-shallow" : "out-shallow", CRT_GREEN),
+                background: wired[p.trigger] ? a2 + "40" : "rgba(20,10,0,.4)", color: "#ffd98a",
+                boxShadow: bevel(wired[p.trigger] || selected === p.trigger ? "in-shallow" : "out-shallow", a2),
               }}>{p.trigger}</button>
           ))}
         </div>
         <div className="flex flex-col gap-2">
           <div className="text-[11px] font-semibold uppercase tracking-wide font-mono" style={{ color: "#c98a2e" }}>Actions</div>
-          {actionsRef.current.map((a) => {
-            const isWiredAction = Object.values(wired).includes(a);
-            const isWrong = flashWrong === a;
+          {actionsRef.current.map((act) => {
+            const isWiredAction = Object.values(wired).includes(act);
+            const isWrong = flashWrong === act;
             return (
-              <button key={a} type="button" disabled={isWiredAction} onClick={() => pickAction(a)}
-                className="text-left text-[12px] font-semibold px-2.5 py-2 disabled:opacity-40"
+              <button key={act} type="button" disabled={isWiredAction} onClick={() => pickAction(act)}
+                className="text-left text-[12px] font-semibold px-2.5 py-2 disabled:opacity-40 transition-colors"
                 style={{
-                  background: isWrong ? CRT_GREEN : "rgba(20,10,0,.4)", color: isWrong ? "#040200" : "#ffd98a",
-                  boxShadow: bevel(isWiredAction || isWrong ? "in-shallow" : "out-shallow", CRT_GREEN),
-                }}>{a}</button>
+                  background: isWrong ? "#fff3e0" : isWiredAction ? a2 + "40" : "rgba(20,10,0,.4)", color: isWrong ? "#040200" : "#ffd98a",
+                  boxShadow: bevel(isWiredAction || isWrong ? "in-shallow" : "out-shallow", a2),
+                }}>{act}</button>
             );
           })}
         </div>
@@ -1265,7 +1306,8 @@ function WorkflowWiringGame({ onComplete }) {
   );
 }
 
-function SystemStabilizerGame({ onComplete }) {
+function SystemStabilizerGame({ onComplete, accent }) {
+  const a = accent || CRT_GREEN;
   const METERS = ["CPU", "Memory", "API Load"];
   const DURATION = 30;
   const [values, setValues] = useState({ CPU: 50, Memory: 50, "API Load": 50 });
@@ -1292,20 +1334,20 @@ function SystemStabilizerGame({ onComplete }) {
     <div className="p-4 flex flex-col gap-4">
       <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
         <span>Time: {timeLeft}s</span>
-        <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={restart}>Restart</button>
+        <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={restart}>Restart</button>
       </div>
       <div className="flex flex-col gap-3">
         {METERS.map((m) => {
           const v = values[m]; const safe = v > 25 && v < 75;
-          const meterColor = safe ? CRT_GREEN : "#fff3e0";
+          const meterColor = safe ? a : "#fff3e0";
           return (
             <div key={m} className="flex items-center gap-3">
               <div className="w-20 text-[11px] font-medium font-mono" style={{ color: "#c98a2e" }}>{m}</div>
-              <div className="flex-1 h-3 overflow-hidden" style={{ boxShadow: bevel("in-shallow", CRT_GREEN), background: "rgba(20,10,0,.5)" }}>
+              <div className="flex-1 h-3 overflow-hidden" style={{ boxShadow: bevel("in-shallow", a), background: "rgba(20,10,0,.5)" }}>
                 <div className="h-full transition-[width]" style={{ width: v + "%", background: meterColor, opacity: safe ? 0.8 : 1, animation: safe ? "none" : "crt-icon-glow 1s ease-in-out infinite" }}></div>
               </div>
-              <button type="button" className="w-7 h-7" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => nudge(m, -1)}>&#8722;</button>
-              <button type="button" className="w-7 h-7" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => nudge(m, 1)}>+</button>
+              <button type="button" className="w-7 h-7" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => nudge(m, -1)}>&#8722;</button>
+              <button type="button" className="w-7 h-7" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => nudge(m, 1)}>+</button>
             </div>
           );
         })}
@@ -1378,10 +1420,10 @@ function pipeIsSolved(grid, rows, cols) {
   }
   return visited.has((rows - 1) + "," + (cols - 1));
 }
-function PipeCell({ cell, size, solved }) {
+function PipeCell({ cell, size, solved, accent }) {
   if (cell.type === "empty") return <div style={{ width: size, height: size }} />;
   const mid = size / 2, thick = size * 0.24;
-  const color = solved ? "#ffe3b3" : (cell.type === "source" || cell.type === "dest") ? CONCEPT : CRT_GREEN;
+  const color = solved ? "#ffe3b3" : (cell.type === "source" || cell.type === "dest") ? CONCEPT : (accent || CRT_GREEN);
   return (
     <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} style={{ filter: solved ? "drop-shadow(0 0 4px #ffe3b3)" : "none" }}>
       {cell.connections.N && <rect x={mid - thick / 2} y={0} width={thick} height={mid + thick / 2} fill={color} />}
@@ -1393,7 +1435,8 @@ function PipeCell({ cell, size, solved }) {
     </svg>
   );
 }
-function PipeFlowGame({ onComplete }) {
+function PipeFlowGame({ onComplete, accent }) {
+  const a = accent || CRT_GREEN;
   const [levelIndex, setLevelIndex] = useState(0);
   const [grid, setGrid] = useState(() => generatePipeLevel(PIPE_LEVELS[0].rows, PIPE_LEVELS[0].cols));
   const [solved, setSolved] = useState(false);
@@ -1443,7 +1486,7 @@ function PipeFlowGame({ onComplete }) {
       setScore((s) => s + gained);
       setSolved(true);
       setClearedLevels((n) => n + 1);
-      pushPop("+" + gained, CRT_GREEN);
+      pushPop("+" + gained, a);
       playArcadeSuccessSound();
       const isLast = levelIndex + 1 >= PIPE_LEVELS.length;
       setMessage(isLast ? "All pipelines connected!" : "Connected! Next pipeline loading…");
@@ -1478,13 +1521,13 @@ function PipeFlowGame({ onComplete }) {
         {grid.map((row, r) => row.map((cell, c) => (
           <button key={r + "-" + c} type="button" onClick={() => clickCell(r, c)} disabled={cell.fixed || cell.type !== "pipe"}
             className="flex items-center justify-center p-0"
-            style={{ width: cellSize, height: cellSize, background: cell.type === "empty" ? "transparent" : "rgba(20,10,0,.4)", boxShadow: cell.type === "empty" ? "none" : bevel("out-shallow", CRT_GREEN), cursor: cell.fixed || cell.type !== "pipe" ? "default" : "pointer" }}>
-            <PipeCell cell={cell} size={cellSize - 8} solved={solved} />
+            style={{ width: cellSize, height: cellSize, background: cell.type === "empty" ? "transparent" : "rgba(20,10,0,.4)", boxShadow: cell.type === "empty" ? "none" : bevel("out-shallow", a), cursor: cell.fixed || cell.type !== "pipe" ? "default" : "pointer" }}>
+            <PipeCell cell={cell} size={cellSize - 8} solved={solved} accent={a} />
           </button>
         )))}
       </div>
       <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{message}</p>
-      {done && <button type="button" className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#040200", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={restart}>Restart</button>}
+      {done && <button type="button" className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: a, color: "#040200", boxShadow: bevel("out-shallow", a) }} onClick={restart}>Restart</button>}
     </div>
   );
 }
@@ -1498,7 +1541,8 @@ function PipeFlowGame({ onComplete }) {
    same value SystemStabilizerGame already uses for unsafe meters), never red — this
    arcade stays strictly mono-CRT-accent, no red/yellow/blue state colors anywhere. */
 const PLATE_NAMES = ["API Gateway", "Auth Service", "Job Queue", "Notifications", "Billing Sync", "Search Index"];
-function SpinningPlatesGame({ onComplete }) {
+function SpinningPlatesGame({ onComplete, accent }) {
+  const a = accent || CRT_GREEN;
   const [plates, setPlates] = useState(() => PLATE_NAMES.slice(0, 3).map((n) => ({ name: n, value: 100 })));
   const [elapsed, setElapsed] = useState(0);
   const [saves, setSaves] = useState(0);
@@ -1553,7 +1597,7 @@ function SpinningPlatesGame({ onComplete }) {
       const wasCritical = p.value <= 25;
       const next = prev.slice();
       next[i] = { name: p.name, value: clamp(p.value + 32, 0, 100) };
-      if (wasCritical) { setSaves((s) => s + 1); pushPop("+15 SAVED!", CRT_GREEN); playArcadeSuccessSound(); }
+      if (wasCritical) { setSaves((s) => s + 1); pushPop("+15 SAVED!", a); playArcadeSuccessSound(); }
       return next;
     });
   }
@@ -1576,17 +1620,17 @@ function SpinningPlatesGame({ onComplete }) {
           return (
             <button key={p.name} type="button" onClick={() => ping(i)} disabled={done}
               className="flex items-center gap-3 px-2 py-1.5 text-left disabled:opacity-60"
-              style={{ background: "rgba(20,10,0,.4)", boxShadow: bevel("out-shallow", CRT_GREEN) }}>
+              style={{ background: "rgba(20,10,0,.4)", boxShadow: bevel("out-shallow", a) }}>
               <span className="w-24 text-[11px] font-medium font-mono truncate" style={{ color: "#c98a2e" }}>{p.name}</span>
-              <span className="flex-1 h-3 overflow-hidden" style={{ boxShadow: bevel("in-shallow", CRT_GREEN), background: "rgba(20,10,0,.5)" }}>
-                <span className="block h-full transition-[width]" style={{ width: p.value + "%", background: critical ? "#fff3e0" : CRT_GREEN, animation: critical ? "arcade-pulse-critical .5s ease-in-out infinite" : "none" }}></span>
+              <span className="flex-1 h-3 overflow-hidden" style={{ boxShadow: bevel("in-shallow", a), background: "rgba(20,10,0,.5)" }}>
+                <span className="block h-full transition-[width]" style={{ width: p.value + "%", background: critical ? "#fff3e0" : a, animation: critical ? "arcade-pulse-critical .5s ease-in-out infinite" : "none" }}></span>
               </span>
             </button>
           );
         })}
       </div>
       <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{message}</p>
-      {done && <button type="button" className="self-center px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#040200", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={restart}>Restart</button>}
+      {done && <button type="button" className="self-center px-3 py-1.5 text-[13px] font-semibold" style={{ background: a, color: "#040200", boxShadow: bevel("out-shallow", a) }} onClick={restart}>Restart</button>}
     </div>
   );
 }
@@ -1611,7 +1655,8 @@ const FRAUD_TRANSACTIONS = [
   { amount: "$2,150.00", location: "Overseas", velocity: "Normal", note: "Luxury goods, first purchase on account", isFraud: true },
 ];
 const FRAUD_ROUND_TIME = 5;
-function FraudOrFineGame({ onComplete }) {
+function FraudOrFineGame({ onComplete, accent }) {
+  const a = accent || CRT_GREEN;
   const orderRef = useRef(shuffle(FRAUD_TRANSACTIONS));
   const [index, setIndex] = useState(0);
   const [lives, setLives] = useState(3);
@@ -1662,7 +1707,7 @@ function FraudOrFineGame({ onComplete }) {
       setScore((s) => s + gained);
       setCombo(nextCombo);
       setFlash("good");
-      pushPop("+" + gained + (nextCombo > 1 ? "  x" + Math.min(nextCombo, 5) : ""), CRT_GREEN);
+      pushPop("+" + gained + (nextCombo > 1 ? "  x" + Math.min(nextCombo, 5) : ""), a);
       playArcadeSuccessSound();
       setMessage(txn.isFraud ? "Correctly flagged." : "Correctly approved.");
     } else {
@@ -1696,7 +1741,7 @@ function FraudOrFineGame({ onComplete }) {
         <span>Score: {score}</span><span>Lives: {"♥".repeat(Math.max(lives, 0))}</span><span>Best: {best}</span>
       </div>
       {!done && txn && (
-        <div className="p-3.5 flex flex-col gap-1.5" style={{ background: flash === "good" ? "rgba(255,176,0,.18)" : flash === "bad" ? "rgba(255,243,224,.32)" : "rgba(20,10,0,.4)", boxShadow: bevel("out-shallow", CRT_GREEN), transition: "background .2s" }}>
+        <div className="p-3.5 flex flex-col gap-1.5" style={{ background: flash === "good" ? "rgba(255,176,0,.18)" : flash === "bad" ? "rgba(255,243,224,.32)" : "rgba(20,10,0,.4)", boxShadow: bevel("out-shallow", a), transition: "background .2s" }}>
           <div className="flex items-center justify-between">
             <span className="text-[16px] font-bold font-mono" style={{ color: "#ffd98a" }}>{txn.amount}</span>
             <span className="text-[11px] font-semibold font-mono" style={{ color: "#c98a2e" }}>{timeLeft}s</span>
@@ -1706,11 +1751,11 @@ function FraudOrFineGame({ onComplete }) {
         </div>
       )}
       <div className="flex gap-2">
-        <button type="button" disabled={done || locked} className="flex-1 px-3 py-2 text-[13px] font-semibold disabled:opacity-40" style={{ background: CRT_GREEN, color: "#040200", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={() => decide("approve")}>Approve</button>
-        <button type="button" disabled={done || locked} className="flex-1 px-3 py-2 text-[13px] font-semibold disabled:opacity-40" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }} onClick={() => decide("flag")}>Flag</button>
+        <button type="button" disabled={done || locked} className="flex-1 px-3 py-2 text-[13px] font-semibold disabled:opacity-40" style={{ background: a, color: "#040200", boxShadow: bevel("out-shallow", a) }} onClick={() => decide("approve")}>Approve</button>
+        <button type="button" disabled={done || locked} className="flex-1 px-3 py-2 text-[13px] font-semibold disabled:opacity-40" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => decide("flag")}>Flag</button>
       </div>
       <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{message}</p>
-      {done && <button type="button" className="self-center px-3 py-1.5 text-[13px] font-semibold" style={{ background: CRT_GREEN, color: "#040200", boxShadow: bevel("out-shallow", CRT_GREEN) }} onClick={restart}>Restart</button>}
+      {done && <button type="button" className="self-center px-3 py-1.5 text-[13px] font-semibold" style={{ background: a, color: "#040200", boxShadow: bevel("out-shallow", a) }} onClick={restart}>Restart</button>}
     </div>
   );
 }
@@ -1730,6 +1775,18 @@ const GAMES = [
    folder window itself still exists in allWindows/worldData and stays reachable via
    the terminal (`cd <cluster>` then `ls`), this only removes the desktop icon. */
 const ARCADE_CLUSTER_IDS = new Set(GAMES.filter((g) => g.cluster).map((g) => g.cluster));
+
+/* Direct follow-up after "the games look lifeless" — every game rendered in the exact
+   same amber-on-black palette regardless of which one you're playing (confirmed by
+   actually playing one before touching anything: Route Racer was a flat grid, no color
+   identity beyond the OS chrome). Each game now gets the SAME per-cabinet accent color
+   already shown on its arcade-menu tile (single source of truth here, so the menu tile
+   and the actual gameplay screen can never drift apart), threaded through as an `accent`
+   prop and used in place of the old hardcoded CRT_GREEN for buttons/meters/borders.
+   Explicit danger/wrong-answer feedback still always reads as the near-white pulse
+   (#fff3e0) used elsewhere in the OS, never red - only the neutral/positive UI got a
+   color identity, the "no red errors" convention is untouched. */
+const GAME_ACCENT_BY_ID = Object.fromEntries(GAMES.map((g, i) => [g.id, "hsl(" + (i * 51) % 360 + ", 70%, 62%)"]));
 
 /* Per Sameer, direct request: the desktop itself should only ever show these four
    icons, no matter how many real clusters worldData has. Everything else (every other
@@ -1759,9 +1816,8 @@ function ArcadeWindow() {
               Summary buttons again (the single-click-whole-tile + tiny corner "i" from
               the previous pass was reduced back down per direct request). */}
           <div className="flex-1 min-h-0 overflow-y-auto grid gap-3 content-start" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))" }}>
-            {GAMES.map((g, i) => {
-              const hue = (i * 51) % 360;
-              const accent = "hsl(" + hue + ", 70%, 62%)";
+            {GAMES.map((g) => {
+              const accent = GAME_ACCENT_BY_ID[g.id];
               return (
                 <div key={g.id} className="flex flex-col items-center gap-2 p-3 text-center"
                   style={{ background: "rgba(20,10,0,.45)", boxShadow: bevel("out-shallow", accent) }}>
@@ -1782,15 +1838,15 @@ function ArcadeWindow() {
       )}
       {view !== "menu" && (
         <div className="mt-3">
-          <button type="button" className="text-[12px] font-semibold hover:brightness-125" style={{ color: "#c98a2e" }} onClick={backToMenu}>&larr; Back to Arcade</button>
+          <button type="button" className="text-[12px] font-semibold hover:brightness-125" style={{ color: GAME_ACCENT_BY_ID[view] || "#c98a2e" }} onClick={backToMenu}>&larr; Back to Arcade</button>
           <div className="mt-1">
-            {view === "route-racer" && <RouteRacerGame onComplete={onGameComplete} />}
-            {view === "dispatch-tetris" && <DispatchTetrisGame onComplete={onGameComplete} />}
-            {view === "workflow-wiring" && <WorkflowWiringGame onComplete={onGameComplete} />}
-            {view === "system-stabilizer" && <SystemStabilizerGame onComplete={onGameComplete} />}
-            {view === "pipe-flow" && <PipeFlowGame onComplete={onGameComplete} />}
-            {view === "spinning-plates" && <SpinningPlatesGame onComplete={onGameComplete} />}
-            {view === "fraud-or-fine" && <FraudOrFineGame onComplete={onGameComplete} />}
+            {view === "route-racer" && <RouteRacerGame onComplete={onGameComplete} accent={GAME_ACCENT_BY_ID[view]} />}
+            {view === "dispatch-tetris" && <DispatchTetrisGame onComplete={onGameComplete} accent={GAME_ACCENT_BY_ID[view]} />}
+            {view === "workflow-wiring" && <WorkflowWiringGame onComplete={onGameComplete} accent={GAME_ACCENT_BY_ID[view]} />}
+            {view === "system-stabilizer" && <SystemStabilizerGame onComplete={onGameComplete} accent={GAME_ACCENT_BY_ID[view]} />}
+            {view === "pipe-flow" && <PipeFlowGame onComplete={onGameComplete} accent={GAME_ACCENT_BY_ID[view]} />}
+            {view === "spinning-plates" && <SpinningPlatesGame onComplete={onGameComplete} accent={GAME_ACCENT_BY_ID[view]} />}
+            {view === "fraud-or-fine" && <FraudOrFineGame onComplete={onGameComplete} accent={GAME_ACCENT_BY_ID[view]} />}
             {view === "summary" && <p className="text-[14px] font-medium leading-relaxed p-4" style={{ color: "#ffd98a" }}>{summaryText}</p>}
           </div>
         </div>
