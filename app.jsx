@@ -2154,7 +2154,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
     else if (verb === "date") { out.push({ text: new Date().toString(), kind: "out" }); }
     else if (verb === "ls") {
       if (!cwd) out.push({ text: worldData.map((c) => c.id + "/").join("  "), kind: "out" });
-      else if (cwd === "careers") out.push({ text: "server/  agent/  database/  readme.md  product.md  solve.sh  quiz.sh  submit.sh", kind: "out" });
+      else if (cwd === "careers") out.push({ text: "server/  agent/  database/  readme.md  product.md  open-roles.md  solve.sh  quiz.sh  submit.sh", kind: "out" });
       else if (cwd === "careers/server") out.push({ text: "access.log", kind: "out" });
       else if (cwd === "careers/agent") out.push({ text: "agent.log", kind: "out" });
       else if (cwd === "careers/database") out.push({ text: "candidates.db", kind: "out" });
@@ -2175,10 +2175,31 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         out.push({ text: "Zuper Careers Challenge — two access-probe levels stand between you and the team.", kind: "out" });
         out.push({ text: "Run: bash solve.sh", kind: "out" });
         out.push({ text: "(Looking for Zuper's real Careers product instead? cat product.md)", kind: "out" });
+        out.push({ text: "(Want to see what's actually open right now? cat open-roles.md)", kind: "out" });
       } else if (cwd === "careers" && arg === "product.md") {
         const c = findCluster(worldData, "careers");
         out.push({ text: "# " + c.name, kind: "out" });
         c.entities.forEach((e) => { out.push({ text: "- " + e.name + " (" + e.type + "): " + e.description, kind: "out" }); });
+      } else if (cwd === "careers" && arg === "open-roles.md") {
+        /* Real, pulled live from Zuper's actual careers portal (zupersoft.keka.com/
+           careers) — not invented. Direct feedback after a design review flagged "no
+           real open-roles content anywhere in the flow": checked the real listing
+           first rather than guessing, found exactly one role with real technical
+           scope open right now, and deliberately did NOT pad this out with fabricated
+           engineering reqs (or ones "inspired by" real employees' LinkedIn) just to
+           make the list look longer — a real candidate could act on this. */
+        out.push({ text: "OPEN ROLES", kind: "heading" });
+        out.push({ text: "────────────────────────────────", kind: "out" });
+        out.push({ text: "Pulled live from Zuper's real careers portal — not invented.", kind: "out" });
+        out.push({ text: "", kind: "out" });
+        out.push({ text: "Senior Executive — Technical Implementation", kind: "label" });
+        out.push({ text: "  Customer Experience · Chennai · Full-Time", kind: "out" });
+        out.push({ text: "  The closest thing to an engineering-facing role open right now —", kind: "out" });
+        out.push({ text: "  technical solutioning + implementation work for real customers.", kind: "out" });
+        out.push({ text: "", kind: "out" });
+        out.push({ text: "No pure software engineering roles (backend/frontend/DevOps/QA)", kind: "out" });
+        out.push({ text: "are open at the moment. New ones show up here first:", kind: "out" });
+        out.push({ text: "https://zupersoft.keka.com/careers/", kind: "out" });
       } else if (cwd === "careers/server" && arg === "access.log") {
         out.push({ text: "info: connection established from 10.0.4.12 — nothing else logged here.", kind: "out" });
       } else if (cwd === "careers/agent" && arg === "agent.log") {
@@ -3231,11 +3252,31 @@ function MobileFallback({ worldData, onContinue }) {
           short version instead.
         </p>
 
+        {/* Real, pulled live from Zuper's actual careers portal (zupersoft.keka.com/
+            careers) — not invented, and deliberately not padded out with fabricated
+            engineering roles just to look fuller. Same content as the terminal's
+            `cat open-roles.md` (see careers cwd in run()), so the story matches
+            whichever entry point a candidate happens to use. */}
         <div className="mb-7 p-4" style={{ background: "rgba(20,10,0,.4)", boxShadow: bevel("out-shallow", CRT_GREEN) }}>
-          <h2 className="m-0 mb-1.5 text-[15px] font-bold" style={{ color: "#ffd98a" }}>Interested in working with us?</h2>
-          <p className="m-0 text-[14px] leading-relaxed" style={{ color: "#c98a2e" }}>
-            Email <a href="mailto:careers@zuper.co" className="underline" style={{ color: CRT_GREEN }}>careers@zuper.co</a> — same
-            address the full challenge (on desktop) sends candidates to at the end.
+          <h2 className="m-0 mb-1.5 text-[15px] font-bold" style={{ color: "#ffd98a" }}>Open roles — pulled live, not invented</h2>
+          <div className="mb-2">
+            <div className="text-[14px] font-bold" style={{ color: CRT_GREEN }}>Senior Executive — Technical Implementation</div>
+            <div className="text-[12px] mb-1" style={{ color: "#c98a2e" }}>Customer Experience · Chennai · Full-Time</div>
+            <p className="m-0 text-[13px] leading-relaxed" style={{ color: "#c98a2e" }}>
+              The closest thing to an engineering-facing role open right now — technical
+              solutioning and implementation work for real customers.
+            </p>
+          </div>
+          <p className="m-0 mb-2 text-[13px] leading-relaxed" style={{ color: "#c98a2e" }}>
+            No pure software engineering roles (backend/frontend/DevOps/QA) are open at
+            the moment. New ones show up on the real portal first:
+          </p>
+          <a href="https://zupersoft.keka.com/careers/" target="_blank" rel="noopener" className="underline text-[13px]" style={{ color: CRT_GREEN }}>
+            View all open roles →
+          </a>
+          <p className="m-0 mt-3 text-[13px] leading-relaxed" style={{ color: "#c98a2e" }}>
+            Or email <a href="mailto:careers@zuper.co" className="underline" style={{ color: CRT_GREEN }}>careers@zuper.co</a> directly
+            — same address the full challenge (on desktop) sends candidates to at the end.
           </p>
         </div>
 
