@@ -2007,6 +2007,24 @@ function careersCleanupLevel2(timerRef) {
   document.documentElement.style.removeProperty("--zuper-key-index");
 }
 
+/* GET reads the live "N people have solved this" count without incrementing (used for
+   the pre-solve teaser in cat readme.md); POST atomically increments and returns the
+   new count (called exactly once, the instant both levels are actually cleared — see
+   careersSubmitAnswer). Real, shared state across every visitor via api/careers-solve-
+   count.js (Upstash Redis) — nothing else in this app has ever needed that before,
+   careers progress itself is per-browser localStorage. Fails silent: returns null
+   (never throws) if the counter isn't configured yet or the request fails, so callers
+   just skip showing the line rather than showing an error over a nice-to-have stat. */
+async function careersFetchSolveCount(method) {
+  try {
+    const r = await fetch("/api/careers-solve-count", { method: method || "GET" });
+    const data = await r.json().catch(() => null);
+    return data && typeof data.count === "number" ? data.count : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 const CAREERS_QUIZ = [
   { q: "What does 'FSM' stand for in the roofing industry?", choices: ["Finite State Machine", "Full Stack Monitoring", "Field Service Management", "Fast Service Middleware"], correct: 2 },
   { q: "Which protocol does gRPC use under the hood?", choices: ["HTTP/1.1", "WebSocket", "HTTP/2", "MQTT"], correct: 2 },
@@ -2203,6 +2221,16 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
           "Reach out to careers@zuper.co with a screenshot of this terminal —",
           "or run: bash submit.sh <your email> and we'll reach out to you directly.",
         ]);
+        /* Increments exactly once, right here — the instant both levels are actually
+           cleared, not on every mount/refresh (careersProgress.step already guards
+           re-entry into this branch, since a second correct submit would just hit the
+           step===4 "already completed" path in run() instead). Fails silent to null if
+           the counter isn't configured — the line just never appears rather than
+           showing an error over what's a nice-to-have stat, not the real conversion
+           step (bash submit.sh <email> above still is). */
+        careersFetchSolveCount("POST").then((count) => {
+          if (count != null) pushLines([{ text: "You're solver #" + count + ".", kind: "out" }]);
+        });
       } else {
         playArcadeFailSound();
         setLines((prev) => prev.concat([{ text: "That answer didn't check out. Double-check it and try again.", kind: "err" }]));
@@ -2339,6 +2367,18 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         out.push({ text: "(Looking for Zuper's real Careers product instead? cat product.md)", kind: "out" });
         out.push({ text: "(Want to see what's actually open right now? cat open-roles.md)", kind: "out" });
         out.push({ text: "(Not on a laptop, or DevTools isn't your thing? cat challenge-preview.md)", kind: "out" });
+        setLines((prev) => prev.concat(out));
+        /* Social-proof teaser, only for someone who hasn't solved it yet — a solver
+           gets their own "You're solver #N" line elsewhere (careersSubmitAnswer), this
+           would be a non sequitur after the fact. Silently skipped if the counter isn't
+           configured or reads 0 (nothing solved yet — "0 people have cracked this,
+           join them" reads as a red flag, not an invitation). */
+        if (careersProgress.step === 1) {
+          careersFetchSolveCount("GET").then((count) => {
+            if (count != null && count > 0) pushLines([{ text: count + " engineer" + (count === 1 ? " has" : "s have") + " already cracked this — join them.", kind: "out" }]);
+          });
+        }
+        return;
       } else if (cwd === "careers" && arg === "challenge-preview.md") {
         /* The puzzle is entirely DevTools-gated with zero alternative — a design review
            flagged this as a real accessibility/inclusivity gap (nothing for a screen-
