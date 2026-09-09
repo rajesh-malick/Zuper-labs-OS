@@ -2183,6 +2183,25 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [lines, input]);
   useEffect(() => () => { if (careersTimerRef.current) clearInterval(careersTimerRef.current); }, []);
 
+  /* careersProgress.step persists to localStorage, but the actual live puzzle state for
+     Level 2 (window.__zuper_keys, the rotating timer, sessionStorage.__zuper_idx) only
+     ever lives in careersAnswerRef/careersTimerRef — plain refs, reset to null on every
+     mount. If Terminal ever unmounts while step === 2 (closing/reopening the window, a
+     stray resize flipping to the mobile-fallback view and back, a hard refresh), a
+     returning candidate was left stuck: progress said "Level 2 is live" but there was no
+     actual state to solve. This regenerates a fresh Level 2 puzzle whenever step === 2
+     but the in-memory answer is missing, so re-entry always has something real to solve
+     instead of silently stranding whoever hits it. */
+  function ensureLevel2Live() {
+    if (careersAnswerRef.current && careersAnswerRef.current.level === 2) return false;
+    careersStartLevel2(careersAnswerRef, careersTimerRef);
+    return true;
+  }
+  useEffect(() => {
+    if (careersProgress.step === 2) ensureLevel2Live();
+    // eslint-disable-next-line
+  }, []);
+
   /* Accepts either plain strings (default to kind "out", same as before) or
      {text, kind} objects — lets careers* helpers tag their own headings/labels/choices
      without every caller having to build the full object shape by hand. */
@@ -2192,7 +2211,15 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
     const trimmed = (answer || "").trim();
     const expected = careersAnswerRef.current;
     if (!trimmed) { setLines((prev) => prev.concat([{ text: "usage: bash submit.sh <answer>", kind: "err" }])); return; }
-    if (!expected) { setLines((prev) => prev.concat([{ text: "Nothing to submit yet — run: bash solve.sh", kind: "err" }])); return; }
+    if (!expected) {
+      if (careersProgress.step === 2) {
+        ensureLevel2Live();
+        setLines((prev) => prev.concat([{ text: "Level 2's live state had reset — fresh keys are up now. Check DevTools again, then: bash submit.sh <key>", kind: "out" }]));
+        return;
+      }
+      setLines((prev) => prev.concat([{ text: "Nothing to submit yet — run: bash solve.sh", kind: "err" }]));
+      return;
+    }
 
     if (expected.level === 1) {
       const dash = trimmed.lastIndexOf("-");
@@ -2448,6 +2475,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
           careersSolveLevel1(careersAnswerRef).then((introLines) => pushLines(introLines));
           return;
         } else if (careersProgress.step === 2) {
+          ensureLevel2Live();
           out.push({ text: "Level 2 is already active — solve it via DevTools, then: bash submit.sh <key>", kind: "out" });
         } else {
           out.push({ text: "Both levels already solved.", kind: "out" });
