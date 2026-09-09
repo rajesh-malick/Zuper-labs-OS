@@ -24,6 +24,16 @@ const CONCEPT = "#7ecbff";
    much larger rename across every component that imports it. */
 const CRT_GREEN = "#ffb000";
 
+/* Product review finding: no analytics anywhere meant zero visibility into the funnel
+   above the solve-count stat — who opens careers, who reaches Level 1/2, where people
+   drop off. window.va is Vercel Web Analytics' queueing shim (see index.html) — a
+   genuine no-op array-push until the script itself loads, so this is safe to call from
+   anywhere immediately on mount with no readiness check, and stays a total no-op if
+   Web Analytics is ever disabled for the project. */
+function trackEvent(name, data) {
+  try { if (window.va) window.va("event", { name: name, data: data || {} }); } catch (e) {}
+}
+
 function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
 function hexToRgb(hex) {
   hex = hex.replace("#", "");
@@ -538,12 +548,24 @@ function ContextMenu({ x, y, items, onClose, theme }) {
   );
 }
 
-function Toast({ text, onDone }) {
-  useEffect(() => { const t = setTimeout(onDone, 1800); return () => clearTimeout(t); }, [onDone]);
+/* action (optional): {label, onClick} — used by trashIcon so a candidate who fat-
+   fingers "Move to Trash" on a high-value icon (design review flagged the Careers
+   icon specifically — one right-click + one click, no confirmation, gone from both
+   the desktop and Start menu instantly) gets an immediate, low-friction undo right
+   in the toast instead of having to hunt it down in the Recycle Bin. Stays up longer
+   than a plain toast (4.5s vs 1.8s) since it's carrying an action, not just a status. */
+function Toast({ text, action, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, action ? 4500 : 1800); return () => clearTimeout(t); }, [onDone, action]);
   return (
-    <div className="fixed bottom-[64px] left-1/2 z-[1950] px-4 py-2 rounded-lg font-mono font-semibold text-[12px] text-white/92"
+    <div className="fixed bottom-[64px] left-1/2 z-[1950] px-4 py-2 rounded-lg font-mono font-semibold text-[12px] text-white/92 flex items-center gap-3"
       style={{ transform: "translateX(-50%)", background: "rgba(20,21,28,.95)", border: "1px solid rgba(255,255,255,.15)", boxShadow: "0 10px 30px rgba(0,0,0,.5)" }}>
-      {text}
+      <span>{text}</span>
+      {action && (
+        <button type="button" onClick={() => { action.onClick(); onDone(); }}
+          className="underline decoration-dotted underline-offset-2 hover:text-white flex-shrink-0" style={{ color: "#ffd98a" }}>
+          {action.label}
+        </button>
+      )}
     </div>
   );
 }
@@ -1519,7 +1541,12 @@ function PipeFlowGame({ onComplete, accent }) {
   }
 
   const rows = grid.length, cols = grid[0].length;
-  const cellSize = cols >= 5 ? 44 : 52;
+  /* Precise clicking on individual pipe segments is the entire mechanic here, but the
+     old fixed 44/52px cells left the grid the smallest thing in an otherwise mostly-empty
+     ~800x500 window (design review finding). Scale to the available space instead — this
+     still shrinks gracefully as PIPE_LEVELS grows to 4x5, but every level now fills most
+     of the window rather than sitting tiny in a corner of it. */
+  const cellSize = Math.max(56, Math.min(96, Math.floor(460 / cols)));
   return (
     <div className="p-4 flex flex-col gap-3 items-center relative">
       <FloatPops pops={pops} />
@@ -1852,7 +1879,7 @@ function ArcadeWindow({ worldData }) {
                     <MinimalIcon shapeKey={g.cluster || "zuper-arcade"} size={22} color={accent} />
                   </span>
                   <h3 className="text-[13px] font-bold m-0 font-mono leading-tight" style={{ color: "#ffd98a" }}>{g.title}</h3>
-                  <p className="text-[11px] font-medium leading-snug m-0 line-clamp-2 flex-1" style={{ color: "#c98a2e" }}>{g.desc}</p>
+                  <p className="text-[11px] font-medium leading-snug m-0 flex-1" style={{ color: "#c98a2e" }}>{g.desc}</p>
                   <div className="flex flex-col gap-1.5 w-full mt-1">
                     <button type="button" className="px-2 py-1 text-[11px] font-semibold" style={{ background: accent, color: "#040200", boxShadow: bevel("out-shallow", accent) }} onClick={() => { setAchievement(null); setView(g.id); }}>Play</button>
                     <button type="button" className="px-2 py-1 text-[11px] font-semibold" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", accent), color: "#ffd98a" }} onClick={() => skip(g)}>Skip &amp; Read Summary</button>
@@ -2175,6 +2202,11 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   const [cwd, setCwd] = useState(null); // null = /desktop root, "cluster", or "cluster/subdir" (careers only)
   const [careersProgress, setCareersProgress] = useState(loadCareersProgress);
   const [quizState, setQuizState] = useState(null); // null | {index, score}
+  /* Product review finding: the quiz score was computed and then just discarded —
+     quizState resets to null the instant the quiz ends, so nothing carried it forward
+     to the actual lead (careersSubmitEmail below). This survives that reset so a real
+     signal of candidate strength reaches Raghav/Sameer instead of vanishing. */
+  const [lastQuizScore, setLastQuizScore] = useState(null);
   const [shareCardOpen, setShareCardOpen] = useState(false);
   const careersAnswerRef = useRef(null);
   const careersTimerRef = useRef(null);
@@ -2229,6 +2261,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         playArcadeSuccessSound();
         const level2Lines = careersStartLevel2(careersAnswerRef, careersTimerRef);
         const next = { step: 2 }; setCareersProgress(next); saveCareersProgress(next);
+        trackEvent("Careers Level 1 solved");
         pushLines([{ text: "LEVEL 1 COMPLETE", kind: "heading" }, "────────────────────────────────", ""].concat(level2Lines));
       } else {
         playArcadeFailSound();
@@ -2240,13 +2273,18 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         careersCleanupLevel2(careersTimerRef);
         careersAnswerRef.current = null;
         const next = { step: 3 }; setCareersProgress(next); saveCareersProgress(next);
+        trackEvent("Careers Level 2 solved");
         pushLines([
           { text: "CHALLENGE COMPLETE", kind: "heading" }, "────────────────────────────────", "Both levels verified.", "",
           "You decoded base64 keys, read CSS custom properties, filtered network",
           "responses, stopped a rotating timer, and found a value in sessionStorage.",
           "That's the kind of engineer we're looking for.", "",
           "Reach out to careers@zuper.co with a screenshot of this terminal —",
-          "or run: bash submit.sh <your email> and we'll reach out to you directly.",
+          "or run: bash submit.sh <your email> [linkedin or portfolio url] and",
+          "we'll reach out to you directly. The link is optional but helps.",
+          "",
+          "Not ready to apply yet? bash notify.sh <your email> — we'll just",
+          "keep you posted about roles, no pressure.",
         ]);
         /* Increments exactly once, right here — the instant both levels are actually
            cleared, not on every mount/refresh (careersProgress.step already guards
@@ -2265,19 +2303,50 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
     }
   }
 
-  async function careersSubmitEmail(email) {
-    const trimmed = (email || "").trim();
-    if (!trimmed) { setLines((prev) => prev.concat([{ text: "usage: bash submit.sh <your email>", kind: "err" }])); return; }
+  async function careersSubmitEmail(raw) {
+    const trimmed = (raw || "").trim();
+    if (!trimmed) { setLines((prev) => prev.concat([{ text: "usage: bash submit.sh <your email> [linkedin or portfolio url]", kind: "err" }])); return; }
+    /* Product review finding: the notification email used to carry a bare address —
+       a cold lead needing manual chase-down, not pipeline-ready data. First
+       whitespace-separated token is still the email (what EMAIL_RE on the server
+       validates); anything after it is an optional link — LinkedIn, portfolio,
+       resume URL, whatever the candidate wants to hand over — plus the quiz score
+       if they took bash quiz.sh this session. Both stay genuinely optional: this
+       still works exactly as bash submit.sh <email> alone always did. */
+    const spaceAt = trimmed.indexOf(" ");
+    const email = spaceAt === -1 ? trimmed : trimmed.slice(0, spaceAt);
+    const link = spaceAt === -1 ? "" : trimmed.slice(spaceAt + 1).trim();
     try {
       const r = await fetch("/api/careers-submit", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: trimmed }),
+        body: JSON.stringify({ email: email, link: link, quizScore: lastQuizScore }),
       });
       const data = await r.json().catch(() => null);
       if (r.ok && data && data.ok) {
         const next = { step: 4 };
         setCareersProgress(next); saveCareersProgress(next);
+        trackEvent("Careers email submitted");
         pushLines(["🎉 Thanks — we've got your details and someone from the team will be in touch."]);
+      } else {
+        setLines((prev) => prev.concat([{ text: r.status === 503 ? "Email notifications aren't configured yet — check back soon." : "Couldn't send that — double-check your email and try again.", kind: "err" }]));
+      }
+    } catch (err) {
+      setLines((prev) => prev.concat([{ text: "Couldn't reach the server. Check your connection and try again.", kind: "err" }]));
+    }
+  }
+
+  async function careersSubmitNotify(email) {
+    const trimmed = (email || "").trim();
+    if (!trimmed) { setLines((prev) => prev.concat([{ text: "usage: bash notify.sh <your email>", kind: "err" }])); return; }
+    try {
+      const r = await fetch("/api/careers-submit", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: trimmed, soft: true }),
+      });
+      const data = await r.json().catch(() => null);
+      if (r.ok && data && data.ok) {
+        trackEvent("Careers notify-me submitted");
+        pushLines(["👍 Got it — we'll keep you posted about roles. No pressure to finish the challenge."]);
       } else {
         setLines((prev) => prev.concat([{ text: r.status === 503 ? "Email notifications aren't configured yet — check back soon." : "Couldn't send that — double-check your email and try again.", kind: "err" }]));
       }
@@ -2293,6 +2362,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
     if (!jumpTo || !findCluster(worldData, jumpTo.cwd)) return;
     const introLines = [{ text: "guest@zuper-web-os:/desktop$ cd " + jumpTo.cwd, kind: "cmd" }];
     if (jumpTo.cwd === "careers") {
+      trackEvent("Careers opened");
       /* Clicking the careers icon lands you here already cd'd in — but nothing said
          what to do next (a design review found this the single biggest discoverability
          gap: no in-product hint that this is where the actual hiring challenge lives).
@@ -2348,6 +2418,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         out.push({ text: "Score: " + nextScore + "/" + CAREERS_QUIZ.length, kind: "out" });
         out.push({ text: nextScore >= 3 ? "Great job! You know your stuff." : "Keep learning — technical depth is trainable.", kind: "out" });
         out.push({ text: "", kind: "out" });
+        setLastQuizScore(nextScore);
         /* Used to just end there — a design review flagged the quiz as a pure dead end
            (score shown, nothing captured, no path onward). It's not the real hiring
            signal (solve.sh is), so this points forward instead of just stopping. */
@@ -2371,7 +2442,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
     else if (verb === "date") { out.push({ text: new Date().toString(), kind: "out" }); }
     else if (verb === "ls") {
       if (!cwd) out.push({ text: worldData.map((c) => c.id + "/").join("  "), kind: "out" });
-      else if (cwd === "careers") out.push({ text: "server/  agent/  database/  readme.md  product.md  open-roles.md  challenge-preview.md  solve.sh  quiz.sh  submit.sh", kind: "out" });
+      else if (cwd === "careers") out.push({ text: "server/  agent/  database/  readme.md  product.md  open-roles.md  challenge-preview.md  solve.sh  quiz.sh  submit.sh  notify.sh", kind: "out" });
       else if (cwd === "careers/server") out.push({ text: "access.log", kind: "out" });
       else if (cwd === "careers/agent") out.push({ text: "agent.log", kind: "out" });
       else if (cwd === "careers/database") out.push({ text: "candidates.db", kind: "out" });
@@ -2385,7 +2456,10 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         else setCwd(null);
       } else if (cwd === "careers" && (arg === "server" || arg === "agent" || arg === "database")) {
         setCwd("careers/" + arg);
-      } else if (findCluster(worldData, arg)) setCwd(arg);
+      } else if (findCluster(worldData, arg)) {
+        if (arg === "careers") trackEvent("Careers opened");
+        setCwd(arg);
+      }
       else out.push({ text: "cd: no such directory: " + arg, kind: "err" });
     } else if (verb === "cat") {
       if (cwd === "careers" && arg === "readme.md") {
@@ -2488,6 +2562,23 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         out.push({ text: "", kind: "out" });
         careersQuizQuestionLines(0).forEach((t) => out.push(t));
         setQuizState({ index: 0, score: 0 });
+      } else if (cwd === "careers" && scriptName === "notify.sh") {
+        /* Product review finding: a solver who finishes CHALLENGE COMPLETE and doesn't
+           submit.sh their email is gone for good — nothing captures the "not ready to
+           apply right now, but keep me in mind" segment. Deliberately separate from
+           submit.sh (which reads as "I'm applying now") and works at ANY step, not just
+           after finishing — someone who's just read readme.md without wanting to do
+           the DevTools puzzle can still opt in. Lower commitment, same underlying
+           endpoint (careers-submit.js), a different email subject line so Raghav/
+           Sameer can tell a soft signal apart from an active application. */
+        if (!scriptArgs) {
+          out.push({ text: "usage: bash notify.sh <your email>", kind: "err" });
+        } else {
+          out.push({ text: "Sending…", kind: "out" });
+          setLines((prev) => prev.concat(out));
+          careersSubmitNotify(scriptArgs);
+          return;
+        }
       } else if (cwd === "careers" && scriptName === "submit.sh") {
         if (careersProgress.step === 4) {
           out.push({ text: "You've already completed this challenge. Thanks!", kind: "out" });
@@ -2620,6 +2711,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
    once the iframe collapses back down after the modal closes. */
 function openGhostSignup(e) {
   e.preventDefault();
+  trackEvent("Subscribe opened");
   const href = e.currentTarget.getAttribute("href");
   const target = e.currentTarget.getAttribute("target");
   let attempts = 0;
@@ -2823,7 +2915,7 @@ function answerFromWorldData(worldData, question) {
    known limitation in the README. */
 const LLM_SESSION_LIMIT = 30;
 
-function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
+function AssistantWidget({ theme, dockTarget, stageRef, worldData, hasFocusedWindow }) {
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem("zuper-os-assistant-pos")); } catch (e) { return null; }
   });
@@ -2956,12 +3048,18 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
     setNudge(null);
   }
   useEffect(() => {
-    if (open || thinking) { setNudge(null); return; }
+    /* Design review finding: the nudge bubble used to fire even while a Terminal/
+       Recycle Bin/Arcade window had focus — an unsolicited interruption competing with
+       whatever the visitor was actually doing. hasFocusedWindow (from App's
+       focusedWinState) suppresses it whenever any window is focused; it only surfaces
+       on the bare desktop, which is also the one place it's actually asking for
+       attention on nothing else. */
+    if (open || thinking || hasFocusedWindow) { setNudge(null); return; }
     const id = setTimeout(() => {
       setNudge(nudgeSuggestions[Math.floor(Math.random() * nudgeSuggestions.length)]);
     }, 90000);
     return () => clearTimeout(id);
-  }, [open, thinking, nudgeTick, nudgeSuggestions]);
+  }, [open, thinking, hasFocusedWindow, nudgeTick, nudgeSuggestions]);
   useEffect(() => {
     if (!nudge) return;
     const id = setTimeout(() => { setNudge(null); setNudgeTick((k) => k + 1); }, 9000);
@@ -3310,7 +3408,7 @@ function App({ worldData, onReboot }) {
   const theme = THEME;
   const [toast, setToast] = useState(null);
   const [hiddenIconIds, setHiddenIconIds] = useState(() => new Set());
-  function showToast(text) { setToast(text); }
+  function showToast(text, action) { setToast({ text: text, action: action || null }); }
 
   const [iconSize, setIconSize] = useState(() => { try { return localStorage.getItem("zuper-os-icon-size") || "lg"; } catch (e) { return "lg"; } });
   const [textSize, setTextSize] = useState(() => { try { return localStorage.getItem("zuper-os-text-size") || "md"; } catch (e) { return "md"; } });
@@ -3335,7 +3433,7 @@ function App({ worldData, onReboot }) {
   function renameIcon(id, name) { setIconNames((prev) => Object.assign({}, prev, { [id]: name })); showToast("Renamed to “" + name + "”"); }
   function trashIcon(id) {
     setHiddenIconIds((prev) => { const next = new Set(prev); next.add(id); return next; });
-    showToast("Moved to Trash — see it in Start menu → Recycle Bin");
+    showToast("Moved to Trash — see it in Start menu → Recycle Bin", { label: "Undo", onClick: () => restoreIcon(id) });
   }
   function restoreIcon(id) {
     setHiddenIconIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
@@ -3485,9 +3583,9 @@ function App({ worldData, onReboot }) {
           ]} />
         )}
 
-        <AssistantWidget theme={theme} dockTarget={assistantDockTarget} stageRef={stageRef} worldData={worldData} />
+        <AssistantWidget theme={theme} dockTarget={assistantDockTarget} stageRef={stageRef} worldData={worldData} hasFocusedWindow={!!focusedWinState} />
 
-        {toast && <Toast text={toast} onDone={() => setToast(null)} />}
+        {toast && <Toast text={toast.text} action={toast.action} onDone={() => setToast(null)} />}
         {launcher && (
           <QuickLauncher title={launcher.title} placeholder={launcher.placeholder} apps={desktopIcons}
             onOpen={wm.open} onClose={() => setLauncher(null)} />
