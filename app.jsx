@@ -2022,6 +2022,130 @@ function careersQuizQuestionLines(index) {
 }
 
 /* ================= Terminal.app (VFS-aware) ================= */
+/* Shareable "ACCESS GRANTED" result card — a design review's pitch: a generated retro
+   badge is dramatically more postable than a screenshot of terminal scrollback. 1200x630
+   (standard social-card size). Draws to an offscreen canvas so it can be downloaded or
+   handed to the Web Share API as a real PNG file, not just a screenshot of the DOM.
+   Waits on document.fonts.load() for the two real site fonts (VT323 for the big glow
+   headline, matching the desktop watermark's own use of it; JetBrains Mono for
+   everything else, matching .font-terminal) — both load async via a Google Fonts
+   <link>, and drawing before they're ready would silently fall back to a generic serif
+   for the headline. */
+async function drawAccessGrantedCard(canvas) {
+  const W = 1200, H = 630;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  try {
+    await Promise.all([
+      document.fonts.load("900 130px VT323"),
+      document.fonts.load("700 26px 'JetBrains Mono'"),
+      document.fonts.load("600 24px 'JetBrains Mono'"),
+    ]);
+  } catch (e) { /* fonts API unsupported or load failed — draw with whatever's available */ }
+
+  ctx.fillStyle = "#0d0700";
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = "rgba(255,176,0,0.05)";
+  ctx.lineWidth = 1;
+  for (let y = 0; y < H; y += 3) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  ctx.fillStyle = "#ff4919";
+  ctx.font = "900 560px VT323";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("Z", W / 2, H / 2 + 20);
+  ctx.restore();
+
+  ctx.strokeStyle = "#ff4919";
+  ctx.lineWidth = 6;
+  const pad = 36, bw = 26;
+  ctx.beginPath();
+  ctx.moveTo(pad + bw, pad); ctx.lineTo(pad, pad); ctx.lineTo(pad, H - pad); ctx.lineTo(pad + bw, H - pad);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(W - pad - bw, pad); ctx.lineTo(W - pad, pad); ctx.lineTo(W - pad, H - pad); ctx.lineTo(W - pad - bw, H - pad);
+  ctx.stroke();
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "700 26px 'JetBrains Mono', monospace";
+  ctx.fillText("Z U P E R   L A B S   —   C A R E E R S   C H A L L E N G E", W / 2, 130);
+
+  ctx.shadowColor = "#ffb000";
+  ctx.shadowBlur = 40;
+  ctx.fillStyle = "#ffb000";
+  ctx.font = "900 130px VT323";
+  ctx.fillText("ACCESS GRANTED", W / 2, 300);
+  ctx.shadowBlur = 0;
+
+  ctx.textAlign = "left";
+  ctx.font = "600 24px 'JetBrains Mono', monospace";
+  ctx.fillStyle = "#c98a2e";
+  const items = [
+    "✓ Decoded base64 keys",
+    "✓ Read a CSS custom property",
+    "✓ Filtered live network responses",
+    "✓ Stopped a rotating timer, read sessionStorage",
+  ];
+  let ty = 370;
+  items.forEach((t) => { ctx.fillText(t, W / 2 - 270, ty); ty += 42; });
+
+  ctx.textAlign = "center";
+  ctx.font = "500 20px 'JetBrains Mono', monospace";
+  ctx.fillStyle = "#ffd98a";
+  ctx.fillText("zuper-labs-os.vercel.app  ·  cd careers && bash solve.sh", W / 2, H - 55);
+}
+
+function ShareCardOverlay({ onClose }) {
+  const canvasRef = useRef(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    if (canvasRef.current) drawAccessGrantedCard(canvasRef.current).then(() => { if (!cancelled) setReady(true); });
+    return () => { cancelled = true; };
+  }, []);
+  function download() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const a = document.createElement("a");
+    a.download = "zuper-access-granted.png";
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+  }
+  function share() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const file = new File([blob], "zuper-access-granted.png", { type: "image/png" });
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: "ACCESS GRANTED", text: "I just cracked Zuper Labs' careers challenge." }); } catch (e) { /* user cancelled the share sheet — not an error */ }
+      } else {
+        download();
+      }
+    }, "image/png");
+  }
+  return (
+    <div className="absolute inset-0 z-[900] flex flex-col items-center justify-center gap-4 p-4" style={{ background: "rgba(4,2,0,.92)" }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center gap-4 max-w-full">
+        <canvas ref={canvasRef} style={{ width: "min(85vw, 600px)", height: "auto", boxShadow: bevel("out-deep", CRT_GREEN) }} />
+        {!ready && <p className="text-[12px] font-mono" style={{ color: "#c98a2e" }}>Generating…</p>}
+        <div className="flex gap-2 flex-wrap justify-center">
+          <button type="button" disabled={!ready} onClick={download} className="px-3 py-1.5 text-[13px] font-semibold disabled:opacity-40" style={{ background: CRT_GREEN, color: "#040200", boxShadow: bevel("out-shallow", CRT_GREEN) }}>Download PNG</button>
+          {typeof navigator !== "undefined" && navigator.share && (
+            <button type="button" disabled={!ready} onClick={share} className="px-3 py-1.5 text-[13px] font-semibold disabled:opacity-40" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }}>Share…</button>
+          )}
+          <button type="button" onClick={onClose} className="px-3 py-1.5 text-[13px] font-semibold" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   /* Direct feedback from a product-design review: nothing anywhere told a first-time
      visitor the careers challenge exists, let alone that it lives in here — discovery
@@ -2033,6 +2157,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   const [cwd, setCwd] = useState(null); // null = /desktop root, "cluster", or "cluster/subdir" (careers only)
   const [careersProgress, setCareersProgress] = useState(loadCareersProgress);
   const [quizState, setQuizState] = useState(null); // null | {index, score}
+  const [shareCardOpen, setShareCardOpen] = useState(false);
   const careersAnswerRef = useRef(null);
   const careersTimerRef = useRef(null);
   const logRef = useRef(null);
@@ -2333,7 +2458,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
      you type, and it scrolls up into history once you hit Enter. Clicking anywhere in
      the terminal refocuses the (invisible, borderless) input, same as a real one. */
   return (
-    <div className="p-3 flex flex-col h-full font-terminal font-medium text-[14px]" onClick={() => inputRef.current && inputRef.current.focus()}
+    <div className="relative p-3 flex flex-col h-full font-terminal font-medium text-[14px]" onClick={() => inputRef.current && inputRef.current.focus()}
       /* Direct request: the careers challenge needs real DevTools access (Network tab,
          Elements, sessionStorage), and this OS's own right-click menu (see the
          desktop's onContextMenu below) was silently eating every right-click before the
@@ -2364,6 +2489,18 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
               : undefined
             }>{l.text}</div>
         ))}
+        {/* Design review's pitch: a generated retro badge is dramatically more postable
+           than a screenshot of terminal scrollback. Sits right above the live prompt so
+           it stays visible near wherever the transcript has scrolled to, once both
+           levels are actually solved (step >= 3) — not shown for the quiz alone, that's
+           a different, lower-stakes win. */}
+        {careersProgress.step >= 3 && (
+          <button type="button" onClick={(e) => { e.stopPropagation(); setShareCardOpen(true); }}
+            className="px-2.5 py-1 text-[12px] font-semibold my-1"
+            style={{ background: "rgba(255,176,0,.12)", boxShadow: bevel("out-shallow", CRT_GREEN), color: "#ffd98a" }}>
+            🎉 Generate a shareable "ACCESS GRANTED" card
+          </button>
+        )}
         <div className="flex items-center gap-2">
           <span style={{ color: CRT_GREEN }}>{promptString()}</span>
           {/* A real <input> still does all the work (value/onChange/focus/keydown) but
@@ -2383,6 +2520,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
           </div>
         </div>
       </div>
+      {shareCardOpen && <ShareCardOverlay onClose={() => setShareCardOpen(false)} />}
     </div>
   );
 }
