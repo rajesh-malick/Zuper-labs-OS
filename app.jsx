@@ -1804,12 +1804,30 @@ const GAME_ACCENT_BY_ID = Object.fromEntries(GAMES.map((g, i) => [g.id, "hsl(" +
    App below) — this only trims what's visible directly on the desktop surface. */
 const DESKTOP_VISIBLE_IDS = new Set(["careers", "blog", "zuper-arcade", "more-apps"]);
 
-function ArcadeWindow() {
+/* Every game's "Skip & Read Summary" used to show the exact same canned disclaimer
+   sentence regardless of which game or which real cluster it's paired with — a design
+   review pointed out worldData (the real cluster/entity/flow data) is already loaded
+   right here and going unused for this. Pulls real entity/flow counts and a couple of
+   real entity names into the takeaway instead, so it actually teaches something rather
+   than repeating "this is an analogy." Falls back to the game's own static summary for
+   Dispatch Tetris (cluster: null — it isn't paired to one real cluster) or if worldData
+   hasn't loaded yet. */
+function gameSummaryText(game, worldData) {
+  const c = game.cluster && worldData ? findCluster(worldData, game.cluster) : null;
+  if (!c) return game.summary;
+  const names = c.entities.slice(0, 3).map((e) => e.name).join(", ");
+  const flowPart = c.flows.length ? " and " + c.flows.length + " real data flow" + (c.flows.length === 1 ? "" : "s") : "";
+  return "Concept takeaway: " + c.name + " is a real Zuper cluster — " + c.entities.length + " real "
+    + (c.entities.length === 1 ? "entity" : "entities") + (names ? " (" + names + ")" : "") + flowPart
+    + ". This mini-game is an illustrative analogy, not a simulation of the real system.";
+}
+
+function ArcadeWindow({ worldData }) {
   const [view, setView] = useState("menu");
   const [achievement, setAchievement] = useState(null);
   const [summaryText, setSummaryText] = useState("");
-  function onGameComplete(title, resultText) { setAchievement({ title: title, text: resultText + " (Concept only — nothing is transmitted anywhere; any high score shown is kept in this browser's localStorage only. In a real deployment this could offer a VIP demo booking link.)" }); }
-  function skip(game) { setSummaryText(game.summary); setView("summary"); setAchievement(null); }
+  function onGameComplete(title, resultText) { setAchievement({ title: title, text: resultText + " (Concept only — nothing is transmitted anywhere; any high score shown is kept in this browser's localStorage only.)" }); }
+  function skip(game) { setSummaryText(gameSummaryText(game, worldData)); setView("summary"); setAchievement(null); }
   function backToMenu() { setView("menu"); setAchievement(null); }
   return (
     <div className="p-4 h-full flex flex-col">
@@ -2094,12 +2112,26 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   useEffect(() => {
     if (!jumpTo || !findCluster(worldData, jumpTo.cwd)) return;
     const introLines = [{ text: "guest@zuper-web-os:/desktop$ cd " + jumpTo.cwd, kind: "cmd" }];
-    /* Clicking the careers icon lands you here already cd'd in — but nothing said what
-       to do next (a product-design review found this the single biggest discoverability
-       gap: no in-product hint that this is where the actual hiring challenge lives). */
-    if (jumpTo.cwd === "careers") introLines.push({ text: "Type 'ls' to look around, or 'cat readme.md' to see what this is about.", kind: "out" });
+    if (jumpTo.cwd === "careers") {
+      /* Clicking the careers icon lands you here already cd'd in — but nothing said
+         what to do next (a design review found this the single biggest discoverability
+         gap: no in-product hint that this is where the actual hiring challenge lives).
+         A follow-up review then found every OTHER cluster (via More_Apps.exe) has the
+         exact same silent-dead-end problem — folder/product windows are one click away
+         via `ls`, but nothing says so — so that's now fixed everywhere, not just here.
+         Returning solvers also now get a status-aware welcome instead of the same
+         first-timer hint every visit, using the progress already persisted in
+         localStorage (see loadCareersProgress/careersProgress above). */
+      if (careersProgress.step === 1) introLines.push({ text: "Type 'ls' to look around, or 'cat readme.md' to see what this is about.", kind: "out" });
+      else if (careersProgress.step === 2) introLines.push({ text: "Welcome back — Level 1's already cleared. Level 2 is still live: bash submit.sh <key>", kind: "out" });
+      else if (careersProgress.step === 3) introLines.push({ text: "Welcome back — both levels are cleared. Still want to leave your email? bash submit.sh <your email>", kind: "out" });
+      else introLines.push({ text: "Welcome back — you already finished this one. bash quiz.sh is still open if you want it.", kind: "out" });
+    } else {
+      introLines.push({ text: "Type 'ls' to look around.", kind: "out" });
+    }
     setLines((prev) => prev.concat(introLines));
     setCwd(jumpTo.cwd);
+    // eslint-disable-next-line
   }, [jumpTo]);
 
   function promptPath() { return cwd ? "/desktop/" + cwd : "/desktop"; }
@@ -2135,6 +2167,11 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         out.push({ text: "────────────────────────────────", kind: "out" });
         out.push({ text: "Score: " + nextScore + "/" + CAREERS_QUIZ.length, kind: "out" });
         out.push({ text: nextScore >= 3 ? "Great job! You know your stuff." : "Keep learning — technical depth is trainable.", kind: "out" });
+        out.push({ text: "", kind: "out" });
+        /* Used to just end there — a design review flagged the quiz as a pure dead end
+           (score shown, nothing captured, no path onward). It's not the real hiring
+           signal (solve.sh is), so this points forward instead of just stopping. */
+        out.push({ text: careersProgress.step === 1 ? "Up for the real challenge? bash solve.sh" : "See what's actually open: cat open-roles.md", kind: "out" });
         setQuizState(null);
       } else {
         careersQuizQuestionLines(nextIndex).forEach((t) => out.push(t));
@@ -2154,7 +2191,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
     else if (verb === "date") { out.push({ text: new Date().toString(), kind: "out" }); }
     else if (verb === "ls") {
       if (!cwd) out.push({ text: worldData.map((c) => c.id + "/").join("  "), kind: "out" });
-      else if (cwd === "careers") out.push({ text: "server/  agent/  database/  readme.md  product.md  open-roles.md  solve.sh  quiz.sh  submit.sh", kind: "out" });
+      else if (cwd === "careers") out.push({ text: "server/  agent/  database/  readme.md  product.md  open-roles.md  challenge-preview.md  solve.sh  quiz.sh  submit.sh", kind: "out" });
       else if (cwd === "careers/server") out.push({ text: "access.log", kind: "out" });
       else if (cwd === "careers/agent") out.push({ text: "agent.log", kind: "out" });
       else if (cwd === "careers/database") out.push({ text: "candidates.db", kind: "out" });
@@ -2176,6 +2213,29 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         out.push({ text: "Run: bash solve.sh", kind: "out" });
         out.push({ text: "(Looking for Zuper's real Careers product instead? cat product.md)", kind: "out" });
         out.push({ text: "(Want to see what's actually open right now? cat open-roles.md)", kind: "out" });
+        out.push({ text: "(Not on a laptop, or DevTools isn't your thing? cat challenge-preview.md)", kind: "out" });
+      } else if (cwd === "careers" && arg === "challenge-preview.md") {
+        /* The puzzle is entirely DevTools-gated with zero alternative — a design review
+           flagged this as a real accessibility/inclusivity gap (nothing for a screen-
+           reader user, a phone visitor, or anyone unfamiliar with DevTools), not just a
+           nice-to-have. This is deliberately a plain-English description of the four
+           real mechanics, not a walkthrough — it explains what's being tested without
+           handing over any actual answers, so it doesn't dilute the engineering signal
+           for candidates who do run the real thing. */
+        out.push({ text: "CHALLENGE PREVIEW", kind: "heading" });
+        out.push({ text: "────────────────────────────────", kind: "out" });
+        out.push({ text: "No DevTools needed to read this — just what solve.sh actually tests:", kind: "out" });
+        out.push({ text: "", kind: "out" });
+        out.push({ text: "1. Reading a value straight from the Console — and recognizing it's", kind: "out" });
+        out.push({ text: "   base64, a one-line decode.", kind: "out" });
+        out.push({ text: "2. Finding a value that lives on a CSS custom property, not in any", kind: "out" });
+        out.push({ text: "   visible component — the Elements panel, not React DevTools.", kind: "out" });
+        out.push({ text: "3. Filtering real network responses for one specific field.", kind: "out" });
+        out.push({ text: "4. Watching a value that's deliberately changing on a timer, and", kind: "out" });
+        out.push({ text: "   grabbing the one part of it that's actually holding still.", kind: "out" });
+        out.push({ text: "", kind: "out" });
+        out.push({ text: "If DevTools isn't your thing right now, that's fine — it's not the", kind: "out" });
+        out.push({ text: "only way to reach us. cat open-roles.md, or email careers@zuper.co.", kind: "out" });
       } else if (cwd === "careers" && arg === "product.md") {
         const c = findCluster(worldData, "careers");
         out.push({ text: "# " + c.name, kind: "out" });
@@ -2716,14 +2776,23 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
   const current = pos || dockTarget || defaultPos();
   /* Both popups (chat panel, nudge bubble) used to always open UPWARD from the mascot
      by a fixed offset — correct only when the mascot sits near the bottom of the
-     screen (its old default position, before "dock next to whichever window is
-     focused" was added). Once docked next to a window opened near the top of the
-     viewport, opening upward pushed the whole panel off-screen above y=0 — confirmed
-     live (a real product-design review measured its computed bounding box at
-     roughly y:-304, i.e. entirely invisible, every time). Flip to open downward
-     instead whenever there isn't enough room above. */
-  const openUpward = current.y > 340;
-  const nudgeUpward = current.y > 200;
+     screen. A first fix flipped to open downward below a fixed y:340 threshold, but
+     that only checked distance from the TOP — at the mascot's default dock (bottom-
+     right of the stage) on any viewport under ~640px tall, current.y itself already
+     lands under 340, so it "correctly" flips downward... into a stage that doesn't
+     have room downward either. Confirmed live by a second review: rendered rect
+     y:483 h:302 on a 529px-tall stage, overflowing the bottom by 250px+. Compare
+     actual space in both directions against the real stage height instead of a
+     guessed constant, and pick whichever side has more room — always the least-bad
+     option even when neither fully fits. */
+  const stageRectNow = stageRef.current ? stageRef.current.getBoundingClientRect() : { height: 800 };
+  const MASCOT_H = 160;
+  const spaceAbove = current.y;
+  const spaceBelow = Math.max(0, stageRectNow.height - (current.y + MASCOT_H));
+  const openUpward = spaceAbove >= spaceBelow;
+  const nudgeUpward = openUpward;
+  const panelMaxH = Math.max(160, (openUpward ? spaceAbove : spaceBelow) - 16);
+  const nudgeMaxH = Math.max(90, (openUpward ? spaceAbove : spaceBelow) - 16);
 
   useEffect(() => {
     function onMove(e) {
@@ -2758,7 +2827,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
       onPointerDown={onPointerDown}>
       {open && (
         <div className={"absolute right-0 w-72 p-3 font-mono font-medium text-[13px] flex flex-col " + (openUpward ? "bottom-[166px]" : "top-[176px]")}
-          style={{ background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "10px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 16px 40px rgba(0,0,0,.5)" }}>
+          style={{ background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "10px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 16px 40px rgba(0,0,0,.5)", maxHeight: panelMaxH, overflowY: "auto" }}>
           <div className="flex items-start justify-end">
             <button type="button" onClick={() => setOpen(false)} className="text-[0.9rem] leading-none px-1" style={{ color: t.chromeTextDim }} aria-label="Hide assistant">×</button>
           </div>
@@ -2792,7 +2861,17 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
         </div>
       )}
       {nudge && !open && (
-        <button type="button" onClick={onNudgeClick} aria-label={"Ask: " + nudge.label}
+        <button type="button" onClick={onNudgeClick}
+          /* The wrapper div's own onPointerDown (drag-initiation) called bumpActivity(),
+             which clears `nudge` on ANY pointerdown inside the widget — including on
+             this button itself. pointerdown fires (and this component re-renders with
+             nudge=null, unmounting this very button) before the click event that would
+             have run onNudgeClick ever gets a chance to — confirmed live: every nudge
+             click just silently dismissed the bubble with zero content delivered.
+             Stopping propagation here keeps the wrapper's drag logic intact for the
+             mascot figure itself while letting this button's own click fire normally. */
+          onPointerDown={(e) => e.stopPropagation()}
+          aria-label={"Ask: " + nudge.label}
           className={"absolute right-3 w-[180px] px-3.5 py-3 text-[12px] font-bold text-left leading-snug " + (nudgeUpward ? "bottom-[128px]" : "top-[172px]")}
           style={{
             background: "#fff3e0", color: "#2a1608",
@@ -2800,6 +2879,7 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
             borderRadius: "26% 24% 28% 30% / 55% 50% 45% 50%",
             boxShadow: "0 8px 18px rgba(0,0,0,.45)",
             animation: "nudge-in .35s ease-out 1",
+            maxHeight: nudgeMaxH, overflow: "hidden",
           }}>
           {/* faint halftone-dot texture, comic-panel style */}
           <span aria-hidden="true" style={{
@@ -2825,11 +2905,17 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData }) {
           )}
         </button>
       )}
+      {/* It's draggable (see onPointerDown above) but nothing signalled that — a design
+          review found it can land right on top of a game's own controls (e.g. Route
+          Racer) with no cue that it's movable, reading as broken rather than "drag me
+          out of the way." A grab cursor + native title tooltip costs nothing and is the
+          standard browser affordance for "this moves." */}
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}
         onMouseEnter={() => { setHover(true); bumpActivity(); }} onMouseLeave={() => setHover(false)}
         className="flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
-        style={{ width: 80, height: 160, animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible" }}
-        aria-label="Zuper OS assistant — real platform data, Claude when configured">
+        style={{ width: 80, height: 160, animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible", cursor: "grab" }}
+        title="Click to ask a question — drag to move me"
+        aria-label="Zuper OS assistant — real platform data, Claude when configured. Draggable.">
         {/* The assistant's visual identity IS the real Zuper Labs logo now (direct
             request — not an SVG character wearing a badge with the logo on it). It
             sits in a small device-style bezel (echoes the OS's own dark CRT-case
@@ -3161,7 +3247,7 @@ function App({ worldData, onReboot }) {
               {w.kind === "shell-status" && <ShellStatusWindow clusterId={w.clusterId} worldData={worldData} />}
               {w.kind === "shell-connections" && <ShellConnectionsWindow clusterId={w.clusterId} worldData={worldData} />}
               {w.kind === "dashboard" && <DashboardWindow clusterId={w.clusterId} worldData={worldData} />}
-              {w.kind === "arcade" && <ArcadeWindow />}
+              {w.kind === "arcade" && <ArcadeWindow worldData={worldData} />}
               {w.kind === "terminal" && <TerminalWindow worldData={worldData} jumpTo={terminalJump} onOpenFolder={wm.open} />}
               {w.kind === "properties" && <PropertiesWindow worldData={worldData} />}
               {w.kind === "display-settings" && <DisplaySettingsWindow iconSize={iconSize} setIconSize={setIconSize} textSize={textSize} setTextSize={setTextSize} />}
