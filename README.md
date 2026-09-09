@@ -282,11 +282,12 @@ all. Per direct discussion, this build keeps that real message *and*
 layers an automated path on top of it: `bash submit.sh <your email>`
 still hits `api/careers-submit.js`, which sends a notification to
 Raghav and Sameer via [Resend](https://resend.com), gated on a
-`RESEND_API_KEY` env var. `FROM_EMAIL` currently uses Resend's shared
-sandbox sender (`onboarding@resend.dev`), which can only deliver to the
-Resend account's own verified address — enough to test the wiring end
-to end, but reaching `raghav@zuper.co` / `sameer@zuper.co` in
-production needs a real sending domain verified in the Resend dashboard.
+`RESEND_API_KEY` env var (set in Vercel, on the project itself — not
+a team-level "Shared" variable, which doesn't apply to a project
+unless separately connected to it). `zuper.co` is verified in Resend,
+so `FROM_EMAIL` sends from a real `careers@zuper.co` address rather
+than Resend's shared sandbox sender, which could only ever reach the
+Resend account's own verified email.
 
 **Progress persistence:** which step a candidate is on is saved to
 `localStorage` (`zuper-os-careers-progress`) so a refresh mid-hunt

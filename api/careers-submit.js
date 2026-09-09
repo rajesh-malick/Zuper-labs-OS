@@ -7,13 +7,11 @@
 // (https://resend.com). RESEND_API_KEY lives only in this server-side env var,
 // same pattern as ANTHROPIC_API_KEY in api/ask.js.
 //
-// FROM_EMAIL below uses Resend's shared sandbox sender, which can only deliver to
-// the Resend account's OWN verified email address — fine for initial testing, but
-// to actually reach raghav@zuper.co / sameer@zuper.co in production, a real sending
-// domain must be verified in the Resend dashboard and FROM_EMAIL updated to use it
-// (e.g. "careers@zuper.co" once zuper.co or a subdomain is verified there).
+// zuper.co is now verified in Resend, so this sends from a real address instead of
+// Resend's shared sandbox sender (which could only ever reach the Resend account's own
+// verified email, never raghav@/sameer@zuper.co).
 const RESEND_API_URL = "https://api.resend.com/emails";
-const FROM_EMAIL = "Zuper Labs OS <onboarding@resend.dev>";
+const FROM_EMAIL = "Zuper Labs OS <careers@zuper.co>";
 const NOTIFY_EMAILS = ["raghav@zuper.co", "sameer@zuper.co"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
