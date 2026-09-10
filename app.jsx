@@ -446,7 +446,11 @@ const SIZE_OPTIONS = [{ value: "sm", label: "Small" }, { value: "md", label: "Me
    was out of scope. Original amber/black CRT palette (was green/black — retinted per
    direct request), not copied from any specific trademarked terminal product. ---------- */
 const THEME = {
-  label: "Mono CRT", osBg: "#040200", winBg: "rgba(8,4,0,.94)",
+  /* winBg is fully opaque (alpha 1, was .94) — direct feedback: the background
+     watermark/logo was bleeding through open windows at 6% transparency, making text
+     harder to read (worst inside Terminal, where CRT-green text sat right on top of
+     the wordmark). Window content should never show the desktop behind it. */
+  label: "Mono CRT", osBg: "#040200", winBg: "rgba(8,4,0,1)",
   winBorder: "#cc8400", winBorderFocused: "#ffd166",
   winRadius: "0px", winShadowFocused: () => "0 0 0 1px #ffd166, 0 0 24px rgba(255,209,102,.35)",
   winShadow: "0 0 0 1px rgba(204,132,0,.5)", winBlur: "none",
@@ -482,34 +486,6 @@ function GlitchWatermark() {
         position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
         width: "min(58vw, 820px)", objectFit: "contain", opacity: 0.9,
       }} />
-    </div>
-  );
-}
-
-/* ================= Screen glitch: a CONTINUOUS moving scanline sweep + subtle
-   flicker across the whole desktop — separate from GlitchWatermark (the "ZUPER LABS"
-   text stays plain and static per direct request; this is the screen glitching, not
-   the text). First pass here was a brief/occasional band-jitter, which wasn't what
-   was actually wanted — this is the always-on sweep instead, the same motion the old
-   CRTOverlay had. Deliberately does NOT bring back CRTOverlay's dark-corners vignette
-   (radial-gradient + inset box-shadow) — that was the part actually disliked, plus
-   the reason it used to visually darken open windows before its z-index got fixed.
-   Sits at z-index 2 — just above the plain background layers
-   (ScanlineBackground/GlitchWatermark, z:0) and nowhere near open app windows (z:10+)
-   or the assistant (z:500); the old CRTOverlay sat at z:1990, "on top of everything,"
-   which is what caused that bug. Stays strictly mono-accent-color — no RGB
-   channel-split, that would break the "mono CRT only" rule the rest of the OS
-   follows. ================= */
-function ScreenGlitch({ color }) {
-  return (
-    <div className="fixed inset-0 pointer-events-none z-[2] overflow-hidden" aria-hidden="true">
-      <div className="absolute inset-x-0" style={{
-        top: 0, height: "140px", left: 0, right: 0,
-        background: "linear-gradient(180deg, transparent, " + color + "1c 45%, " + color + "0d 55%, transparent)",
-        animation: "crt-sweep 7s linear infinite",
-        mixBlendMode: "screen",
-      }} />
-      <div className="absolute inset-0" style={{ background: color, opacity: 0.02, animation: "crt-flicker 6.5s ease-in-out infinite", mixBlendMode: "overlay" }} />
     </div>
   );
 }
@@ -3118,7 +3094,7 @@ function answerFromWorldData(worldData, question) {
    known limitation in the README. */
 const LLM_SESSION_LIMIT = 30;
 
-function AssistantWidget({ theme, dockTarget, stageRef, worldData, hasFocusedWindow }) {
+function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem("zuper-os-assistant-pos")); } catch (e) { return null; }
   });
@@ -3279,8 +3255,12 @@ function AssistantWidget({ theme, dockTarget, stageRef, worldData, hasFocusedWin
     const rect = stageRef.current ? stageRef.current.getBoundingClientRect() : { width: 1400, height: 800 };
     return { x: rect.width - 110, y: rect.height - 210 };
   }
+  /* Direct feedback: the mascot used to dock near whatever window had focus, jumping
+     around the screen as you opened/switched windows — confusing, and not what was
+     asked for. Default placement is now always bottom-right (defaultPos()) until the
+     user actually drags it somewhere else, full stop — no more per-window docking. */
   const docked = !pos;
-  const current = pos || dockTarget || defaultPos();
+  const current = pos || defaultPos();
   /* Both popups (chat panel, nudge bubble) used to always open UPWARD from the mascot
      by a fixed offset — correct only when the mascot sits near the bottom of the
      screen. A first fix flipped to open downward below a fixed y:340 threshold, but
@@ -3702,18 +3682,6 @@ function App({ worldData, onReboot }) {
 
   const runningWindows = allWindows.filter((a) => wm.state[a.id] && wm.state[a.id].open);
   const focusedWinState = wm.focusedId && wm.state[wm.focusedId] && wm.state[wm.focusedId].open ? wm.state[wm.focusedId] : null;
-  /* Docks the mascot just past a focused window's top-right corner — it used to sit
-     20px ABOVE the title bar at (win.x+win.w-60), which is exactly where the minimize/
-     maximize/close button cluster lives (that cluster is the rightmost ~85px of the
-     title bar), so the mascot's own 80px-wide figure visually covered those buttons —
-     confirmed live, close (x) was unclickable on any window opened near the mascot.
-     Pushed further right (past the window's edge, not into it) and down (below the
-     title bar's ~36px height, not above it) so it no longer overlaps window chrome at
-     all, on either axis. */
-  const stageW = stageRef.current ? stageRef.current.getBoundingClientRect().width : 4000;
-  const assistantDockTarget = focusedWinState && !focusedWinState.maximized
-    ? { x: clamp(focusedWinState.x + focusedWinState.w - 20, 4, stageW - 90), y: Math.max(44, focusedWinState.y + 44) }
-    : null;
   const winDefById = useMemo(() => { const m = {}; allWindows.forEach((w) => { m[w.id] = w; }); return m; }, [allWindows]);
 
   function closeAllWindows() {
@@ -3733,7 +3701,10 @@ function App({ worldData, onReboot }) {
         onDoubleClick={(e) => { if (e.target === e.currentTarget) setCreateMenu({ x: e.clientX, y: e.clientY }); }}>
         <ScanlineBackground color={theme.accent} />
         <GlitchWatermark />
-        <ScreenGlitch color={theme.accent} />
+        {/* ScreenGlitch (the continuously sweeping scanline band) removed per direct
+           feedback: "the lines going on behind the screen is a constant distraction."
+           Static ScanlineBackground/GlitchWatermark stay — those are what gives the
+           desktop its CRT identity without anything actively moving/distracting. */}
 
         {visibleDesktopIcons.map((a, i) => (
           <DesktopIcon key={a.id} id={a.id} title={iconNames[a.id] || a.title} icon={a.icon} color={theme.accent}
@@ -3786,7 +3757,7 @@ function App({ worldData, onReboot }) {
           ]} />
         )}
 
-        <AssistantWidget theme={theme} dockTarget={assistantDockTarget} stageRef={stageRef} worldData={worldData} hasFocusedWindow={!!focusedWinState} />
+        <AssistantWidget theme={theme} stageRef={stageRef} worldData={worldData} hasFocusedWindow={!!focusedWinState} />
 
         {toast && <Toast text={toast.text} action={toast.action} onDone={() => setToast(null)} />}
         {launcher && (

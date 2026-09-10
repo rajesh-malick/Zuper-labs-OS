@@ -242,15 +242,6 @@
     @keyframes mascot-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.055); } }
     /* nudge-in: entrance for the proactive suggestion bubble near the assistant. */
     @keyframes nudge-in { 0% { opacity: 0; transform: translateY(6px) scale(.96); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
-    /* crt-flicker: used by both the CRT-robot mascot's screen-scanline ambient
-       flicker AND ScreenGlitch's whole-screen flicker layer (below). crt-sweep:
-       the continuous moving scanline band for ScreenGlitch — the old CRTOverlay had
-       this same motion; brought back on request after a brief/occasional-burst first
-       attempt turned out not to be what was wanted. Deliberately NOT bringing back
-       CRTOverlay's dark-corners vignette (radial-gradient + inset box-shadow) —
-       that part stays removed. */
-    @keyframes crt-flicker { 0%, 100% { opacity: .015; } 50% { opacity: .035; } 92% { opacity: .06; } }
-    @keyframes crt-sweep { 0% { transform: translateY(-160px); } 100% { transform: translateY(100vh); } }
     @keyframes crt-icon-glow { 0%, 100% { filter: drop-shadow(0 0 2px currentColor); } 50% { filter: drop-shadow(0 0 6px currentColor); } }
     html { cursor: default; }
     ::selection { background: rgba(255,176,0,.35); color: #fff3e0; }
