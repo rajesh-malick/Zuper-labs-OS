@@ -2201,6 +2201,83 @@ function ShareCardOverlay({ onClose }) {
   );
 }
 
+/* Direct request: bring the terminal closer to a real shell — history (Up/Down),
+   Tab completion, live syntax coloring of the verb being typed, and fish-style faded
+   auto-suggestions from history. Kept as small standalone helpers (not component
+   methods) since none of them need component state — they just describe what's
+   completable/known at a given cwd, reused by both the completion and the
+   validity-coloring logic below. */
+const TERMINAL_VERBS = ["help", "ls", "cd", "pwd", "cat", "bash", "whoami", "date", "clear"];
+function terminalCwdFiles(cwd) {
+  if (cwd === "careers") return ["readme.md", "product.md", "open-roles.md", "challenge-preview.md"];
+  if (cwd === "careers/server") return ["access.log"];
+  if (cwd === "careers/agent") return ["agent.log"];
+  if (cwd === "careers/database") return ["candidates.db"];
+  if (cwd) return ["readme.md"];
+  return [];
+}
+function terminalCwdScripts(cwd) {
+  if (cwd === "careers") return ["solve.sh", "quiz.sh", "submit.sh", "notify.sh"];
+  if (cwd && cwd.indexOf("careers") !== 0) return ["status.sh", "connections.sh"];
+  return [];
+}
+function terminalCwdDirs(cwd, worldData) {
+  if (!cwd) return worldData.map((c) => c.id);
+  if (cwd === "careers") return ["server", "agent", "database", ".."];
+  return [".."];
+}
+function terminalLongestCommonPrefix(strs) {
+  if (!strs.length) return "";
+  let prefix = strs[0];
+  for (let i = 1; i < strs.length; i++) {
+    while (strs[i].toLowerCase().indexOf(prefix.toLowerCase()) !== 0) {
+      prefix = prefix.slice(0, -1);
+      if (!prefix) return "";
+    }
+  }
+  return prefix;
+}
+/* First word not yet typed (or already a space) -> completing the verb, candidates are
+   every known command PLUS any bare file.sh/file.md shortcut reachable from here (the
+   normalization in run() already accepts those). Otherwise, candidates depend on which
+   verb was typed — only completes a single trailing arg, not further ones, since
+   nothing past the first arg (a key, an email, a link) is realistically completable. */
+function terminalCompletions(input, cwd, worldData) {
+  const spaceIdx = input.indexOf(" ");
+  if (spaceIdx === -1) return TERMINAL_VERBS.concat(terminalCwdFiles(cwd)).concat(terminalCwdScripts(cwd));
+  const verb = input.slice(0, spaceIdx).toLowerCase();
+  const rest = input.slice(spaceIdx + 1);
+  if (rest.indexOf(" ") !== -1) return [];
+  if (verb === "cd") return terminalCwdDirs(cwd, worldData);
+  if (verb === "cat") return terminalCwdFiles(cwd);
+  if (verb === "bash") return terminalCwdScripts(cwd);
+  return [];
+}
+/* Live validity color for the verb being typed — green once it's a full match (a real
+   command, or a bare file.sh/file.md that the run() normalization will accept), white
+   while it's still a plausible prefix of something, red once it can't possibly resolve
+   to anything. Only ever colors the first word; arguments after it stay plain white. */
+function terminalInputColor(input) {
+  const trimmedStart = input.replace(/^\s+/, "");
+  if (!trimmedStart) return "#ffffff";
+  const spaceIdx = trimmedStart.indexOf(" ");
+  const word = (spaceIdx === -1 ? trimmedStart : trimmedStart.slice(0, spaceIdx)).toLowerCase();
+  if (!word) return "#ffffff";
+  if (TERMINAL_VERBS.indexOf(word) !== -1 || /\.(sh|md)$/i.test(word)) return "#8aff8a";
+  if (spaceIdx === -1 && TERMINAL_VERBS.some((v) => v.indexOf(word) === 0)) return "#ffffff";
+  return "#ff8080";
+}
+/* Fish-style auto-suggestion: most recent history entry that starts with (and is
+   longer than) what's typed so far. Most-recent-first so retyping something you just
+   ran surfaces immediately rather than an older, possibly stale match. */
+function terminalGhostSuggestion(input, history) {
+  if (!input) return null;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i] !== input && history[i].toLowerCase().indexOf(input.toLowerCase()) === 0) return history[i];
+  }
+  return null;
+}
+
 function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   /* Direct feedback from a product-design review: nothing anywhere told a first-time
      visitor the careers challenge exists, let alone that it lives in here — discovery
@@ -2222,6 +2299,15 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   const careersTimerRef = useRef(null);
   const logRef = useRef(null);
   const inputRef = useRef(null);
+  /* Command history (Up/Down) — plain refs, not state, since navigating history
+     shouldn't itself trigger extra re-renders beyond the setInput() that already
+     updates what's displayed. historyPosRef -1 means "not currently navigating, this
+     is the live draft"; draftRef holds whatever was being typed before the user
+     pressed Up, so pressing Down back past the newest history entry restores it
+     instead of just clearing the line. */
+  const historyRef = useRef([]);
+  const historyPosRef = useRef(-1);
+  const draftRef = useRef("");
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [lines, input]);
   useEffect(() => () => { if (careersTimerRef.current) clearInterval(careersTimerRef.current); }, []);
 
@@ -2461,7 +2547,11 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
     const arg = rest.join(" ");
 
     if (verb === "clear") { setLines([]); return; }
-    if (verb === "help") { out.push({ text: "Commands: help, ls, cd <dir>, pwd, cat <file>, bash <file.sh>, whoami, date, clear", kind: "out" }); out.push({ text: "Shortcuts: ./file.sh, file.sh, and bare file.md all work too — no need to type bash/cat first.", kind: "out" }); }
+    if (verb === "help") {
+      out.push({ text: "Commands: help, ls, cd <dir>, pwd, cat <file>, bash <file.sh>, whoami, date, clear", kind: "out" });
+      out.push({ text: "Shortcuts: ./file.sh, file.sh, and bare file.md all work too — no need to type bash/cat first.", kind: "out" });
+      out.push({ text: "Tab completes, Up/Down cycles history, faded text is a suggestion — press → to accept it.", kind: "out" });
+    }
     else if (verb === "pwd") { out.push({ text: promptPath(), kind: "out" }); }
     else if (verb === "whoami") { out.push({ text: "guest@zuper-web-os", kind: "out" }); }
     else if (verb === "date") { out.push({ text: new Date().toString(), kind: "out" }); }
@@ -2636,6 +2726,73 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
     setLines((prev) => prev.concat(out));
   }
 
+  /* Enter/history/completion/suggestion-accept all live on the real <input>'s
+     onKeyDown, not run() — run() only ever handles what a submitted command actually
+     DOES, this is purely about editing the not-yet-submitted line. Quiz mode keeps its
+     original plain-Enter-only behavior (a/b/c/d, cancel) — none of history/tab-
+     completion/coloring make sense mid-quiz, so everything past the Enter branch bails
+     out early while quizState is set. */
+  function handleTermKeyDown(e) {
+    if (e.key === "Enter") {
+      const val = input;
+      const trimmedVal = val.trim();
+      if (trimmedVal && historyRef.current[historyRef.current.length - 1] !== trimmedVal) {
+        historyRef.current = historyRef.current.concat([trimmedVal]);
+      }
+      historyPosRef.current = -1;
+      draftRef.current = "";
+      run(val);
+      setInput("");
+      return;
+    }
+    if (quizState) return;
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const hist = historyRef.current;
+      if (hist.length === 0) return;
+      if (historyPosRef.current === -1) { draftRef.current = input; historyPosRef.current = hist.length - 1; }
+      else if (historyPosRef.current > 0) { historyPosRef.current -= 1; }
+      setInput(hist[historyPosRef.current]);
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const hist = historyRef.current;
+      if (historyPosRef.current === -1) return;
+      if (historyPosRef.current < hist.length - 1) { historyPosRef.current += 1; setInput(hist[historyPosRef.current]); }
+      else { historyPosRef.current = -1; setInput(draftRef.current); }
+      return;
+    }
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const spaceIdx = input.indexOf(" ");
+      const wordStart = spaceIdx === -1 ? 0 : spaceIdx + 1;
+      const partial = input.slice(wordStart);
+      const candidates = terminalCompletions(input, cwd, worldData).filter((c) => c.toLowerCase().indexOf(partial.toLowerCase()) === 0);
+      if (candidates.length === 0) return;
+      if (candidates.length === 1) { setInput(input.slice(0, wordStart) + candidates[0] + " "); return; }
+      const lcp = terminalLongestCommonPrefix(candidates);
+      if (lcp.length > partial.length) setInput(input.slice(0, wordStart) + lcp);
+      else setLines((prev) => prev.concat([{ text: candidates.slice().sort().join("  "), kind: "out" }]));
+      return;
+    }
+    if (e.key === "ArrowRight") {
+      const el = inputRef.current;
+      const atEnd = el && el.selectionStart === input.length && el.selectionEnd === input.length;
+      const ghost = terminalGhostSuggestion(input, historyRef.current);
+      if (atEnd && ghost) { e.preventDefault(); setInput(ghost); }
+    }
+  }
+
+  /* Live syntax coloring + auto-suggestion, computed fresh every render off the
+     current input value — cheap (a handful of string ops on a short line), no need
+     for useMemo. quizState keeps the plain white a/b/c/d line, same as before. */
+  const inputSpaceIdx = input.indexOf(" ");
+  const inputVerbPart = inputSpaceIdx === -1 ? input : input.slice(0, inputSpaceIdx);
+  const inputRestPart = inputSpaceIdx === -1 ? "" : input.slice(inputSpaceIdx);
+  const inputVerbColor = quizState ? "#ffffff" : terminalInputColor(input);
+  const ghostSuggestion = quizState ? null : terminalGhostSuggestion(input, historyRef.current);
+
   /* The live prompt line lives INSIDE the scrolling log, right after the last output
      line — same as a real terminal (cmd.exe, a shell), where there's no separate
      "input box" below a divider and no placeholder hint; the prompt itself is where
@@ -2705,12 +2862,22 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
               instead of a thin, easy-to-miss native i-beam caret sitting right after
               the prompt's own "$". */}
           <div className="relative flex-1">
-            <span className="text-white" style={{ whiteSpace: "pre" }}>{input}</span>
+            {/* Verb colored live (green = recognized, white = still a valid prefix,
+                red = won't resolve to anything) — arguments after it stay plain white,
+                same as before. */}
+            <span style={{ whiteSpace: "pre" }}>
+              <span style={{ color: inputVerbColor }}>{inputVerbPart}</span>
+              <span className="text-white">{inputRestPart}</span>
+            </span>
             <span aria-hidden="true" style={{
               display: "inline-block", width: "0.6em", height: "1.05em", verticalAlign: "text-bottom",
               background: CRT_GREEN, marginLeft: 1, animation: "term-cursor-blink 1s steps(1) infinite",
             }} />
-            <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { run(input); setInput(""); } }}
+            {/* Faded auto-suggestion (fish-style) — the rest of the most recent matching
+                history entry, past what's actually been typed. Right arrow (at end of
+                line) accepts it — see handleTermKeyDown. */}
+            {ghostSuggestion && <span aria-hidden="true" style={{ whiteSpace: "pre", opacity: 0.38 }}>{ghostSuggestion.slice(input.length)}</span>}
+            <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleTermKeyDown}
               className="absolute inset-0 bg-transparent outline-none opacity-0" style={{ caretColor: "transparent" }} spellCheck={false} autoComplete="off" autoFocus aria-label="Terminal command input" />
           </div>
         </div>
