@@ -478,7 +478,7 @@ function ScanlineBackground({ color }) {
 function GlitchWatermark() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true" style={{ zIndex: 0 }}>
-      <img src="./assets/zuper-logo.png" alt="" style={{
+      <img src="./assets/zuper-logo.svg" alt="" style={{
         position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
         width: "min(30vw, 380px)", height: "min(30vw, 380px)", objectFit: "contain", opacity: 0.08,
       }} />
@@ -3433,7 +3433,7 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
                 background: "radial-gradient(circle, " + t.accent + "50 0%, transparent 72%)",
                 animation: (greet || bye || excited) ? "dot-pulse .5s ease-in-out 3" : "dot-pulse 3s ease-in-out infinite",
               }} />
-              <img src="./assets/zuper-logo.png" alt="Zuper Labs" draggable={false} style={{
+              <img src="./assets/zuper-logo.svg" alt="Zuper Labs" draggable={false} style={{
                 position: "relative", width: 42, height: 42, objectFit: "contain",
                 filter: "drop-shadow(0 0 6px " + t.accent + "a0)",
                 transform: bye ? "scale(.7) translateY(6px)" : greet ? "scale(1.18)" : hover ? "scale(1.08)" : "scale(1)",

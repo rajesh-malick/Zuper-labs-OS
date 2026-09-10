@@ -54,13 +54,12 @@ a mismatch once Mono CRT became the only look, so that got fixed too.
 - `CRTOverlay` (the old moving scanline sweep + flicker + screen-curvature
   vignette, all layered on top of everything) was removed entirely — it
   visually darkened/shadowed open windows and the assistant, a real bug,
-  not a style choice. In its place, `ScreenGlitch` brings back the
-  continuous sweep + flicker motion (a first attempt at a brief/occasional
-  glitch burst turned out not to be what was wanted — this is the
-  always-on version instead) without the vignette, which stays removed —
-  that part was disliked on its own, separately from the z-index bug.
-  Parked at z-index 2, nowhere near the z:1990 that caused the original
-  bug. Strictly mono accent color, no RGB channel-split.
+  not a style choice. It was briefly replaced by `ScreenGlitch` (a
+  continuous sweep + flicker motion without the vignette), but that too
+  was later removed entirely per direct feedback — "the lines going on
+  behind the screen is a constant distraction." The desktop's CRT identity
+  now comes only from the static `ScanlineBackground`/`GlitchWatermark`
+  layers — nothing actively moves/sweeps anymore.
 - Icon tiles use a real glow-pulse animation (`crt-icon-glow`), not just a
   static shadow.
 - Menu/list rows (Start menu, context menus, the Find/Run launcher) get a
@@ -74,7 +73,7 @@ a mismatch once Mono CRT became the only look, so that got fixed too.
   (`opacity: 0`, including its own caret); what's shown is styled text
   plus the block cursor next to it.
 - A large watermark (`GlitchWatermark`) is stamped behind the desktop
-  icons: the real Zuper Labs logo mark (`assets/zuper-logo.png`, faint,
+  icons: the real Zuper Labs logo mark (`assets/zuper-logo.svg`, faint,
   ~8% opacity) sits behind the real Zuper Labs **wordmark** image
   (`assets/zuper-wordmark.png` — the actual brand asset, white "Zuper
   Labs" text in the same orange bracket-frame as the logo, not a
@@ -83,8 +82,7 @@ a mismatch once Mono CRT became the only look, so that got fixed too.
   LABS" text treatment in the boot screen (shown once, above the boot
   log) and gained a new home as a header at the top of the Start menu —
   direct request, once the real wordmark asset was available. Still
-  plain and static, no animation — the screen glitching independently of
-  it is deliberate: see `ScreenGlitch` above.
+  plain and static, no animation.
 
 ### Bevel texture (technique borrowed from 1j01/os-gui, recolored)
 
@@ -106,7 +104,7 @@ assistant's chat input (sunken) and buttons, and the scrollbar thumb/track.
 ## Desktop assistant
 
 The assistant's visual identity is now the real Zuper Labs logo mark
-(`assets/zuper-logo.png`) — direct request, replacing the earlier
+(`assets/zuper-logo.svg`) — direct request, replacing the earlier
 hand-drawn CRT-terminal-robot character entirely. It sits in a small
 dark device-style bezel (the same case gradient/material the old robot
 head used) so it still reads as a physical desktop widget with real
@@ -137,9 +135,10 @@ circle-shaped) — that's the actual reason only a head ever fit, and why
 it kept reading as "a face inside a circular icon." The button is now
 just an invisible hit-box; every visible pixel is drawn at whatever size
 the design needs, with the glow as a `drop-shadow` filter (hugs the real
-silhouette) instead of a `boxShadow` on the button. It docks near the
-currently focused window until you manually drag it, then stays where
-you put it.
+silhouette) instead of a `boxShadow` on the button. Default placement is
+always bottom-right — it used to dock near whichever window had focus,
+jumping position on every window switch, but that read as unpredictable
+(direct feedback) and is gone now. Drag it and it stays where you put it.
 
 **Animation states.** Classic assistant-character libraries like
 `@react95/clippy` expose a named set of animations (`Wave`, `Greeting`,
