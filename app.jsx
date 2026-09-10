@@ -1979,7 +1979,17 @@ async function careersSolveLevel1(answerRef) {
   window.__zuper_keys = words.map((w) => btoa(w));
   document.documentElement.style.setProperty("--zuper-key-index", String(correctIdx));
 
-  const guaranteedId = 16 + Math.floor(Math.random() * 5); // ceil(id/5) === 4 for ids 16-20
+  /* Ported from labs.zuper.co's real challenge, then re-verified live against it
+     (direct bug report + screenshots) — the target postId there is NOT fixed at 4,
+     it's freshly randomized (1-100) every single time the puzzle loads (58, 72, 89
+     all observed live back to back). jsonplaceholder's /comments are laid out in
+     sequential 5-per-post blocks (ids 1-5 -> postId 1, 6-10 -> postId 2, ...), so
+     for any target postId N the ids that actually belong to it are the 5-id block
+     starting at (N-1)*5+1 — same math this file already used, just generalized off
+     the hardcoded 4/16-20 case to match the real site's actual behavior. */
+  const targetPostId = 1 + Math.floor(Math.random() * 100);
+  const blockStart = (targetPostId - 1) * 5 + 1;
+  const guaranteedId = blockStart + Math.floor(Math.random() * 5);
   const decoyIds = [];
   while (decoyIds.length < 4) {
     const id = 1 + Math.floor(Math.random() * 500);
@@ -1989,7 +1999,7 @@ async function careersSolveLevel1(answerRef) {
   const responses = await Promise.all(ids.map((id) =>
     fetch("https://jsonplaceholder.typicode.com/comments/" + id).then((r) => r.json()).catch(() => null)
   ));
-  const target = responses.find((r) => r && r.postId === 4);
+  const target = responses.find((r) => r && r.postId === targetPostId);
   answerRef.current = { level: 1, key: words[correctIdx], code: String(target ? target.id : guaranteedId) };
 
   return [
@@ -1997,7 +2007,7 @@ async function careersSolveLevel1(answerRef) {
     "Open DevTools (F12 / Cmd+Shift+I).", "",
     { text: "STEP 1 — Console tab", kind: "label" }, "  Run: window.__zuper_keys", "  Returns 16 strings. They are base64-encoded. Decode with: atob()", "",
     { text: "STEP 2 — Elements tab (Styles)", kind: "label" }, "  The correct array index is a CSS custom property on the <html> element.", "  Property: --zuper-key-index", "",
-    { text: "STEP 3 — Network tab", kind: "label" }, "  5 requests were made to jsonplaceholder.", "  Find the response where postId === 4.", "  The \"id\" field of that response is your verification code.", "",
+    { text: "STEP 3 — Network tab", kind: "label" }, "  5 requests were made to jsonplaceholder.", "  Find the response where postId === " + targetPostId + ".", "  The \"id\" field of that response is your verification code.", "",
     { text: "STEP 4 — Submit", kind: "label" }, "  bash submit.sh <decoded_key>-<code>",
   ];
 }
