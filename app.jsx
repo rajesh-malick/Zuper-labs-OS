@@ -2617,7 +2617,18 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
      you type, and it scrolls up into history once you hit Enter. Clicking anywhere in
      the terminal refocuses the (invisible, borderless) input, same as a real one. */
   return (
-    <div className="relative p-3 flex flex-col h-full font-terminal font-medium text-[14px]" onClick={() => inputRef.current && inputRef.current.focus()}
+    <div className="relative p-3 flex flex-col h-full font-terminal font-medium text-[14px] select-text"
+      /* The desktop stage (App's outer div) is select-none so dragging icons/windows
+         around doesn't accidentally highlight page text — but that's a `user-select`
+         CSS property, which inherits into every window's content by default, including
+         this one. That silently made it impossible to select/copy ANY terminal output
+         (a real bug report: "not capable of copy or paste") — you couldn't even copy a
+         value out to paste into a submit.sh command. select-text here overrides the
+         inheritance back on for this window specifically; the guard below on onClick
+         additionally stops the click-to-refocus-the-input behavior from immediately
+         stealing back a selection the user just finished making (the standard fix any
+         terminal emulator needs once its input steals focus on click). */
+      onClick={() => { if (window.getSelection().toString()) return; inputRef.current && inputRef.current.focus(); }}
       /* Direct request: the careers challenge needs real DevTools access (Network tab,
          Elements, sessionStorage), and this OS's own right-click menu (see the
          desktop's onContextMenu below) was silently eating every right-click before the

@@ -193,6 +193,10 @@
     button:hover.hover\:text-white:not(:disabled) { color: #fff !important; }
     a:hover.hover\:bg-white\/5 { background-color: rgba(255,255,255,.05) !important; }
     .pointer-events-none { pointer-events: none !important; }
+    /* Guaranteed since it's overriding the desktop stage's own select-none (a real
+       user-select inheritance bug: Terminal output was impossible to select/copy at
+       all until this was added — see TerminalWindow in app.jsx). */
+    .select-text { user-select: text !important; -webkit-user-select: text !important; }
     .overflow-y-auto { overflow-y: auto !important; }
     .overflow-x-hidden { overflow-x: hidden !important; }
     @keyframes zuper-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
