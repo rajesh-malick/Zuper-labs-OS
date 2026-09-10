@@ -2442,11 +2442,26 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
       return;
     }
 
-    const [verb, ...rest] = trimmed.split(/\s+/);
+    /* Direct feedback: requiring the literal "bash" prefix for every script (and "cat"
+       for every doc) doesn't match how anyone actually types at a real shell — real
+       terminals accept ./file.sh, bash file.sh, or just file.sh interchangeably, and
+       a bare filename for a text file is a completely normal instinct too. Rewriting
+       here (not by adding parallel branches everywhere below) means every existing
+       "bash x.sh" / "cat x.md" handler below keeps working unchanged — this only
+       decides WHICH verb a bare/./-prefixed filename resolves to before the normal
+       dispatch runs. Only rewrites the leading token, so it can't misfire on some
+       later argument that happens to end in .sh/.md (e.g. a pasted URL). */
+    const firstTok = trimmed.split(/\s+/)[0] || "";
+    let effective = trimmed;
+    if (/^\.\/[\w.-]+\.sh$/i.test(firstTok)) effective = "bash " + trimmed.slice(2);
+    else if (/^[\w.-]+\.sh$/i.test(firstTok)) effective = "bash " + trimmed;
+    else if (/^[\w.-]+\.md$/i.test(firstTok)) effective = "cat " + trimmed;
+
+    const [verb, ...rest] = effective.split(/\s+/);
     const arg = rest.join(" ");
 
     if (verb === "clear") { setLines([]); return; }
-    if (verb === "help") { out.push({ text: "Commands: help, ls, cd <dir>, pwd, cat <file>, bash <file.sh>, whoami, date, clear", kind: "out" }); }
+    if (verb === "help") { out.push({ text: "Commands: help, ls, cd <dir>, pwd, cat <file>, bash <file.sh>, whoami, date, clear", kind: "out" }); out.push({ text: "Shortcuts: ./file.sh, file.sh, and bare file.md all work too — no need to type bash/cat first.", kind: "out" }); }
     else if (verb === "pwd") { out.push({ text: promptPath(), kind: "out" }); }
     else if (verb === "whoami") { out.push({ text: "guest@zuper-web-os", kind: "out" }); }
     else if (verb === "date") { out.push({ text: new Date().toString(), kind: "out" }); }
