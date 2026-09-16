@@ -3527,53 +3527,63 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
   );
 }
 
-/* ================= Living World — Phase 3 (horizontal pan + worker hotspots) =================
-   Real-photo background layer, replacing GlitchWatermark's abstract logo/wordmark
-   watermark. NOT a spherical 360 — a wide horizontal photo strip behind a fixed-size
-   viewport, exactly the model validated in Figma (approved prototype:
-   figma.com/design/wRs6WHWTuPNzRlO3zR1NHw). Deliberately plain DOM/CSS transforms, no
-   canvas/WebGL — the whole thing is one absolutely-positioned "world" div (fixed
-   1520x760 logical/world-unit size, matching the Figma coordinate system exactly) that
-   gets a single `scale(...) translateX(...)` transform: scale makes it cover the real
-   viewport (like CSS background-size:cover, computed from both dimensions so there's
-   never a gap on either axis), translateX is the pan, expressed in the SAME world
-   units the scale hasn't been applied to yet — so everything inside (the photo, the
-   three hotspots) can be positioned with the exact worldX/worldY coordinates measured
-   in Figma, with zero per-viewport-size math needed anywhere else.
+/* ================= Living World — Phase 3, v2 (ambient camera, mission-control room) =====
+   Replaces the earlier field-worker/hotspot version entirely — new approved environment
+   (a real, empty-of-people engineering command-center render), no hotspots this round.
+   Same underlying model as before (one absolutely-positioned "world" div at a fixed
+   world-unit size, single `scale() translateX()` transform, plain CSS — no canvas/WebGL),
+   but the camera now has three named stops (LEFT/CENTER/RIGHT) instead of free
+   incremental nudging, because this phase adds an AMBIENT auto-pan that cycles through
+   those same three stops on its own while idle — manual arrow keys and the ambient
+   scheduler drive the exact same `goTo(index)` transition, which is what makes manual
+   movement "feel the same" as ambient movement rather than being a separate mechanism.
 
-   Hotspot coordinates (world-space, not screen-space — they pan with the photo):
-   roofer (175,175), plumber (175,575), AC tech (670,490) — precisely measured against
-   the actual photo geometry, not estimated (see Figma prototype's measurement pass).
-
-   Vertical parallax, the glass/chrome material, and hotspot hover-cards are explicitly
-   NOT part of this phase — see the Phase 3 spec. This component owns only pan +
-   idle-pulse hotspots + the look-around hint. */
-const LIVING_WORLD_W = 1520, LIVING_WORLD_H = 760;
-const LIVING_WORLD_PAN_STEP = 80;
-const LIVING_WORLD_HOTSPOTS = [
-  { id: "roofer", x: 175, y: 175, label: "Roofing & Safety Ops" },
-  { id: "plumber", x: 175, y: 575, label: "Plumbing & Utilities" },
-  { id: "actech", x: 670, y: 490, label: "HVAC Diagnostics" },
+   World-unit size is the image's own native pixel size (2048x768) — no legacy
+   coordinate system to preserve this time (no hotspots), so there's no reason to use
+   anything other than the asset's real dimensions. */
+const LIVING_WORLD_W = 2048, LIVING_WORLD_H = 768;
+const LIVING_WORLD_MOVE_MS = 4500; // CENTER<->LEFT/RIGHT transition — same for ambient AND manual
+const LIVING_WORLD_MANUAL_RESUME_MS = 9000; // idle time after manual input before ambient resumes
+/* The ambient loop, expressed as (targetPositionIndex, holdMsAfterArriving) steps.
+   0=LEFT, 1=CENTER, 2=RIGHT. Starts already at CENTER (see initial posIndex state) and
+   holds there 5s before the very first move — that first hold is scheduled separately
+   in the effect below; this array is just the repeating LEFT->CENTER->RIGHT->CENTER
+   cycle after that. Easy to retune: these are the spec's suggested starting values,
+   nothing else in the component assumes particular numbers. */
+const LIVING_WORLD_AMBIENT_STEPS = [
+  { i: 0, hold: 2000 }, // -> LEFT, hold 2s
+  { i: 1, hold: 3000 }, // -> CENTER, hold 3s
+  { i: 2, hold: 2000 }, // -> RIGHT, hold 2s
+  { i: 1, hold: 5000 }, // -> CENTER, hold 5s (matches the spec's initial "CENTER HOLD: 5s")
 ];
 
-function LivingWorld({ stageRef, accent }) {
-  const [cameraX, setCameraX] = useState(0);
+function LivingWorld({ stageRef }) {
+  const [posIndex, setPosIndex] = useState(1); // 0=LEFT, 1=CENTER, 2=RIGHT — starts at CENTER
   const [scale, setScale] = useState(1);
   const [maxPan, setMaxPan] = useState(0);
   const [hintVisible, setHintVisible] = useState(true);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const maxPanRef = useRef(0);
+  const ambientTimerRef = useRef(null);
+  const resumeTimerRef = useRef(null);
+  const ambientStepRef = useRef(0);
 
   useEffect(() => {
-    /* MIN_PAN_BUDGET_W: guaranteed minimum world-units of look-around room, always.
-       Plain "cover" fit (bigger of width-based/height-based scale) is correct for
-       "no gaps" but is NOT enough on its own here — on any viewport wider-than-2:1
-       (the photo's own native aspect), width-based cover makes the ENTIRE 1520-wide
-       world visible at once, leaving zero pixels to pan through (confirmed live:
-       zero-effect arrow keys on a ~2.6:1 test window). Taking the max of cover-scale
-       and a scale that reserves this budget guarantees panning always works, at the
-       cost of slightly more vertical crop on very wide viewports — never gaps,
-       since this can only ever scale UP beyond strict cover, never down. */
-    const MIN_PAN_BUDGET_W = 150;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+    function onChange(e) { setReducedMotion(e.matches); }
+    mq.addEventListener ? mq.addEventListener("change", onChange) : mq.addListener(onChange);
+    return () => { mq.removeEventListener ? mq.removeEventListener("change", onChange) : mq.removeListener(onChange); };
+  }, []);
+
+  useEffect(() => {
+    /* Same guaranteed-minimum-pan-budget fix proven necessary in the previous version:
+       plain cover-fit (bigger of width-based/height-based scale) hits exactly zero pan
+       room on any viewport wider than the image's own native aspect (here 2048:768,
+       2.67:1 — wider than before, so less likely to bite on ordinary monitors, but the
+       same guard is cheap insurance). Only ever scales UP beyond strict cover, so it
+       can't introduce gaps. */
+    const MIN_PAN_BUDGET_W = 300;
     function recompute() {
       const rect = stageRef.current ? stageRef.current.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
       const coverScale = Math.max(rect.height / LIVING_WORLD_H, rect.width / LIVING_WORLD_W);
@@ -3584,31 +3594,71 @@ function LivingWorld({ stageRef, accent }) {
       setScale(s);
       setMaxPan(mp);
       maxPanRef.current = mp;
-      setCameraX((x) => clamp(x, -mp, 0));
     }
     recompute();
     window.addEventListener("resize", recompute);
     return () => window.removeEventListener("resize", recompute);
   }, [stageRef]);
 
+  function offsetForIndex(i) {
+    if (i === 0) return 0;
+    if (i === 2) return -maxPanRef.current;
+    return -maxPanRef.current / 2;
+  }
+
+  function scheduleAmbient() {
+    clearTimeout(ambientTimerRef.current);
+    if (reducedMotion) return; // ambient auto-pan never runs under reduced-motion — manual stays available
+    const step = LIVING_WORLD_AMBIENT_STEPS[ambientStepRef.current % LIVING_WORLD_AMBIENT_STEPS.length];
+    ambientTimerRef.current = setTimeout(() => {
+      setPosIndex(step.i);
+      ambientTimerRef.current = setTimeout(() => {
+        ambientStepRef.current += 1;
+        scheduleAmbient();
+      }, LIVING_WORLD_MOVE_MS + step.hold);
+    }, 0);
+  }
+
+  useEffect(() => {
+    // initial CENTER hold (5s) before the very first ambient move, then the loop above
+    if (reducedMotion) return;
+    const t = setTimeout(scheduleAmbient, 5000);
+    return () => { clearTimeout(t); clearTimeout(ambientTimerRef.current); };
+    // eslint-disable-next-line
+  }, [reducedMotion]);
+
+  function pauseAmbientThenResume() {
+    clearTimeout(ambientTimerRef.current);
+    clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      ambientStepRef.current = 0;
+      scheduleAmbient();
+    }, LIVING_WORLD_MANUAL_RESUME_MS);
+  }
+
   useEffect(() => {
     /* Isolated keydown listener — only ever touches Left/Right, only ever this
-       component's own cameraX state. Bails out immediately if focus is anywhere text
+       component's own posIndex state. Bails out immediately if focus is anywhere text
        could be typed (Terminal's real <input>, any future textarea/contentEditable),
        so it can never hijack typing. preventDefault (and the horizontal-scroll
        suppression that comes with it) only ever fires on the branch that actually
-       moves the camera — a guarded-out keypress passes through untouched. */
+       moves the camera — a guarded-out keypress passes through untouched. Manual
+       presses drive the exact same posIndex/transition the ambient scheduler does —
+       same goTo, different caller — per the spec's "must feel the same" requirement.
+       Clamped, not wrapping: at index 0, Left is a no-op; at index 2, Right is a no-op. */
     function onKey(e) {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       const ae = document.activeElement;
       if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
       e.preventDefault();
       setHintVisible(false);
-      const dir = e.key === "ArrowLeft" ? 1 : -1;
-      setCameraX((x) => clamp(x + dir * LIVING_WORLD_PAN_STEP, -maxPanRef.current, 0));
+      pauseAmbientThenResume();
+      const dir = e.key === "ArrowLeft" ? -1 : 1;
+      setPosIndex((i) => clamp(i + dir, 0, 2));
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line
   }, []);
 
   useEffect(() => {
@@ -3617,6 +3667,9 @@ function LivingWorld({ stageRef, accent }) {
     return () => clearTimeout(t);
   }, [hintVisible]);
 
+  const cameraX = offsetForIndex(posIndex);
+  const moveMs = reducedMotion ? 0 : LIVING_WORLD_MOVE_MS;
+
   return (
     <React.Fragment>
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true" style={{ zIndex: 0 }}>
@@ -3624,17 +3677,12 @@ function LivingWorld({ stageRef, accent }) {
           position: "absolute", top: 0, left: 0, width: LIVING_WORLD_W, height: LIVING_WORLD_H,
           transformOrigin: "top left",
           transform: "scale(" + scale + ") translateX(" + cameraX + "px)",
-          transition: "transform 260ms cubic-bezier(.22,.68,.36,1)",
+          transition: "transform " + moveMs + "ms cubic-bezier(.45,.05,.55,.95)",
+          willChange: "transform",
         }}>
-          <img src="./assets/careers-field-scene.png" alt="" draggable={false}
+          <img src="./assets/living-world-command-center.png" alt="" draggable={false}
             style={{ position: "absolute", top: 0, left: 0, width: LIVING_WORLD_W, height: LIVING_WORLD_H, objectFit: "cover" }} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.35) 100%)" }} />
-          {LIVING_WORLD_HOTSPOTS.map((h) => (
-            <div key={h.id} className="living-world-hotspot" title={h.label} style={{ position: "absolute", left: h.x - 12, top: h.y - 12, width: 24, height: 24, pointerEvents: "auto" }}>
-              <span style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "2px solid " + accent, opacity: 0.6, animation: "living-world-pulse 2.2s ease-out infinite" }} />
-              <span style={{ position: "absolute", left: 5, top: 5, width: 14, height: 14, borderRadius: "50%", background: accent, border: "2px solid #fff", boxShadow: "0 0 12px 2px " + accent + "b0" }} />
-            </div>
-          ))}
+          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,.12) 0%, rgba(0,0,0,.32) 100%)" }} />
         </div>
       </div>
       <div className="absolute top-6 left-1/2 pointer-events-none" style={{
@@ -3812,11 +3860,12 @@ function App({ worldData, onReboot }) {
         onDoubleClick={(e) => { if (e.target === e.currentTarget) setCreateMenu({ x: e.clientX, y: e.clientY }); }}>
         <ScanlineBackground color={theme.accent} />
         {/* GlitchWatermark (the abstract logo/wordmark watermark) replaced by the real
-           Living World photo background — Phase 3. ScanlineBackground stays as a subtle
-           texture overlay on top of it, same CRT identity, nothing actively distracting
+           Living World environment render — Phase 3 (now the mission-control room, not
+           the earlier field-worker photo). ScanlineBackground stays as a subtle texture
+           overlay on top of it, same CRT identity, nothing actively distracting
            (ScreenGlitch, the old sweeping scanline band, was already removed earlier per
            direct feedback and stays removed). */}
-        <LivingWorld stageRef={stageRef} accent={theme.accent} />
+        <LivingWorld stageRef={stageRef} />
         {/* ScreenGlitch (the continuously sweeping scanline band) removed per direct
            feedback: "the lines going on behind the screen is a constant distraction."
            Static ScanlineBackground stays — that's what gives the desktop its CRT

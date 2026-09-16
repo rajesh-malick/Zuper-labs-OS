@@ -232,10 +232,6 @@
        character's screen-content states — no longer applicable to the logo-based
        assistant.) */
     @keyframes dot-pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
-    /* Living World hotspot idle pulse (Phase 3) — same "outer ring expands + fades"
-       language as dot-pulse above, just on the ring instead of opacity, so a beacon
-       reads as alive without competing with the assistant's own pulse for attention. */
-    @keyframes living-world-pulse { 0% { transform: scale(0.9); opacity: 0.7; } 100% { transform: scale(1.7); opacity: 0; } }
     .assistant-eye { transform-box: fill-box; transform-origin: center; animation: dog-blink 4.5s ease-in-out infinite; }
     /* mascot-breathe: a continuous, gentle scale pulse on the logo-based assistant's
        inner content (glow ring + logo) — this is what makes it read as a living thing
