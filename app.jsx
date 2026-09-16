@@ -2488,10 +2488,18 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         trackEvent("Careers email submitted");
         pushLines(["🎉 Thanks — we've got your details and someone from the team will be in touch."]);
       } else {
-        setLines((prev) => prev.concat([{ text: r.status === 503 ? "Email notifications aren't configured yet — check back soon." : "Couldn't send that — double-check your email and try again.", kind: "err" }]));
+        // Same fix as careersSubmitNotify below: surface the server's actual
+        // detail/error instead of guessing. 503 stays a fixed message since "not
+        // configured yet" is already the real, specific reason.
+        const detail = data && (data.detail || data.error);
+        const text = r.status === 503
+          ? "Email notifications aren't configured yet — check back soon."
+          : detail ? "Send failed: " + detail : "Couldn't send that — double-check your email and try again.";
+        setLines((prev) => prev.concat([{ text, kind: "err" }]));
       }
     } catch (err) {
-      setLines((prev) => prev.concat([{ text: "Couldn't reach the server. Check your connection and try again.", kind: "err" }]));
+      const detail = err && err.message;
+      setLines((prev) => prev.concat([{ text: detail ? "Couldn't reach the server: " + detail : "Couldn't reach the server. Check your connection and try again.", kind: "err" }]));
     }
   }
 
@@ -2518,7 +2526,8 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         setLines((prev) => prev.concat([{ text, kind: "err" }]));
       }
     } catch (err) {
-      setLines((prev) => prev.concat([{ text: "Couldn't reach the server. Check your connection and try again.", kind: "err" }]));
+      const detail = err && err.message;
+      setLines((prev) => prev.concat([{ text: detail ? "Couldn't reach the server: " + detail : "Couldn't reach the server. Check your connection and try again.", kind: "err" }]));
     }
   }
 
@@ -3278,7 +3287,7 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
           const data = await r.json();
           if (data && data.answer) { answer = data.answer; source = "claude"; llmCallsRef.current += 1; }
         }
-      } catch (e) { /* network/API unavailable — fall through to local search */ }
+      } catch (e) { console.error(e); /* network/API unavailable — fall through to local search */ }
     }
     if (!answer) answer = answerFromWorldData(worldData, text);
     setThinking(false);
@@ -4010,7 +4019,7 @@ function Root() {
   const [appVisible, setAppVisible] = useState(false);
 
   useEffect(() => {
-    fetch("./zuper-world-data.json").then((r) => r.json()).then(setWorldData).catch(() => setWorldData([]));
+    fetch("./zuper-world-data.json").then((r) => r.json()).then(setWorldData).catch((e) => { console.error(e); setWorldData([]); });
   }, []);
 
   const ready = bootDone && worldData;
