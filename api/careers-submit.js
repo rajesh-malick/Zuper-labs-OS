@@ -7,9 +7,16 @@
 // (https://resend.com). RESEND_API_KEY lives only in this server-side env var,
 // same pattern as ANTHROPIC_API_KEY in api/ask.js.
 //
-// zuper.co is now verified in Resend, so this sends from a real address instead of
-// Resend's shared sandbox sender (which could only ever reach the Resend account's own
-// verified email, never raghav@/sameer@zuper.co).
+// This sends from careers@zuper.co rather than Resend's shared sandbox sender (which
+// could only ever reach the Resend account's own verified email, never raghav@/
+// sameer@zuper.co) — but that only works once zuper.co is verified in Resend.
+//
+// STATUS (as of the last real send attempt): NOT currently verified — Resend is
+// rejecting sends with a 403 validation_error, "The zuper.co domain is not verified.
+// Please, add and verify your domain on https://resend.com/domains". Whoever
+// re-verifies the domain (adding/confirming the DNS records Resend's dashboard asks
+// for) should update this comment back once a real send succeeds — don't trust this
+// note either way without testing; that's exactly the mistake it's replacing.
 //
 // link and quizScore are both optional (product review finding: a bare email address
 // is a cold lead needing manual chase-down). link is free-text from the candidate

@@ -2508,7 +2508,14 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         trackEvent("Careers notify-me submitted");
         pushLines(["👍 Got it — we'll keep you posted about roles. No pressure to finish the challenge."]);
       } else {
-        setLines((prev) => prev.concat([{ text: r.status === 503 ? "Email notifications aren't configured yet — check back soon." : "Couldn't send that — double-check your email and try again.", kind: "err" }]));
+        // Surface the server's actual detail/error instead of guessing — it already
+        // sends one (see api/careers-submit.js's 502/500 branches). 503 stays a fixed
+        // message since "not configured yet" is already the real, specific reason.
+        const detail = data && (data.detail || data.error);
+        const text = r.status === 503
+          ? "Email notifications aren't configured yet — check back soon."
+          : detail ? "Send failed: " + detail : "Couldn't send that — double-check your email and try again.";
+        setLines((prev) => prev.concat([{ text, kind: "err" }]));
       }
     } catch (err) {
       setLines((prev) => prev.concat([{ text: "Couldn't reach the server. Check your connection and try again.", kind: "err" }]));
