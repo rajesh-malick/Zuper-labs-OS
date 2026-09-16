@@ -615,21 +615,120 @@ function BootScreen({ onDone, extraLine }) {
     setFading((f) => { if (f) return f; setTimeout(onDone, 250); return true; });
   }
 
+  /* Progress ties directly to the same visibleCount the log already uses — no separate
+     timeline to keep in sync, and it naturally reaches 100% exactly when the log
+     finishes, same moment "ready."/the click-to-continue hint appear. Deliberately NOT
+     tied to real asset-loading progress (there isn't any meaningful one to report) —
+     this is the same "simulated status" pattern the boot log itself already uses. */
+  const progress = Math.min(1, visibleCount / lines.length);
+
   return (
     <div
       className={"fixed inset-0 z-[2000] p-6 font-terminal text-[1.25rem] leading-relaxed whitespace-pre-wrap cursor-pointer transition-opacity duration-300 " + (fading ? "opacity-0 pointer-events-none" : "opacity-100")}
       style={{ background: THEME.osBg, color: CRT_GREEN, textShadow: "0 0 8px " + CRT_GREEN + "70" }}
       onClick={finish}
     >
+      <BootHudFrame />
+      <BootGlitchMark progress={progress} />
       {/* The real "Zuper Labs" wordmark image, once, above the boot log — direct
           request to use the real brand asset instead of a plain text line. */}
-      <img src="./assets/zuper-wordmark.png" alt="Zuper Labs" className="mb-4" style={{ width: "min(60vw, 340px)" }} />
-      {lines.slice(0, visibleCount).join("\n")}
-      {visibleCount >= lines.length && extraLine && "\n" + extraLine}
-      {visibleCount >= lines.length && "\n> ready."}
+      <img src="./assets/zuper-wordmark.png" alt="Zuper Labs" className="mb-4" style={{ width: "min(60vw, 340px)", position: "relative" }} />
+      <div style={{ position: "relative" }}>
+        {lines.slice(0, visibleCount).join("\n")}
+        {visibleCount >= lines.length && extraLine && "\n" + extraLine}
+        {visibleCount >= lines.length && "\n> ready."}
+      </div>
+      <div className="mt-5" style={{ position: "relative", maxWidth: 260 }}>
+        <BootProgressBar progress={progress} />
+      </div>
       {visibleCount >= lines.length && (
-        <div className="mt-5 text-white/48">[ click or press any key to continue ]</div>
+        <div className="mt-5 text-white/48" style={{ position: "relative" }}>[ click or press any key to continue ]</div>
       )}
+    </div>
+  );
+}
+
+/* Restrained HUD corner brackets — direct feedback: "not that much sparky and
+   glitchy." Four static L-shapes inset from the real screen edges, same accent color
+   as the rest of the boot log, no glow/pulse/animation on the brackets themselves —
+   just enough to read as "instrument panel," not a movie prop. */
+function BootHudFrame() {
+  const size = 28, thickness = 2, inset = 20;
+  return (
+    <React.Fragment>
+      <div aria-hidden="true" style={{ position: "fixed", top: inset, left: inset, width: size, height: size, borderTop: thickness + "px solid currentColor", borderLeft: thickness + "px solid currentColor", opacity: 0.4 }} />
+      <div aria-hidden="true" style={{ position: "fixed", top: inset, right: inset, width: size, height: size, borderTop: thickness + "px solid currentColor", borderRight: thickness + "px solid currentColor", opacity: 0.4 }} />
+      <div aria-hidden="true" style={{ position: "fixed", bottom: inset, left: inset, width: size, height: size, borderBottom: thickness + "px solid currentColor", borderLeft: thickness + "px solid currentColor", opacity: 0.4 }} />
+      <div aria-hidden="true" style={{ position: "fixed", bottom: inset, right: inset, width: size, height: size, borderBottom: thickness + "px solid currentColor", borderRight: thickness + "px solid currentColor", opacity: 0.4 }} />
+    </React.Fragment>
+  );
+}
+
+/* Procedural ASCII mask of the real Zuper "Z" mark (a thick horizontal-bar / diagonal-
+   stroke / horizontal-bar glyph — the same silhouette as assets/zuper-logo.svg, just
+   built as a character grid instead of vector paths, since that's what a boot-log
+   aesthetic can actually render). Computed once at module load, not per-render. */
+const BOOT_GLITCH_ROWS = 11, BOOT_GLITCH_COLS = 22;
+const BOOT_GLITCH_MASK = (() => {
+  const bandH = 2, diagWidth = 6;
+  const mask = [];
+  for (let r = 0; r < BOOT_GLITCH_ROWS; r++) {
+    const row = [];
+    for (let c = 0; c < BOOT_GLITCH_COLS; c++) {
+      let on;
+      if (r < bandH || r >= BOOT_GLITCH_ROWS - bandH) on = true;
+      else {
+        const t = (r - bandH) / (BOOT_GLITCH_ROWS - 2 * bandH);
+        const centerCol = Math.round((1 - t) * (BOOT_GLITCH_COLS - diagWidth));
+        on = c >= centerCol && c < centerCol + diagWidth;
+      }
+      row.push(on);
+    }
+    mask.push(row);
+  }
+  return mask;
+})();
+const BOOT_GLITCH_CHARSET = "01#/\\|_-:;^+~".split("");
+
+/* Direct feedback: "not that much sparky and glitchy." This is deliberately the
+   restrained version of a matrix-style decode effect — slow tick (220ms, not a fast
+   flicker), low opacity, single muted color (no multi-color/RGB split), and the reroll
+   RATE itself decays as `progress` climbs, so it visibly settles into a held, mostly-
+   static "Z" by the time the boot log finishes rather than staying busy the whole
+   time. Purely decorative (aria-hidden) — never blocks or delays the real boot log. */
+function BootGlitchMark({ progress }) {
+  const [grid, setGrid] = useState(() => BOOT_GLITCH_MASK.map((row) => row.map((on) => (on ? BOOT_GLITCH_CHARSET[Math.floor(Math.random() * BOOT_GLITCH_CHARSET.length)] : ""))));
+  useEffect(() => {
+    if (progress >= 1) return;
+    const t = setInterval(() => {
+      setGrid((prev) => prev.map((row, r) => row.map((ch, c) => {
+        if (!BOOT_GLITCH_MASK[r][c]) return ch;
+        if (Math.random() > progress * 0.85) return BOOT_GLITCH_CHARSET[Math.floor(Math.random() * BOOT_GLITCH_CHARSET.length)];
+        return ch;
+      })));
+    }, 220);
+    return () => clearInterval(t);
+  }, [progress]);
+
+  return (
+    <div aria-hidden="true" className="hidden sm:block" style={{
+      position: "fixed", right: "6vw", top: "50%", transform: "translateY(-50%)",
+      fontFamily: "'JetBrains Mono','Inconsolata',monospace", fontSize: 12, lineHeight: "12px",
+      letterSpacing: "2px", color: CRT_GREEN, opacity: 0.3, userSelect: "none", pointerEvents: "none",
+    }}>
+      {grid.map((row, r) => (
+        <div key={r} style={{ whiteSpace: "pre" }}>{row.map((ch) => ch || " ").join("")}</div>
+      ))}
+    </div>
+  );
+}
+
+/* Simple bordered fill bar — no shine/glow/gradient, just the bevel language already
+   used everywhere else in this app, tracking the same progress the glitch mark does. */
+function BootProgressBar({ progress }) {
+  return (
+    <div style={{ height: 6, background: "rgba(255,255,255,.06)", border: "1px solid currentColor", opacity: 0.8 }}>
+      <div style={{ height: "100%", width: (progress * 100) + "%", background: "currentColor", opacity: 0.6, transition: "width 130ms linear" }} />
     </div>
   );
 }
