@@ -595,6 +595,10 @@ function BootScreen({ onDone, extraLine }) {
   /* Fixed for every visitor — direct request, after the first version read the real
      navigator/screen data (browser, core count, language, resolution), so the boot log
      looked different on every device and every visit. */
+  /* "> ready." is deliberately NOT in this array — it's appended separately below,
+     right after extraLine, so a caller-supplied extraLine (e.g. Phase 2's environment
+     init line) always lands immediately BEFORE "ready.", not after it. Everything else
+     about the log (content, order, per-line typewriter timing) is unchanged. */
   function buildLines() {
     return [
       "ZUPER OS [concept build]",
@@ -605,7 +609,6 @@ function BootScreen({ onDone, extraLine }) {
       "  14 clusters · 39 entities · OK",
       "> mounting virtual file system...",
       "  /desktop  OK",
-      "> ready.",
     ];
   }
 
@@ -638,6 +641,7 @@ function BootScreen({ onDone, extraLine }) {
       <img src="./assets/zuper-wordmark.png" alt="Zuper Labs" className="mb-4" style={{ width: "min(60vw, 340px)" }} />
       {lines.slice(0, visibleCount).join("\n")}
       {visibleCount >= lines.length && extraLine && "\n" + extraLine}
+      {visibleCount >= lines.length && "\n> ready."}
       {visibleCount >= lines.length && (
         <div className="mt-5 text-white/48">[ click or press any key to continue ]</div>
       )}
@@ -3875,19 +3879,51 @@ function Root() {
   const isNarrow = useIsNarrowViewport();
   const [forceDesktop, setForceDesktop] = useState(false);
 
+  /* Phase 2 crossfade — was a hard swap (!ready -> BootScreen, ready -> App, nothing
+     mounted in between). Two small pieces of state replace that: showBoot keeps
+     BootScreen mounted for a brief window AFTER bootDone flips (instead of unmounting
+     it the instant App appears), and appVisible drives App's own fade-in, flipped one
+     frame after mount so the opacity change is a real CSS transition, not a no-op
+     initial value. BootScreen already fades itself out over ~300ms via its own
+     `fading` state (unchanged) and sits at z-[2000], well above App's content, so the
+     two fades naturally overlap into a crossfade without either screen needing to know
+     about the other. */
+  const [showBoot, setShowBoot] = useState(true);
+  const [appVisible, setAppVisible] = useState(false);
+
   useEffect(() => {
     fetch("./zuper-world-data.json").then((r) => r.json()).then(setWorldData).catch(() => setWorldData([]));
   }, []);
 
-  function reboot() { setBootDone(false); setBootKey((k) => k + 1); }
+  const ready = bootDone && worldData;
+
+  useEffect(() => {
+    if (!ready) return;
+    const raf = requestAnimationFrame(() => setAppVisible(true));
+    const hideBootTimer = setTimeout(() => setShowBoot(false), 350);
+    return () => { cancelAnimationFrame(raf); clearTimeout(hideBootTimer); };
+  }, [ready]);
+
+  function reboot() {
+    setBootDone(false);
+    setAppVisible(false);
+    setShowBoot(true);
+    setBootKey((k) => k + 1);
+  }
 
   if (isNarrow && !forceDesktop) return <MobileFallback worldData={worldData} onContinue={() => setForceDesktop(true)} />;
 
-  const ready = bootDone && worldData;
   return (
     <React.Fragment>
-      {!ready && <BootScreen key={bootKey} onDone={() => setBootDone(true)} />}
-      {ready && <App worldData={worldData} onReboot={reboot} />}
+      {ready && (
+        <div style={{ opacity: appVisible ? 1 : 0, transition: "opacity 300ms ease" }}>
+          <App worldData={worldData} onReboot={reboot} />
+        </div>
+      )}
+      {showBoot && (
+        <BootScreen key={bootKey} onDone={() => setBootDone(true)}
+          extraLine={"> initializing environment...\n  world engine  OK"} />
+      )}
     </React.Fragment>
   );
 }
