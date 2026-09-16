@@ -469,26 +469,11 @@ function ScanlineBackground({ color }) {
   );
 }
 
-/* ================= Background watermark imprint — the real Zuper Labs logo
-   mark (faint, behind) AND the real "Zuper Labs" wordmark image (the actual
-   brand asset — white text in the same orange bracket-frame as the logo,
-   not a recreated pixel-font approximation) on the same center point.
-   Static, no glitch/breathe animation — the screen-glitch motion lives in
-   ScreenGlitch instead, not here. ================= */
-function GlitchWatermark() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true" style={{ zIndex: 0 }}>
-      <img src="./assets/zuper-logo.svg" alt="" style={{
-        position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
-        width: "min(30vw, 380px)", height: "min(30vw, 380px)", objectFit: "contain", opacity: 0.08,
-      }} />
-      <img src="./assets/zuper-wordmark.png" alt="" style={{
-        position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
-        width: "min(58vw, 820px)", objectFit: "contain", opacity: 0.9,
-      }} />
-    </div>
-  );
-}
+/* GlitchWatermark (the abstract logo/wordmark background imprint) removed — Phase 3
+   replaced it with the real Living World photo (see LivingWorld below), matching the
+   approved Figma prototype exactly: the abstract watermark was deliberately dropped
+   there once the real photo was introduced, not kept alongside it. The real wordmark
+   image still appears elsewhere unrelated to this (BootScreen, StartMenu header). */
 
 /* ================= Generic right-click context menu ================= */
 function ContextMenu({ x, y, items, onClose, theme }) {
@@ -3542,6 +3527,128 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
   );
 }
 
+/* ================= Living World — Phase 3 (horizontal pan + worker hotspots) =================
+   Real-photo background layer, replacing GlitchWatermark's abstract logo/wordmark
+   watermark. NOT a spherical 360 — a wide horizontal photo strip behind a fixed-size
+   viewport, exactly the model validated in Figma (approved prototype:
+   figma.com/design/wRs6WHWTuPNzRlO3zR1NHw). Deliberately plain DOM/CSS transforms, no
+   canvas/WebGL — the whole thing is one absolutely-positioned "world" div (fixed
+   1520x760 logical/world-unit size, matching the Figma coordinate system exactly) that
+   gets a single `scale(...) translateX(...)` transform: scale makes it cover the real
+   viewport (like CSS background-size:cover, computed from both dimensions so there's
+   never a gap on either axis), translateX is the pan, expressed in the SAME world
+   units the scale hasn't been applied to yet — so everything inside (the photo, the
+   three hotspots) can be positioned with the exact worldX/worldY coordinates measured
+   in Figma, with zero per-viewport-size math needed anywhere else.
+
+   Hotspot coordinates (world-space, not screen-space — they pan with the photo):
+   roofer (175,175), plumber (175,575), AC tech (670,490) — precisely measured against
+   the actual photo geometry, not estimated (see Figma prototype's measurement pass).
+
+   Vertical parallax, the glass/chrome material, and hotspot hover-cards are explicitly
+   NOT part of this phase — see the Phase 3 spec. This component owns only pan +
+   idle-pulse hotspots + the look-around hint. */
+const LIVING_WORLD_W = 1520, LIVING_WORLD_H = 760;
+const LIVING_WORLD_PAN_STEP = 80;
+const LIVING_WORLD_HOTSPOTS = [
+  { id: "roofer", x: 175, y: 175, label: "Roofing & Safety Ops" },
+  { id: "plumber", x: 175, y: 575, label: "Plumbing & Utilities" },
+  { id: "actech", x: 670, y: 490, label: "HVAC Diagnostics" },
+];
+
+function LivingWorld({ stageRef, accent }) {
+  const [cameraX, setCameraX] = useState(0);
+  const [scale, setScale] = useState(1);
+  const [maxPan, setMaxPan] = useState(0);
+  const [hintVisible, setHintVisible] = useState(true);
+  const maxPanRef = useRef(0);
+
+  useEffect(() => {
+    /* MIN_PAN_BUDGET_W: guaranteed minimum world-units of look-around room, always.
+       Plain "cover" fit (bigger of width-based/height-based scale) is correct for
+       "no gaps" but is NOT enough on its own here — on any viewport wider-than-2:1
+       (the photo's own native aspect), width-based cover makes the ENTIRE 1520-wide
+       world visible at once, leaving zero pixels to pan through (confirmed live:
+       zero-effect arrow keys on a ~2.6:1 test window). Taking the max of cover-scale
+       and a scale that reserves this budget guarantees panning always works, at the
+       cost of slightly more vertical crop on very wide viewports — never gaps,
+       since this can only ever scale UP beyond strict cover, never down. */
+    const MIN_PAN_BUDGET_W = 150;
+    function recompute() {
+      const rect = stageRef.current ? stageRef.current.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
+      const coverScale = Math.max(rect.height / LIVING_WORLD_H, rect.width / LIVING_WORLD_W);
+      const minPanScale = rect.width / (LIVING_WORLD_W - MIN_PAN_BUDGET_W);
+      const s = Math.max(coverScale, minPanScale);
+      const visibleWorldW = rect.width / s;
+      const mp = Math.max(0, LIVING_WORLD_W - visibleWorldW);
+      setScale(s);
+      setMaxPan(mp);
+      maxPanRef.current = mp;
+      setCameraX((x) => clamp(x, -mp, 0));
+    }
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [stageRef]);
+
+  useEffect(() => {
+    /* Isolated keydown listener — only ever touches Left/Right, only ever this
+       component's own cameraX state. Bails out immediately if focus is anywhere text
+       could be typed (Terminal's real <input>, any future textarea/contentEditable),
+       so it can never hijack typing. preventDefault (and the horizontal-scroll
+       suppression that comes with it) only ever fires on the branch that actually
+       moves the camera — a guarded-out keypress passes through untouched. */
+    function onKey(e) {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const ae = document.activeElement;
+      if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
+      e.preventDefault();
+      setHintVisible(false);
+      const dir = e.key === "ArrowLeft" ? 1 : -1;
+      setCameraX((x) => clamp(x + dir * LIVING_WORLD_PAN_STEP, -maxPanRef.current, 0));
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (!hintVisible) return;
+    const t = setTimeout(() => setHintVisible(false), 6000);
+    return () => clearTimeout(t);
+  }, [hintVisible]);
+
+  return (
+    <React.Fragment>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true" style={{ zIndex: 0 }}>
+        <div style={{
+          position: "absolute", top: 0, left: 0, width: LIVING_WORLD_W, height: LIVING_WORLD_H,
+          transformOrigin: "top left",
+          transform: "scale(" + scale + ") translateX(" + cameraX + "px)",
+          transition: "transform 260ms cubic-bezier(.22,.68,.36,1)",
+        }}>
+          <img src="./assets/careers-field-scene.png" alt="" draggable={false}
+            style={{ position: "absolute", top: 0, left: 0, width: LIVING_WORLD_W, height: LIVING_WORLD_H, objectFit: "cover" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.35) 100%)" }} />
+          {LIVING_WORLD_HOTSPOTS.map((h) => (
+            <div key={h.id} className="living-world-hotspot" title={h.label} style={{ position: "absolute", left: h.x - 12, top: h.y - 12, width: 24, height: 24, pointerEvents: "auto" }}>
+              <span style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "2px solid " + accent, opacity: 0.6, animation: "living-world-pulse 2.2s ease-out infinite" }} />
+              <span style={{ position: "absolute", left: 5, top: 5, width: 14, height: 14, borderRadius: "50%", background: accent, border: "2px solid #fff", boxShadow: "0 0 12px 2px " + accent + "b0" }} />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="absolute top-6 left-1/2 pointer-events-none" style={{
+        zIndex: 1, transform: "translateX(-50%)", opacity: hintVisible ? 1 : 0,
+        transition: "opacity 500ms ease", fontFamily: "'JetBrains Mono','Inconsolata',monospace",
+      }}>
+        <div className="px-3 py-1.5 text-[11px] font-semibold tracking-widest" style={{ background: "rgba(0,0,0,.35)", border: "1px solid rgba(255,255,255,.15)", borderRadius: 999, color: "rgba(255,255,255,.85)" }}>
+          ← →  LOOK AROUND
+        </div>
+      </div>
+    </React.Fragment>
+  );
+}
+
 /* ================= App ================= */
 function App({ worldData, onReboot }) {
   const clusterApps = useMemo(() => worldData.map((c, i) => ({
@@ -3704,11 +3811,16 @@ function App({ worldData, onReboot }) {
         onContextMenu={(e) => { e.preventDefault(); setDesktopMenu({ x: e.clientX, y: e.clientY }); }}
         onDoubleClick={(e) => { if (e.target === e.currentTarget) setCreateMenu({ x: e.clientX, y: e.clientY }); }}>
         <ScanlineBackground color={theme.accent} />
-        <GlitchWatermark />
+        {/* GlitchWatermark (the abstract logo/wordmark watermark) replaced by the real
+           Living World photo background — Phase 3. ScanlineBackground stays as a subtle
+           texture overlay on top of it, same CRT identity, nothing actively distracting
+           (ScreenGlitch, the old sweeping scanline band, was already removed earlier per
+           direct feedback and stays removed). */}
+        <LivingWorld stageRef={stageRef} accent={theme.accent} />
         {/* ScreenGlitch (the continuously sweeping scanline band) removed per direct
            feedback: "the lines going on behind the screen is a constant distraction."
-           Static ScanlineBackground/GlitchWatermark stay — those are what gives the
-           desktop its CRT identity without anything actively moving/distracting. */}
+           Static ScanlineBackground stays — that's what gives the desktop its CRT
+           identity without anything actively moving/distracting. */}
 
         {visibleDesktopIcons.map((a, i) => (
           <DesktopIcon key={a.id} id={a.id} title={iconNames[a.id] || a.title} icon={a.icon} color={theme.accent}
