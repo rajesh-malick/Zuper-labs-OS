@@ -469,11 +469,11 @@ function ScanlineBackground({ color }) {
   );
 }
 
-/* GlitchWatermark (the abstract logo/wordmark background imprint) removed — Phase 3
-   replaced it with the real Living World photo (see LivingWorld below), matching the
-   approved Figma prototype exactly: the abstract watermark was deliberately dropped
-   there once the real photo was introduced, not kept alongside it. The real wordmark
-   image still appears elsewhere unrelated to this (BootScreen, StartMenu header). */
+/* GlitchWatermark (the abstract logo/wordmark background imprint) removed — replaced
+   with a real photo background (see DesktopBackground below), matching the approved
+   Figma prototype exactly: the abstract watermark was deliberately dropped once a real
+   photo was introduced, not kept alongside it. The real wordmark image still appears
+   elsewhere unrelated to this (BootScreen, StartMenu header). */
 
 /* ================= Generic right-click context menu ================= */
 function ContextMenu({ x, y, items, onClose, theme }) {
@@ -3605,7 +3605,7 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
             <IconImg icon={icon} size={typeof icon === "string" ? glyphSize : Math.round(tile * (icon && icon.img ? 0.88 : 0.66))} color={color} />
           </span>
         </span>
-        <span className="text-center leading-tight font-mono font-semibold break-words" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 0 6px " + color + "80" }}>{title}</span>
+        <span className="text-center leading-tight font-mono font-semibold break-words" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 1px 2px rgba(0,0,0,.9), 0 0 3px rgba(0,0,0,.85), 0 0 8px " + color + "60" }}>{title}</span>
       </button>
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} theme={t} items={[
@@ -3626,173 +3626,24 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
   );
 }
 
-/* ================= Living World — Phase 3, v2 (ambient camera, mission-control room) =====
-   Replaces the earlier field-worker/hotspot version entirely — new approved environment
-   (a real, empty-of-people engineering command-center render), no hotspots this round.
-   Same underlying model as before (one absolutely-positioned "world" div at a fixed
-   world-unit size, single `scale() translateX()` transform, plain CSS — no canvas/WebGL),
-   but the camera now has three named stops (LEFT/CENTER/RIGHT) instead of free
-   incremental nudging, because this phase adds an AMBIENT auto-pan that cycles through
-   those same three stops on its own while idle — manual arrow keys and the ambient
-   scheduler drive the exact same `goTo(index)` transition, which is what makes manual
-   movement "feel the same" as ambient movement rather than being a separate mechanism.
+/* ================= Desktop Background =================
+   Replaces the "Living World" ambient-camera photo (mission-control room) with a
+   static paper-craft/diorama wallpaper — deliberately NOT another pannable/ambient
+   world this time. Plain object-fit: cover, no JS layout math needed (the previous
+   two backgrounds both needed a scale/pan-budget computation; a static wallpaper
+   doesn't).
 
-   World-unit size is the image's own native pixel size (2048x768) — no legacy
-   coordinate system to preserve this time (no hotspots), so there's no reason to use
-   anything other than the asset's real dimensions. */
-const LIVING_WORLD_W = 2048, LIVING_WORLD_H = 768;
-const LIVING_WORLD_MOVE_MS = 4500; // CENTER<->LEFT/RIGHT transition — same for ambient AND manual
-const LIVING_WORLD_MANUAL_RESUME_MS = 9000; // idle time after manual input before ambient resumes
-/* The ambient loop, expressed as (targetPositionIndex, holdMsAfterArriving) steps.
-   0=LEFT, 1=CENTER, 2=RIGHT. Starts already at CENTER (see initial posIndex state) and
-   holds there 5s before the very first move — that first hold is scheduled separately
-   in the effect below; this array is just the repeating LEFT->CENTER->RIGHT->CENTER
-   cycle after that. Easy to retune: these are the spec's suggested starting values,
-   nothing else in the component assumes particular numbers. */
-const LIVING_WORLD_AMBIENT_STEPS = [
-  { i: 0, hold: 2000 }, // -> LEFT, hold 2s
-  { i: 1, hold: 3000 }, // -> CENTER, hold 3s
-  { i: 2, hold: 2000 }, // -> RIGHT, hold 2s
-  { i: 1, hold: 5000 }, // -> CENTER, hold 5s (matches the spec's initial "CENTER HOLD: 5s")
-];
-
-function LivingWorld({ stageRef }) {
-  const [posIndex, setPosIndex] = useState(1); // 0=LEFT, 1=CENTER, 2=RIGHT — starts at CENTER
-  const [scale, setScale] = useState(1);
-  const [maxPan, setMaxPan] = useState(0);
-  const [hintVisible, setHintVisible] = useState(true);
-  const [reducedMotion, setReducedMotion] = useState(false);
-  const maxPanRef = useRef(0);
-  const ambientTimerRef = useRef(null);
-  const resumeTimerRef = useRef(null);
-  const ambientStepRef = useRef(0);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mq.matches);
-    function onChange(e) { setReducedMotion(e.matches); }
-    mq.addEventListener ? mq.addEventListener("change", onChange) : mq.addListener(onChange);
-    return () => { mq.removeEventListener ? mq.removeEventListener("change", onChange) : mq.removeListener(onChange); };
-  }, []);
-
-  useEffect(() => {
-    /* Same guaranteed-minimum-pan-budget fix proven necessary in the previous version:
-       plain cover-fit (bigger of width-based/height-based scale) hits exactly zero pan
-       room on any viewport wider than the image's own native aspect (here 2048:768,
-       2.67:1 — wider than before, so less likely to bite on ordinary monitors, but the
-       same guard is cheap insurance). Only ever scales UP beyond strict cover, so it
-       can't introduce gaps. */
-    const MIN_PAN_BUDGET_W = 300;
-    function recompute() {
-      const rect = stageRef.current ? stageRef.current.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
-      const coverScale = Math.max(rect.height / LIVING_WORLD_H, rect.width / LIVING_WORLD_W);
-      const minPanScale = rect.width / (LIVING_WORLD_W - MIN_PAN_BUDGET_W);
-      const s = Math.max(coverScale, minPanScale);
-      const visibleWorldW = rect.width / s;
-      const mp = Math.max(0, LIVING_WORLD_W - visibleWorldW);
-      setScale(s);
-      setMaxPan(mp);
-      maxPanRef.current = mp;
-    }
-    recompute();
-    window.addEventListener("resize", recompute);
-    return () => window.removeEventListener("resize", recompute);
-  }, [stageRef]);
-
-  function offsetForIndex(i) {
-    if (i === 0) return 0;
-    if (i === 2) return -maxPanRef.current;
-    return -maxPanRef.current / 2;
-  }
-
-  function scheduleAmbient() {
-    clearTimeout(ambientTimerRef.current);
-    if (reducedMotion) return; // ambient auto-pan never runs under reduced-motion — manual stays available
-    const step = LIVING_WORLD_AMBIENT_STEPS[ambientStepRef.current % LIVING_WORLD_AMBIENT_STEPS.length];
-    ambientTimerRef.current = setTimeout(() => {
-      setPosIndex(step.i);
-      ambientTimerRef.current = setTimeout(() => {
-        ambientStepRef.current += 1;
-        scheduleAmbient();
-      }, LIVING_WORLD_MOVE_MS + step.hold);
-    }, 0);
-  }
-
-  useEffect(() => {
-    // initial CENTER hold (5s) before the very first ambient move, then the loop above
-    if (reducedMotion) return;
-    const t = setTimeout(scheduleAmbient, 5000);
-    return () => { clearTimeout(t); clearTimeout(ambientTimerRef.current); };
-    // eslint-disable-next-line
-  }, [reducedMotion]);
-
-  function pauseAmbientThenResume() {
-    clearTimeout(ambientTimerRef.current);
-    clearTimeout(resumeTimerRef.current);
-    resumeTimerRef.current = setTimeout(() => {
-      ambientStepRef.current = 0;
-      scheduleAmbient();
-    }, LIVING_WORLD_MANUAL_RESUME_MS);
-  }
-
-  useEffect(() => {
-    /* Isolated keydown listener — only ever touches Left/Right, only ever this
-       component's own posIndex state. Bails out immediately if focus is anywhere text
-       could be typed (Terminal's real <input>, any future textarea/contentEditable),
-       so it can never hijack typing. preventDefault (and the horizontal-scroll
-       suppression that comes with it) only ever fires on the branch that actually
-       moves the camera — a guarded-out keypress passes through untouched. Manual
-       presses drive the exact same posIndex/transition the ambient scheduler does —
-       same goTo, different caller — per the spec's "must feel the same" requirement.
-       Clamped, not wrapping: at index 0, Left is a no-op; at index 2, Right is a no-op. */
-    function onKey(e) {
-      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-      const ae = document.activeElement;
-      if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
-      e.preventDefault();
-      setHintVisible(false);
-      pauseAmbientThenResume();
-      const dir = e.key === "ArrowLeft" ? -1 : 1;
-      setPosIndex((i) => clamp(i + dir, 0, 2));
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line
-  }, []);
-
-  useEffect(() => {
-    if (!hintVisible) return;
-    const t = setTimeout(() => setHintVisible(false), 6000);
-    return () => clearTimeout(t);
-  }, [hintVisible]);
-
-  const cameraX = offsetForIndex(posIndex);
-  const moveMs = reducedMotion ? 0 : LIVING_WORLD_MOVE_MS;
-
+   objectPosition is tuned, not centered, because the photo itself isn't centered:
+   most of the spare/blank paper lives above and to the right of the objects on the
+   table (server rack, CRT monitor, circuit board, Z logomark), so on viewports
+   wider or taller than the image's own ~1.8:1 aspect, cropping should eat into that
+   blank margin first rather than the objects themselves. */
+function DesktopBackground() {
   return (
-    <React.Fragment>
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true" style={{ zIndex: 0 }}>
-        <div style={{
-          position: "absolute", top: 0, left: 0, width: LIVING_WORLD_W, height: LIVING_WORLD_H,
-          transformOrigin: "top left",
-          transform: "scale(" + scale + ") translateX(" + cameraX + "px)",
-          transition: "transform " + moveMs + "ms cubic-bezier(.45,.05,.55,.95)",
-          willChange: "transform",
-        }}>
-          <img src="./assets/living-world-command-center.png" alt="" draggable={false}
-            style={{ position: "absolute", top: 0, left: 0, width: LIVING_WORLD_W, height: LIVING_WORLD_H, objectFit: "cover" }} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,.12) 0%, rgba(0,0,0,.32) 100%)" }} />
-        </div>
-      </div>
-      <div className="absolute top-6 left-1/2 pointer-events-none" style={{
-        zIndex: 1, transform: "translateX(-50%)", opacity: hintVisible ? 1 : 0,
-        transition: "opacity 500ms ease", fontFamily: "'JetBrains Mono','Inconsolata',monospace",
-      }}>
-        <div className="px-3 py-1.5 text-[11px] font-semibold tracking-widest" style={{ background: "rgba(0,0,0,.35)", border: "1px solid rgba(255,255,255,.15)", borderRadius: 999, color: "rgba(255,255,255,.85)" }}>
-          ← →  LOOK AROUND
-        </div>
-      </div>
-    </React.Fragment>
+    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true" style={{ zIndex: 0 }}>
+      <img src="./assets/desktop-background.webp" alt="" draggable={false}
+        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "24% 62%" }} />
+    </div>
   );
 }
 
@@ -3958,13 +3809,13 @@ function App({ worldData, onReboot }) {
         onContextMenu={(e) => { e.preventDefault(); setDesktopMenu({ x: e.clientX, y: e.clientY }); }}
         onDoubleClick={(e) => { if (e.target === e.currentTarget) setCreateMenu({ x: e.clientX, y: e.clientY }); }}>
         <ScanlineBackground color={theme.accent} />
-        {/* GlitchWatermark (the abstract logo/wordmark watermark) replaced by the real
-           Living World environment render — Phase 3 (now the mission-control room, not
-           the earlier field-worker photo). ScanlineBackground stays as a subtle texture
-           overlay on top of it, same CRT identity, nothing actively distracting
-           (ScreenGlitch, the old sweeping scanline band, was already removed earlier per
-           direct feedback and stays removed). */}
-        <LivingWorld stageRef={stageRef} />
+        {/* Desktop wallpaper: static paper-craft diorama photo, replacing the earlier
+           ambient-camera Living World (mission-control room) and, before that, the
+           field-worker photo — both retired for this direction. ScanlineBackground
+           stays as a subtle texture overlay on top of it, same CRT identity, nothing
+           actively distracting (ScreenGlitch, the old sweeping scanline band, was
+           already removed earlier per direct feedback and stays removed). */}
+        <DesktopBackground />
         {/* ScreenGlitch (the continuously sweeping scanline band) removed per direct
            feedback: "the lines going on behind the screen is a constant distraction."
            Static ScanlineBackground stays — that's what gives the desktop its CRT
