@@ -201,21 +201,25 @@ const CLUSTER_ICONS = {
      single-stroke minimal icon for these specific ids only. Every other cluster below
      stays on the minimal line-icon system — this isn't a wholesale icon-system
      change. The CLUSTER_ICONS lookup is shared by the desktop, the Start menu app
-     list, and the
-     taskbar running-app button, so these images now appear everywhere those ids'
-     icon is looked up, not just the desktop — consistent branding for the same app
-     across surfaces, not an oversight. */
-  "careers": { img: "./assets/icon-careers-door.webp" },
-  "blog": { img: "./assets/icon-blog-notebook.webp" },
+     list, the QuickLauncher (Find/Run), the Trash, and the More Apps drawer, so these
+     images now appear everywhere those ids' icon is looked up, not just the desktop —
+     consistent branding for the same app across surfaces, not an oversight.
+
+     minimalFallback keeps the original single-stroke shape reachable — IconImg falls
+     back to it below a small render size (see IconImg) rather than showing the photo
+     illegibly. The photo is a desktop-scale flourish; every smaller list/grid context
+     gets the glyph it was actually designed for. */
+  "careers": { img: "./assets/icon-careers-door.webp", minimalFallback: "careers" },
+  "blog": { img: "./assets/icon-blog-notebook.webp", minimalFallback: "blog" },
   "customer-portal": minimalIcon("customer-portal", "\u{1F464}"),
   "data-pipeline": minimalIcon("data-pipeline", "\u{1F4CA}"),
   "payment-processing": minimalIcon("payment-processing", "\u{1F4B3}"),
   "inventory-management": minimalIcon("inventory-management", "\u{1F4E6}"),
   "integration-hub": minimalIcon("integration-hub", "\u{1F517}"),
   "predictive-analytics": minimalIcon("predictive-analytics", "\u{1F52E}"),
-  "zuper-arcade": { img: "./assets/icon-arcade-joystick.webp" },
-  "terminal": { img: "./assets/icon-terminal-crt.webp" },
-  "more-apps": { img: "./assets/icon-moreapps-drawer.webp" },
+  "zuper-arcade": { img: "./assets/icon-arcade-joystick.webp", minimalFallback: "zuper-arcade" },
+  "terminal": { img: "./assets/icon-terminal-crt.webp", minimalFallback: "terminal" },
+  "more-apps": { img: "./assets/icon-moreapps-drawer.webp", minimalFallback: "more-apps" },
 };
 
 /* One shape array per cluster, in the same [tag, attrs] tuple format PixelIcon already
@@ -437,11 +441,31 @@ function PixelIcon({ shape, size, className, color }) {
 function IconImg({ icon, size, className, color }) {
   if (!icon || typeof icon === "string") return <span className={className} style={{ fontSize: size }}>{icon}</span>;
   if (icon.minimal && MINIMAL_ICON_SHAPES[icon.minimal]) return <MinimalIcon shapeKey={icon.minimal} size={size} className={className} color={color} />;
-  /* imageRendering intentionally omitted (defaults to smooth/auto) — "pixelated" was
-     inherited from an old low-res pixel-art PNG set this branch used to render; these
-     are full-resolution photos, and "pixelated" would nearest-neighbor-scale them into
-     visible blocky aliasing instead of the smooth downscale a photo needs. */
-  if (icon.img) return <img src={icon.img} alt="" draggable={false} className={className} style={{ width: size, height: size, objectFit: "contain", flexShrink: 0 }} />;
+  if (icon.img) {
+    /* Below a small render size, the photo itself (not just its card edge) stops
+       reading — fall back to the same single-stroke shape this id would've used
+       before the photo set existed, if one's registered. Every current icon.img
+       consumer passes size as a plain number (never the rem-string sizing DesktopIcon
+       uses for minimal/vintage icons), so a direct numeric compare is safe here. */
+    if (icon.minimalFallback && MINIMAL_ICON_SHAPES[icon.minimalFallback] && typeof size === "number" && size < 36) {
+      return <MinimalIcon shapeKey={icon.minimalFallback} size={size} className={className} color={color} />;
+    }
+    /* imageRendering intentionally omitted (defaults to smooth/auto) — "pixelated" was
+       inherited from an old low-res pixel-art PNG set this branch used to render; these
+       are full-resolution photos, and "pixelated" would nearest-neighbor-scale them into
+       visible blocky aliasing instead of the smooth downscale a photo needs.
+       maskImage: each source photo is a flat, fully opaque rounded card — its own
+       background tone doesn't quite match either region of the desktop wallpaper it
+       sits on, so it reads as a sticker rather than another object on the table. A
+       soft radial fade on just the outer edge (not deep enough to clip the door/
+       notebook/joystick/drawer/CRT itself, all comfortably inset from the card's own
+       edge) blends the card into whatever's actually behind it instead of showing a
+       hard rectangle. This only ever applies at the size the fallback above doesn't
+       already intercept, i.e. desktop-icon scale. */
+    const edgeFeather = "radial-gradient(ellipse 82% 82% at 50% 50%, #000 74%, transparent 100%)";
+    return <img src={icon.img} alt="" draggable={false} className={className}
+      style={{ width: size, height: size, objectFit: "contain", flexShrink: 0, WebkitMaskImage: edgeFeather, maskImage: edgeFeather }} />;
+  }
   if (!icon.shape || !VINTAGE_ICON_SHAPES[icon.shape]) return <span className={className} style={{ fontSize: size, color: color || CRT_GREEN }}>{icon.fallback}</span>;
   return <PixelIcon shape={icon.shape} size={size} className={className} color={color} />;
 }
@@ -465,14 +489,24 @@ const SIZE_OPTIONS = [{ value: "sm", label: "Small" }, { value: "md", label: "Me
    was out of scope. Original amber/black CRT palette (was green/black — retinted per
    direct request), not copied from any specific trademarked terminal product. ---------- */
 const THEME = {
-  /* winBg is fully opaque (alpha 1, was .94) — direct feedback: the background
-     watermark/logo was bleeding through open windows at 6% transparency, making text
-     harder to read (worst inside Terminal, where CRT-green text sat right on top of
-     the wordmark). Window content should never show the desktop behind it. */
-  label: "Mono CRT", osBg: "#040200", winBg: "rgba(8,4,0,1)",
+  /* winBg went fully opaque a while back — direct feedback that the background
+     watermark/logo was bleeding through open windows at 6% transparency, worst inside
+     Terminal where CRT-green text sat right on top of the wordmark. That constraint
+     still holds, but it turns out to only ever apply to winBg's own layer: the actual
+     scrollable CONTENT pane every window renders into (the bg-zinc-900/90 div in
+     Window below) already carries its own separate, nearly-opaque backing on top of
+     winBg — it isn't winBg alone protecting text legibility, and never fully was.
+     That gives room to make winBg itself a real glass layer (translucent + blurred)
+     for the window CHROME — the part actually visible against the wallpaper, mostly
+     the titlebar and the window's own edges — without touching the content pane's
+     own protection at all. Same "Workshop Chrome" direction the Start menu got
+     (glass panel, blur, rounded corners) now on the shared Window component that
+     Terminal/More Apps/Arcade all render through, so it reaches all three at once
+     instead of needing a fix per window kind. */
+  label: "Mono CRT", osBg: "#040200", winBg: "rgba(22,16,12,.7)",
   winBorder: "#cc8400", winBorderFocused: "#ffd166",
-  winRadius: "0px", winShadowFocused: () => "0 0 0 1px #ffd166, 0 0 24px rgba(255,209,102,.35)",
-  winShadow: "0 0 0 1px rgba(204,132,0,.5)", winBlur: "none",
+  winRadius: "14px", winShadowFocused: () => "0 0 0 1px #ffd166, 0 0 24px rgba(255,209,102,.35)",
+  winShadow: "0 0 0 1px rgba(204,132,0,.5)", winBlur: "blur(18px)",
   titlebar: () => "linear-gradient(180deg, rgba(204,132,0,.18), transparent)",
   accent: CRT_GREEN, chromeText: "#ffd98a", chromeTextDim: "#c98a2e",
   /* panelBg/panelBlur (Start menu, context menus, the assistant panel) were a
@@ -904,9 +938,9 @@ function Window({ id, title, x, y, w, h, z, color, theme, isFocused, isMaximized
         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c }}></span>
         <span className="flex-1 truncate font-mono font-semibold text-[13px] tracking-wide" style={{ color: t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{title}</span>
         <div className="flex gap-1">
-          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onMinimize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&#8211;</button>
-          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onToggleMaximize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&#9723;</button>
-          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onClose(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>&times;</button>
+          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onMinimize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim, borderRadius: 6 }}>&#8211;</button>
+          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onToggleMaximize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim, borderRadius: 6 }}>&#9723;</button>
+          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onClose(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim, borderRadius: 6 }}>&times;</button>
         </div>
       </div>
       <div className="relative flex-1 min-h-0 overflow-y-auto touch-pan-y bg-zinc-900/90">{children}</div>
@@ -3082,11 +3116,13 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
   return (
     <React.Fragment>
       <div className="fixed inset-0 z-[840]" onClick={onClose}></div>
-      {/* Glass panel: translucent + real backdrop-filter blur (t.panelBg/panelBlur),
-          rounded corners hardcoded here rather than reading t.winRadius — that value
-          is shared with every plain Window's square-cornered content panel, which
-          isn't part of this fix, so the Start menu's own corner radius is scoped
-          locally instead of rippling a global change into unrelated components. */}
+      {/* Glass panel: translucent + real backdrop-filter blur (t.panelBg/panelBlur).
+          16px hardcoded locally rather than reusing t.winRadius (now 14px, since
+          Window itself picked up rounded corners in the same pass that made
+          ContextMenu/AssistantWidget round too, via their existing
+          winRadius==="0px" ternary) — kept as its own literal because the Start
+          menu is proportionally larger than either and reads better very slightly
+          more rounded, not because sharing the token would break anything now. */}
       <div className="fixed left-3 bottom-[60px] w-72 max-h-[70vh] overflow-y-auto py-2 z-[850] font-mono font-semibold text-[13px]"
         style={{ background: t.panelBg, backdropFilter: t.panelBlur, WebkitBackdropFilter: t.panelBlur, borderRadius: "16px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 20px 50px rgba(0,0,0,.45)", fontFamily: t.fontChrome || undefined }}
         onClick={(e) => e.stopPropagation()}>
