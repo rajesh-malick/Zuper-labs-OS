@@ -23,6 +23,11 @@ const CONCEPT = "#7ecbff";
    orange and the other was green. The variable name stays CRT_GREEN to avoid a
    much larger rename across every component that imports it. */
 const CRT_GREEN = "#ffb000";
+/* Neutral warm gray/off-white for icon glyphs (desktop icons, Start menu app list) —
+   the accent color (CRT_GREEN) is reserved for the hovered/focused item only, per
+   direct feedback that every icon being orange all the time against the paper-craft
+   wallpaper read as uniform noise instead of a meaningful highlight. */
+const ICON_NEUTRAL = "#D9CFC2";
 
 /* Product review finding: no analytics anywhere meant zero visibility into the funnel
    above the solve-count stat — who opens careers, who reaches Level 1/2, where people
@@ -456,7 +461,16 @@ const THEME = {
   winShadow: "0 0 0 1px rgba(204,132,0,.5)", winBlur: "none",
   titlebar: () => "linear-gradient(180deg, rgba(204,132,0,.18), transparent)",
   accent: CRT_GREEN, chromeText: "#ffd98a", chromeTextDim: "#c98a2e",
-  taskbarBg: "#040200", panelBg: "rgba(8,4,0,.97)", panelBlur: "none",
+  /* panelBg/panelBlur (Start menu, context menus, the assistant panel) were a
+     near-opaque near-black, .97 alpha + no blur — against the old dark CRT desktop
+     background that read fine, but against the paper-craft wallpaper it read as a
+     flat black rectangle dropped on top of the photo with zero visual relationship
+     to it. Now a real translucent glass panel: lower alpha + a genuine
+     backdrop-filter blur, so the photo's warm tones/texture show through softly
+     instead of being blocked outright. winBg (window CONTENT panels — readme/
+     dashboard/game panes) is untouched and stays fully opaque; that was a separate,
+     already-settled legibility fix and isn't part of this change. */
+  taskbarBg: "#040200", panelBg: "rgba(26,20,16,.74)", panelBlur: "blur(20px)",
   fontChrome: "'JetBrains Mono','Inconsolata',monospace",
 };
 /* ================= CRT desktop background: static scanlines + accent-color vignette ================= */
@@ -3041,6 +3055,7 @@ function Taskbar({ onStartClick, running, onRunningClick, theme }) {
 }
 
 function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun, onReboot, onSession, onRecycleBin, trashedCount, theme }) {
+  const [hoverId, setHoverId] = useState(null);
   if (!open) return null;
   const t = theme || THEME;
   function item(label, fn) {
@@ -3053,8 +3068,13 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
   return (
     <React.Fragment>
       <div className="fixed inset-0 z-[840]" onClick={onClose}></div>
+      {/* Glass panel: translucent + real backdrop-filter blur (t.panelBg/panelBlur),
+          rounded corners hardcoded here rather than reading t.winRadius — that value
+          is shared with every plain Window's square-cornered content panel, which
+          isn't part of this fix, so the Start menu's own corner radius is scoped
+          locally instead of rippling a global change into unrelated components. */}
       <div className="fixed left-3 bottom-[60px] w-72 max-h-[70vh] overflow-y-auto py-2 z-[850] font-mono font-semibold text-[13px]"
-        style={{ background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "8px", boxShadow: bevel("out-deep", t.winBorder), fontFamily: t.fontChrome || undefined }}
+        style={{ background: t.panelBg, backdropFilter: t.panelBlur, WebkitBackdropFilter: t.panelBlur, borderRadius: "16px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 20px 50px rgba(0,0,0,.45)", fontFamily: t.fontChrome || undefined }}
         onClick={(e) => e.stopPropagation()}>
         {/* The real "Zuper Labs" wordmark, once, as a header — the taskbar itself is
             already dense (running-app buttons, clock, Subscribe), so the Start menu
@@ -3064,8 +3084,10 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
         </div>
         <div className="px-4 pt-1.5 pb-1.5 text-[11px] font-semibold uppercase tracking-wide" style={{ color: t.chromeTextDim, opacity: .7 }}>Programs</div>
         {topApps.map((a) => (
-          <button key={a.id} type="button" className="crt-item w-full text-left px-4 py-2 pl-5 flex items-center gap-2.5" style={{ color: t.chromeText }} onClick={() => onOpen(a.id)}>
-            <IconImg icon={a.icon} size={20} className="w-5 text-center flex-shrink-0" />{a.title}
+          <button key={a.id} type="button" className="crt-item w-full text-left px-4 py-2 pl-5 flex items-center gap-2.5" style={{ color: t.chromeText }}
+            onMouseEnter={() => setHoverId(a.id)} onMouseLeave={() => setHoverId((h) => (h === a.id ? null : h))}
+            onClick={() => onOpen(a.id)}>
+            <IconImg icon={a.icon} size={20} className="w-5 text-center flex-shrink-0" color={hoverId === a.id ? t.accent : ICON_NEUTRAL} />{a.title}
           </button>
         ))}
         <div className="my-1.5 border-t" style={{ borderColor: t.winBorder }}></div>
@@ -3567,6 +3589,7 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
   const dragRef = useRef({ dragging: false, moved: false, startX: 0, startY: 0, startLeft: 0, startTop: 0 });
   const [menu, setMenu] = useState(null);
   const [pressed, setPressed] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
     function onPointerMove(e) {
@@ -3598,30 +3621,43 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
   const glyphSize = ICON_GLYPH_REM[iconSize] || ICON_GLYPH_REM.md;
   const labelSize = ICON_LABEL_REM[textSize] || ICON_LABEL_REM.md;
   const t = theme || THEME;
+  /* Accent (color, from theme.accent) is reserved for hover/press only — direct
+     feedback that every icon glowing orange all the time, against the busy
+     paper-craft wallpaper, read as uniform noise rather than a meaningful
+     highlight. Neutral warm gray/off-white (ICON_NEUTRAL) is the resting state. */
+  const active = hovered || pressed;
+  const iconColor = active ? color : ICON_NEUTRAL;
 
   return (
     <div className="absolute pointer-events-auto" style={{ left: pos.x, top: pos.y, width: Math.max(92, tile + 24) }}
       onPointerDown={onPointerDown}
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenu({ x: e.clientX, y: e.clientY }); }}>
       <button type="button" onClickCapture={onClickCapture}
-        className="flex flex-col items-center gap-1.5 p-2 hover:bg-white/10 transition-transform focus-visible:outline focus-visible:outline-2"
-        style={{ width: Math.max(92, tile + 24), outlineColor: color, transform: pressed ? "scale(.93)" : "scale(1)" }}
+        className="flex flex-col items-center gap-1.5 p-2 transition-transform focus-visible:outline focus-visible:outline-2"
+        style={{
+          width: Math.max(92, tile + 24), outlineColor: color, transform: pressed ? "scale(.93)" : "scale(1)",
+          background: active ? "rgba(24,19,15,.55)" : "rgba(24,19,15,.32)",
+          backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", borderRadius: 14,
+          transition: "background-color .15s, transform .1s",
+        }}
+        onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         onClick={() => onOpen(id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(id); } }}>
-        {/* Just the icon itself now — no bordered/background tile behind it (that
-            square "window" frame was the actual ask to remove; the icon's own
-            drop-shadow glow still ties it into the CRT theme). The icon box has an
-            explicit width/height so it can never be squeezed by the label. The label
-            deliberately does NOT get a forced width: shrink-to-fit sizing is what lets
-            it wrap at natural word boundaries ("AI intelligence" -> "AI" / "intelligence")
-            instead of force-breaking mid-word — a forced width narrower than a single
-            long word (tried once, reverted) makes overflow-wrap break the word itself
-            ("intellige" / "nce"), which is worse than the problem it was meant to fix. */}
+        {/* A translucent backing chip (not just the icon itself) is what makes an icon
+            readable against a detailed photo background regardless of what's directly
+            behind it — a text-shadow alone can't help the glyph itself, only the label.
+            The icon box has an explicit width/height so it can never be squeezed by the
+            label. The label deliberately does NOT get a forced width: shrink-to-fit
+            sizing is what lets it wrap at natural word boundaries ("AI intelligence" ->
+            "AI" / "intelligence") instead of force-breaking mid-word — a forced width
+            narrower than a single long word (tried once, reverted) makes overflow-wrap
+            break the word itself ("intellige" / "nce"), which is worse than the problem
+            it was meant to fix. */}
         <span className="relative flex items-center justify-center flex-shrink-0" style={{ width: tile, height: tile, fontSize: glyphSize, overflow: "visible" }}>
-          <span className="relative" style={{ color: color, animation: !pressed ? "crt-icon-glow 2.4s ease-in-out infinite" : "none" }}>
-            <IconImg icon={icon} size={typeof icon === "string" ? glyphSize : Math.round(tile * (icon && icon.img ? 0.88 : 0.66))} color={color} />
+          <span className="relative" style={{ color: iconColor }}>
+            <IconImg icon={icon} size={typeof icon === "string" ? glyphSize : Math.round(tile * (icon && icon.img ? 0.88 : 0.66))} color={iconColor} />
           </span>
         </span>
-        <span className="text-center leading-tight font-mono font-semibold break-words" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 1px 2px rgba(0,0,0,.9), 0 0 3px rgba(0,0,0,.85), 0 0 8px " + color + "60" }}>{title}</span>
+        <span className="text-center leading-tight font-mono font-semibold break-words" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 1px 2px rgba(0,0,0,.9), 0 0 3px rgba(0,0,0,.85), 0 0 8px " + iconColor + "50" }}>{title}</span>
       </button>
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} theme={t} items={[
