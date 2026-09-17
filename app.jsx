@@ -231,7 +231,14 @@ const CLUSTER_ICONS = {
      minimalFallback keeps the original single-stroke shape reachable — IconImg falls
      back to it below a small render size (see IconImg) rather than showing the photo
      illegibly. The photo is a desktop-scale flourish; every smaller list/grid context
-     gets the glyph it was actually designed for. */
+     gets the glyph it was actually designed for.
+
+     feather: true marks the ORIGINAL flat opaque-card asset (still just terminal) —
+     IconImg only applies the card-edge-softening radial mask to these. The other 4
+     were re-supplied as real transparent cutouts (confirmed via pixel format: RGBA,
+     not the old RGB24 opaque card) — masking an already-transparent object would
+     needlessly soften the real door/notebook/joystick/drawer silhouette itself for a
+     problem that asset no longer has. */
   "careers": { img: "./assets/icon-careers-door.webp", minimalFallback: "careers" },
   "blog": { img: "./assets/icon-blog-notebook.webp", minimalFallback: "blog" },
   "customer-portal": minimalIcon("customer-portal", "\u{1F464}"),
@@ -241,7 +248,7 @@ const CLUSTER_ICONS = {
   "integration-hub": minimalIcon("integration-hub", "\u{1F517}"),
   "predictive-analytics": minimalIcon("predictive-analytics", "\u{1F52E}"),
   "zuper-arcade": { img: "./assets/icon-arcade-joystick.webp", minimalFallback: "zuper-arcade" },
-  "terminal": { img: "./assets/icon-terminal-crt.webp", minimalFallback: "terminal" },
+  "terminal": { img: "./assets/icon-terminal-crt.webp", minimalFallback: "terminal", feather: true },
   "more-apps": { img: "./assets/icon-moreapps-drawer.webp", minimalFallback: "more-apps" },
 };
 
@@ -477,17 +484,23 @@ function IconImg({ icon, size, className, color }) {
        inherited from an old low-res pixel-art PNG set this branch used to render; these
        are full-resolution photos, and "pixelated" would nearest-neighbor-scale them into
        visible blocky aliasing instead of the smooth downscale a photo needs.
-       maskImage: each source photo is a flat, fully opaque rounded card — its own
-       background tone doesn't quite match either region of the desktop wallpaper it
-       sits on, so it reads as a sticker rather than another object on the table. A
-       soft radial fade on just the outer edge (not deep enough to clip the door/
-       notebook/joystick/drawer/CRT itself, all comfortably inset from the card's own
-       edge) blends the card into whatever's actually behind it instead of showing a
-       hard rectangle. This only ever applies at the size the fallback above doesn't
-       already intercept, i.e. desktop-icon scale. */
+       maskImage (icon.feather only — currently just terminal): that one source photo
+       is still a flat, fully opaque rounded card — its own background tone doesn't
+       quite match either region of the desktop wallpaper it sits on, so it reads as a
+       sticker rather than another object on the table. A soft radial fade on just the
+       outer edge (not deep enough to clip the CRT monitor itself, comfortably inset
+       from the card's own edge) blends the card into whatever's actually behind it
+       instead of showing a hard rectangle. The other 4 (door/notebook/joystick/
+       drawer) were re-supplied as real transparent cutouts and skip this entirely —
+       masking an already-transparent object would needlessly soften its own real
+       silhouette for a problem it no longer has. Either way this only ever applies at
+       the size the fallback above doesn't already intercept, i.e. desktop-icon
+       scale. */
     const edgeFeather = "radial-gradient(ellipse 82% 82% at 50% 50%, #000 74%, transparent 100%)";
     return <img src={icon.img} alt="" draggable={false} className={className}
-      style={{ width: size, height: size, objectFit: "contain", flexShrink: 0, WebkitMaskImage: edgeFeather, maskImage: edgeFeather }} />;
+      style={icon.feather
+        ? { width: size, height: size, objectFit: "contain", flexShrink: 0, WebkitMaskImage: edgeFeather, maskImage: edgeFeather }
+        : { width: size, height: size, objectFit: "contain", flexShrink: 0 }} />;
   }
   if (!icon.shape || !VINTAGE_ICON_SHAPES[icon.shape]) return <span className={className} style={{ fontSize: size, color: color || CRT_GREEN }}>{icon.fallback}</span>;
   return <PixelIcon shape={icon.shape} size={size} className={className} color={color} />;
