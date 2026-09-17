@@ -214,40 +214,47 @@ function minimalIcon(key, fallback) { return { minimal: key, fallback: fallback 
 const CLUSTER_ICONS = {
   "command-center": minimalIcon("command-center", "\u{1F5A5}️"),
   "core-platform": minimalIcon("core-platform", "\u{1F9E0}"),
-  "ai-intelligence": minimalIcon("ai-intelligence", "\u{1F916}"),
   "workflows-cluster": minimalIcon("workflows-cluster", "\u{1F501}"),
   "field-operations": minimalIcon("field-operations", "\u{1F6F0}️"),
-  "security-compliance": minimalIcon("security-compliance", "\u{1F512}"),
-  /* These 5 (careers/blog/zuper-arcade/terminal/more-apps) are real paper-craft photo
-     assets — the same diorama style/set as the desktop wallpaper (a glowing open door,
-     a notebook+pen, a joystick, a file drawer, a CRT monitor) — replacing the flat
-     single-stroke minimal icon for these specific ids only. Every other cluster below
-     stays on the minimal line-icon system — this isn't a wholesale icon-system
-     change. The CLUSTER_ICONS lookup is shared by the desktop, the Start menu app
-     list, the QuickLauncher (Find/Run), the Trash, and the More Apps drawer, so these
-     images now appear everywhere those ids' icon is looked up, not just the desktop —
+  /* These 11 are real paper-craft photo assets — the same diorama style/set as the
+     desktop wallpaper — replacing the flat single-stroke minimal icon for these
+     specific ids only. Every other cluster above/below stays on the minimal
+     line-icon system — this isn't a wholesale icon-system change. The
+     CLUSTER_ICONS lookup is shared by the desktop, the Start menu app list, the
+     QuickLauncher (Find/Run), the Trash, and the More Apps drawer, so these images
+     now appear everywhere those ids' icon is looked up, not just the desktop —
      consistent branding for the same app across surfaces, not an oversight.
 
-     minimalFallback keeps the original single-stroke shape reachable — IconImg falls
-     back to it below a small render size (see IconImg) rather than showing the photo
-     illegibly. The photo is a desktop-scale flourish; every smaller list/grid context
-     gets the glyph it was actually designed for.
+     minimalFallback keeps the original single-stroke shape reachable — IconImg
+     falls back to it below a small render size (see IconImg) rather than showing
+     the photo illegibly. The photo is a desktop-scale flourish; every smaller
+     list/grid context gets the glyph it was actually designed for.
 
-     feather: true marks the ORIGINAL flat opaque-card asset (still just terminal) —
-     IconImg only applies the card-edge-softening radial mask to these. The other 4
-     were re-supplied as real transparent cutouts (confirmed via pixel format: RGBA,
-     not the old RGB24 opaque card) — masking an already-transparent object would
-     needlessly soften the real door/notebook/joystick/drawer silhouette itself for a
-     problem that asset no longer has. */
+     feather: true marks assets that are still a flat opaque card (crops from a
+     second reference sheet, on a plain white background — not yet a real
+     transparent cutout) — IconImg only applies the card-edge-softening radial
+     mask to these. careers/blog/zuper-arcade/more-apps were re-supplied as real
+     transparent cutouts (confirmed via pixel format: RGBA, not the old RGB24
+     opaque card) and skip the mask entirely — applying it to an already-
+     transparent object would needlessly soften the real door/notebook/joystick/
+     drawer silhouette itself for a problem that asset no longer has. terminal and
+     the 6 newly-added cluster icons don't have that yet, so they keep the mask
+     until/unless a matching cutout shows up the same way the first 4 did. */
   "careers": { img: "./assets/icon-careers-door.webp", minimalFallback: "careers" },
   "blog": { img: "./assets/icon-blog-notebook.webp", minimalFallback: "blog" },
-  "customer-portal": minimalIcon("customer-portal", "\u{1F464}"),
+  "ai-intelligence": { img: "./assets/icon-ai-intelligence.webp", minimalFallback: "ai-intelligence", feather: true },
+  "customer-portal": { img: "./assets/icon-customer-portal.webp", minimalFallback: "customer-portal", feather: true },
   "data-pipeline": minimalIcon("data-pipeline", "\u{1F4CA}"),
   "payment-processing": minimalIcon("payment-processing", "\u{1F4B3}"),
-  "inventory-management": minimalIcon("inventory-management", "\u{1F4E6}"),
-  "integration-hub": minimalIcon("integration-hub", "\u{1F517}"),
-  "predictive-analytics": minimalIcon("predictive-analytics", "\u{1F52E}"),
+  "inventory-management": { img: "./assets/icon-inventory-management.webp", minimalFallback: "inventory-management", feather: true },
+  "integration-hub": { img: "./assets/icon-integration-hub.webp", minimalFallback: "integration-hub", feather: true },
+  "security-compliance": { img: "./assets/icon-security-compliance.webp", minimalFallback: "security-compliance", feather: true },
+  "predictive-analytics": { img: "./assets/icon-predictive-analytics.webp", minimalFallback: "predictive-analytics", feather: true },
   "zuper-arcade": { img: "./assets/icon-arcade-joystick.webp", minimalFallback: "zuper-arcade" },
+  /* terminal's asset was replaced with a new crop from the same second reference
+     sheet — a tan/cream CRT that matches the current warm palette better than the
+     original grey one did. Same feather treatment as before (still an opaque
+     card), just a different image underneath the same code path. */
   "terminal": { img: "./assets/icon-terminal-crt.webp", minimalFallback: "terminal", feather: true },
   "more-apps": { img: "./assets/icon-moreapps-drawer.webp", minimalFallback: "more-apps" },
 };
