@@ -195,17 +195,27 @@ const CLUSTER_ICONS = {
   "workflows-cluster": minimalIcon("workflows-cluster", "\u{1F501}"),
   "field-operations": minimalIcon("field-operations", "\u{1F6F0}️"),
   "security-compliance": minimalIcon("security-compliance", "\u{1F512}"),
-  "careers": minimalIcon("careers", "\u{1F4BC}"),
-  "blog": minimalIcon("blog", "\u{1F4DD}"),
+  /* These 5 (careers/blog/zuper-arcade/terminal/more-apps) are real paper-craft photo
+     assets — the same diorama style/set as the desktop wallpaper (a glowing open door,
+     a notebook+pen, a joystick, a file drawer, a CRT monitor) — replacing the flat
+     single-stroke minimal icon for these specific ids only. Every other cluster below
+     stays on the minimal line-icon system — this isn't a wholesale icon-system
+     change. The CLUSTER_ICONS lookup is shared by the desktop, the Start menu app
+     list, and the
+     taskbar running-app button, so these images now appear everywhere those ids'
+     icon is looked up, not just the desktop — consistent branding for the same app
+     across surfaces, not an oversight. */
+  "careers": { img: "./assets/icon-careers-door.webp" },
+  "blog": { img: "./assets/icon-blog-notebook.webp" },
   "customer-portal": minimalIcon("customer-portal", "\u{1F464}"),
   "data-pipeline": minimalIcon("data-pipeline", "\u{1F4CA}"),
   "payment-processing": minimalIcon("payment-processing", "\u{1F4B3}"),
   "inventory-management": minimalIcon("inventory-management", "\u{1F4E6}"),
   "integration-hub": minimalIcon("integration-hub", "\u{1F517}"),
   "predictive-analytics": minimalIcon("predictive-analytics", "\u{1F52E}"),
-  "zuper-arcade": minimalIcon("zuper-arcade", "\u{1F3AE}"),
-  "terminal": minimalIcon("terminal", "⌨️"),
-  "more-apps": minimalIcon("more-apps", "\u{2795}"),
+  "zuper-arcade": { img: "./assets/icon-arcade-joystick.webp" },
+  "terminal": { img: "./assets/icon-terminal-crt.webp" },
+  "more-apps": { img: "./assets/icon-moreapps-drawer.webp" },
 };
 
 /* One shape array per cluster, in the same [tag, attrs] tuple format PixelIcon already
@@ -421,13 +431,17 @@ function PixelIcon({ shape, size, className, color }) {
   );
 }
 
-/* Renders a minimalist flat line icon if one's set (desktop/app icons), else a
-   full-color pixel-art PNG (unused now, kept for anything not yet migrated), else a
-   mono-CRT vintage embossed vector icon (ENTITY_ICONS), else a plain emoji fallback. */
+/* Renders a minimalist flat line icon if one's set (desktop/app icons), else a real
+   photo icon (the paper-craft door/notebook/joystick/drawer/CRT set), else a mono-CRT
+   vintage embossed vector icon (ENTITY_ICONS), else a plain emoji fallback. */
 function IconImg({ icon, size, className, color }) {
   if (!icon || typeof icon === "string") return <span className={className} style={{ fontSize: size }}>{icon}</span>;
   if (icon.minimal && MINIMAL_ICON_SHAPES[icon.minimal]) return <MinimalIcon shapeKey={icon.minimal} size={size} className={className} color={color} />;
-  if (icon.img) return <img src={icon.img} alt="" draggable={false} className={className} style={{ width: size, height: size, objectFit: "contain", imageRendering: "pixelated", flexShrink: 0 }} />;
+  /* imageRendering intentionally omitted (defaults to smooth/auto) — "pixelated" was
+     inherited from an old low-res pixel-art PNG set this branch used to render; these
+     are full-resolution photos, and "pixelated" would nearest-neighbor-scale them into
+     visible blocky aliasing instead of the smooth downscale a photo needs. */
+  if (icon.img) return <img src={icon.img} alt="" draggable={false} className={className} style={{ width: size, height: size, objectFit: "contain", flexShrink: 0 }} />;
   if (!icon.shape || !VINTAGE_ICON_SHAPES[icon.shape]) return <span className={className} style={{ fontSize: size, color: color || CRT_GREEN }}>{icon.fallback}</span>;
   return <PixelIcon shape={icon.shape} size={size} className={className} color={color} />;
 }
@@ -3627,6 +3641,15 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
      highlight. Neutral warm gray/off-white (ICON_NEUTRAL) is the resting state. */
   const active = hovered || pressed;
   const iconColor = active ? color : ICON_NEUTRAL;
+  /* The 5 paper-craft photo icons (door/notebook/joystick/drawer/CRT) are already
+     self-contained cards with their own baked-in background/lighting — stacking the
+     translucent backing chip underneath them would double up two competing "frame"
+     treatments (a dark blurred chip behind an opaque tan card). They get a plain
+     grounding drop-shadow instead, same idea as every object's own cast shadow in the
+     wallpaper photo, and skip the chip entirely. Only the label still needs a
+     legibility treatment either way, since it sits directly on the photo either side
+     of the icon. */
+  const isImageIcon = !!(icon && icon.img);
 
   return (
     <div className="absolute pointer-events-auto" style={{ left: pos.x, top: pos.y, width: Math.max(92, tile + 24) }}
@@ -3636,25 +3659,31 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
         className="flex flex-col items-center gap-1.5 p-2 transition-transform focus-visible:outline focus-visible:outline-2"
         style={{
           width: Math.max(92, tile + 24), outlineColor: color, transform: pressed ? "scale(.93)" : "scale(1)",
-          background: active ? "rgba(24,19,15,.55)" : "rgba(24,19,15,.32)",
-          backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", borderRadius: 14,
-          transition: "background-color .15s, transform .1s",
+          background: isImageIcon ? "transparent" : (active ? "rgba(24,19,15,.55)" : "rgba(24,19,15,.32)"),
+          backdropFilter: isImageIcon ? undefined : "blur(6px)", WebkitBackdropFilter: isImageIcon ? undefined : "blur(6px)",
+          borderRadius: 14, transition: "background-color .15s, transform .1s",
         }}
         onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         onClick={() => onOpen(id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(id); } }}>
-        {/* A translucent backing chip (not just the icon itself) is what makes an icon
-            readable against a detailed photo background regardless of what's directly
-            behind it — a text-shadow alone can't help the glyph itself, only the label.
-            The icon box has an explicit width/height so it can never be squeezed by the
-            label. The label deliberately does NOT get a forced width: shrink-to-fit
-            sizing is what lets it wrap at natural word boundaries ("AI intelligence" ->
-            "AI" / "intelligence") instead of force-breaking mid-word — a forced width
-            narrower than a single long word (tried once, reverted) makes overflow-wrap
-            break the word itself ("intellige" / "nce"), which is worse than the problem
-            it was meant to fix. */}
-        <span className="relative flex items-center justify-center flex-shrink-0" style={{ width: tile, height: tile, fontSize: glyphSize, overflow: "visible" }}>
+        {/* A translucent backing chip (not just the icon itself) is what makes a
+            single-stroke line icon readable against a detailed photo background
+            regardless of what's directly behind it — a text-shadow alone can't help
+            the glyph itself, only the label. The photo icons skip this (see
+            isImageIcon above). The icon box has an explicit width/height so it can
+            never be squeezed by the label. The label deliberately does NOT get a
+            forced width: shrink-to-fit sizing is what lets it wrap at natural word
+            boundaries ("AI intelligence" -> "AI" / "intelligence") instead of
+            force-breaking mid-word — a forced width narrower than a single long word
+            (tried once, reverted) makes overflow-wrap break the word itself
+            ("intellige" / "nce"), which is worse than the problem it was meant to fix. */}
+        <span className="relative flex items-center justify-center flex-shrink-0"
+          style={{
+            width: tile, height: tile, fontSize: glyphSize, overflow: "visible",
+            filter: isImageIcon ? "drop-shadow(0 " + (active ? "10px 14px" : "6px 10px") + " rgba(0,0,0,.45))" : undefined,
+            transition: "filter .15s",
+          }}>
           <span className="relative" style={{ color: iconColor }}>
-            <IconImg icon={icon} size={typeof icon === "string" ? glyphSize : Math.round(tile * (icon && icon.img ? 0.88 : 0.66))} color={iconColor} />
+            <IconImg icon={icon} size={typeof icon === "string" ? glyphSize : Math.round(tile * (isImageIcon ? 0.88 : 0.66))} color={iconColor} />
           </span>
         </span>
         <span className="text-center leading-tight font-mono font-semibold break-words" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 1px 2px rgba(0,0,0,.9), 0 0 3px rgba(0,0,0,.85), 0 0 8px " + iconColor + "50" }}>{title}</span>
