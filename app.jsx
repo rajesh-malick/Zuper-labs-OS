@@ -29,6 +29,29 @@ const CRT_GREEN = "#ffb000";
    wallpaper read as uniform noise instead of a meaningful highlight. */
 const ICON_NEUTRAL = "#D9CFC2";
 
+/* Design-token palette — sampled directly from the actual paper-craft wallpaper photo
+   (not eyeballed), so these match it exactly. Mirrors the CSS custom properties of the
+   same name in index.html's :root — kept as plain hex here rather than read via
+   getComputedStyle/var() because several consumers need to do real arithmetic on the
+   value (bevel()'s shade() math expects a hex string; PixelIcon/canvas rendering wants
+   a real color to paint with), not just apply it as a CSS declaration.
+
+   Deliberately a NEW, separate set of constants — not a retint of CRT_GREEN (the OS
+   shell's existing amber, kept exactly as-is for Terminal's own text, the boot screen,
+   the mobile fallback, and every window CONTENT pane) and not the existing ACCENT
+   (Zuper's brand red-orange, #ff4919, used inside window content like the Recycle Bin/
+   Display Settings panes). Three different oranges for three genuinely different
+   things — THEME below is the only place these new tokens plug in, so this pass only
+   ever touches OS chrome (taskbar, Start menu, window chrome, icon labels, context/
+   quick-launcher menus), never content. */
+const BG_CREAM = "#EEE1C8";
+const OLIVE_GROUND = "#968B5F";
+const CHARCOAL = "#605756";
+const ICON_CARD = "#4F4138";
+const ACCENT_ORANGE = "#E67E38";
+const TEXT_PRIMARY = "#F5F0E8";
+const TEXT_SECONDARY = "#B8A98E";
+
 /* Product review finding: no analytics anywhere meant zero visibility into the funnel
    above the solve-count stat — who opens careers, who reaches Level 1/2, where people
    drop off. window.va is Vercel Web Analytics' queueing shim (see index.html) — a
@@ -483,43 +506,36 @@ const ICON_LABEL_REM = { sm: "11px", md: "13px", lg: "17px" };
 const ICON_CELL_PX = { sm: 78, md: 100, lg: 168 };
 const SIZE_OPTIONS = [{ value: "sm", label: "Small" }, { value: "md", label: "Medium" }, { value: "lg", label: "Large" }];
 
-/* ---------- Mono CRT theme — the OS shell's only look. Reskins desktop bg, window
-   chrome, taskbar, start menu, context menus, and icon tiles. Window CONTENT (readme/
-   dashboard/game text) stays on a dark panel — full re-theming of every content pane
-   was out of scope. Original amber/black CRT palette (was green/black — retinted per
-   direct request), not copied from any specific trademarked terminal product. ---------- */
+/* ---------- Workshop Chrome theme — the OS shell's look. Reskins desktop bg, window
+   chrome, taskbar, start menu, context/quick-launcher menus, and icon tiles using the
+   BG_CREAM/OLIVE_GROUND/CHARCOAL/ICON_CARD/ACCENT_ORANGE/TEXT_PRIMARY/TEXT_SECONDARY
+   design tokens above (sampled from the wallpaper photo). Window CONTENT (readme/
+   dashboard/game text) stays on its own dark panel, unchanged, using CRT_GREEN/ACCENT
+   as before — full re-theming of every content pane remains out of scope; this is a
+   chrome-only design system, not a content-typography pass. `label` renamed from
+   "Mono CRT" to match — grepped first to confirm nothing compares against the old
+   string anywhere (it was purely descriptive, never read/branched on), so renaming it
+   is safe. */
 const THEME = {
-  /* winBg went fully opaque a while back — direct feedback that the background
-     watermark/logo was bleeding through open windows at 6% transparency, worst inside
-     Terminal where CRT-green text sat right on top of the wordmark. That constraint
-     still holds, but it turns out to only ever apply to winBg's own layer: the actual
-     scrollable CONTENT pane every window renders into (the bg-zinc-900/90 div in
-     Window below) already carries its own separate, nearly-opaque backing on top of
-     winBg — it isn't winBg alone protecting text legibility, and never fully was.
-     That gives room to make winBg itself a real glass layer (translucent + blurred)
-     for the window CHROME — the part actually visible against the wallpaper, mostly
-     the titlebar and the window's own edges — without touching the content pane's
-     own protection at all. Same "Workshop Chrome" direction the Start menu got
-     (glass panel, blur, rounded corners) now on the shared Window component that
-     Terminal/More Apps/Arcade all render through, so it reaches all three at once
-     instead of needing a fix per window kind. */
-  label: "Mono CRT", osBg: "#040200", winBg: "rgba(22,16,12,.7)",
-  winBorder: "#cc8400", winBorderFocused: "#ffd166",
-  winRadius: "14px", winShadowFocused: () => "0 0 0 1px #ffd166, 0 0 24px rgba(255,209,102,.35)",
-  winShadow: "0 0 0 1px rgba(204,132,0,.5)", winBlur: "blur(18px)",
-  titlebar: () => "linear-gradient(180deg, rgba(204,132,0,.18), transparent)",
-  accent: CRT_GREEN, chromeText: "#ffd98a", chromeTextDim: "#c98a2e",
-  /* panelBg/panelBlur (Start menu, context menus, the assistant panel) were a
-     near-opaque near-black, .97 alpha + no blur — against the old dark CRT desktop
-     background that read fine, but against the paper-craft wallpaper it read as a
-     flat black rectangle dropped on top of the photo with zero visual relationship
-     to it. Now a real translucent glass panel: lower alpha + a genuine
-     backdrop-filter blur, so the photo's warm tones/texture show through softly
-     instead of being blocked outright. winBg (window CONTENT panels — readme/
-     dashboard/game panes) is untouched and stays fully opaque; that was a separate,
-     already-settled legibility fix and isn't part of this change. */
-  taskbarBg: "#040200", panelBg: "rgba(26,20,16,.74)", panelBlur: "blur(20px)",
-  fontChrome: "'JetBrains Mono','Inconsolata',monospace",
+  /* winBg's own translucency only shows through the window's titlebar and edges (see
+     the Window component) — the actual scrollable content pane has its own separate,
+     nearly-opaque backing on top of it, untouched by this token swap. Charcoal glass
+     instead of the previous warm-black glass; same structural fix, new palette. */
+  label: "Workshop Chrome", osBg: "#040200", winBg: "rgba(96,87,86,.7)",
+  /* Item 5: orange reserved for the focused/active window only — the unfocused border
+     is icon-card, a neutral distinct from both winBg (charcoal) and the wallpaper, not
+     an accent color at rest. */
+  winBorder: ICON_CARD, winBorderFocused: ACCENT_ORANGE,
+  winRadius: "14px", winShadowFocused: () => "0 0 0 1px " + ACCENT_ORANGE + ", 0 0 24px " + ACCENT_ORANGE + "59",
+  winShadow: "0 0 0 1px " + ICON_CARD + "99", winBlur: "blur(18px)",
+  titlebar: () => "linear-gradient(180deg, " + ICON_CARD + "cc, transparent)",
+  accent: ACCENT_ORANGE, chromeText: TEXT_PRIMARY, chromeTextDim: TEXT_SECONDARY,
+  /* panelBg/panelBlur (Start menu, context menus, the quick launcher, the assistant
+     panel) — same charcoal glass as winBg, same reasoning: translucent + blurred so
+     the wallpaper's warm tones/texture show through softly instead of a flat
+     rectangle dropped on top of the photo. */
+  taskbarBg: CHARCOAL, panelBg: "rgba(96,87,86,.74)", panelBlur: "blur(20px)",
+  fontChrome: "'Inter','Segoe UI',-apple-system,sans-serif",
 };
 /* ================= CRT desktop background: static scanlines + accent-color vignette ================= */
 function ScanlineBackground({ color }) {
@@ -553,7 +569,7 @@ function ContextMenu({ x, y, items, onClose, theme }) {
   const top = Math.min(y, vh - items.length * 32 - 60);
   return (
     <div
-      className="fixed z-[1900] min-w-[190px] py-1.5 font-mono font-medium text-[13px] overflow-hidden"
+      className="fixed z-[1900] min-w-[190px] py-1.5 font-chrome font-medium text-[13px] overflow-hidden"
       style={{ left: left, top: top, background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "8px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 20px 50px rgba(0,0,0,.6)", fontFamily: t.fontChrome || undefined }}
       onPointerDown={(e) => e.stopPropagation()}
     >
@@ -580,12 +596,12 @@ function ContextMenu({ x, y, items, onClose, theme }) {
 function Toast({ text, action, onDone }) {
   useEffect(() => { const t = setTimeout(onDone, action ? 4500 : 1800); return () => clearTimeout(t); }, [onDone, action]);
   return (
-    <div className="fixed bottom-[64px] left-1/2 z-[1950] px-4 py-2 rounded-lg font-mono font-semibold text-[12px] text-white/92 flex items-center gap-3"
-      style={{ transform: "translateX(-50%)", background: "rgba(20,21,28,.95)", border: "1px solid rgba(255,255,255,.15)", boxShadow: "0 10px 30px rgba(0,0,0,.5)" }}>
+    <div className="fixed bottom-[64px] left-1/2 z-[1950] px-4 py-2 rounded-lg font-chrome font-semibold text-[12px] flex items-center gap-3"
+      style={{ transform: "translateX(-50%)", background: CHARCOAL, color: TEXT_PRIMARY, border: "1px solid " + ICON_CARD, boxShadow: "0 10px 30px rgba(0,0,0,.5)" }}>
       <span>{text}</span>
       {action && (
         <button type="button" onClick={() => { action.onClick(); onDone(); }}
-          className="underline decoration-dotted underline-offset-2 hover:text-white flex-shrink-0" style={{ color: "#ffd98a" }}>
+          className="underline decoration-dotted underline-offset-2 flex-shrink-0" style={{ color: ACCENT_ORANGE }}>
           {action.label}
         </button>
       )}
@@ -594,9 +610,15 @@ function Toast({ text, action, onDone }) {
 }
 
 /* ================= Quick launcher (Find / Run) ================= */
-function QuickLauncher({ title, placeholder, apps, onOpen, onClose }) {
+/* Audit finding (design-token pass): this never adopted THEME at all — hardcoded to a
+   generic dark slate independent of the OS chrome's own palette, amber or otherwise.
+   Brought onto the same charcoal glass (t.panelBg/panelBlur) every other floating
+   chrome surface (Start menu, context menu, assistant panel) already uses, so it reads
+   as one system rather than a fourth separately-styled panel. */
+function QuickLauncher({ title, placeholder, apps, onOpen, onClose, theme }) {
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
+  const t = theme || THEME;
   useEffect(() => { inputRef.current && inputRef.current.focus(); }, []);
   const matches = query.trim()
     ? apps.filter((a) => a.title.toLowerCase().includes(query.trim().toLowerCase()))
@@ -611,18 +633,19 @@ function QuickLauncher({ title, placeholder, apps, onOpen, onClose }) {
   return (
     <React.Fragment>
       <div className="fixed inset-0 z-[1940]" onClick={onClose}></div>
-      <div className="fixed left-1/2 top-[22%] w-[380px] z-[1950] rounded-lg border border-white/10 overflow-hidden"
-        style={{ transform: "translateX(-50%)", background: "rgba(16,17,23,.97)", backdropFilter: "blur(16px)", boxShadow: "0 24px 60px rgba(0,0,0,.6)" }}
+      <div className="fixed left-1/2 top-[22%] w-[380px] z-[1950] rounded-lg overflow-hidden"
+        style={{ transform: "translateX(-50%)", background: t.panelBg, backdropFilter: t.panelBlur, WebkitBackdropFilter: t.panelBlur, border: "1px solid " + t.winBorder, boxShadow: "0 24px 60px rgba(0,0,0,.6)" }}
         onClick={(e) => e.stopPropagation()}>
-        <div className="px-4 py-3 border-b border-white/10 font-mono font-semibold text-[13px] text-white/68">{title}</div>
+        <div className="px-4 py-3 border-b font-chrome font-semibold text-[13px]" style={{ borderColor: t.winBorder, color: t.chromeTextDim }}>{title}</div>
         <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={onKeyDown}
           placeholder={placeholder} spellCheck={false} autoComplete="off"
-          className="w-full px-4 py-3 bg-transparent outline-none text-white/92 font-mono font-medium text-[14px] placeholder-white/40 border-b border-white/10" />
+          className="w-full px-4 py-3 bg-transparent outline-none font-chrome font-medium text-[14px] border-b"
+          style={{ color: t.chromeText, borderColor: t.winBorder }} />
         <div className="max-h-[260px] overflow-y-auto py-1.5">
-          {matches.length === 0 && <div className="px-4 py-2 text-white/48 font-mono font-medium text-[11px]">No matching app.</div>}
+          {matches.length === 0 && <div className="px-4 py-2 font-chrome font-medium text-[11px]" style={{ color: t.chromeTextDim }}>No matching app.</div>}
           {matches.map((a) => (
             <button key={a.id} type="button" onClick={() => openAndClose(a.id)}
-              className="crt-item w-full text-left px-4 py-2 pl-5 flex items-center gap-2.5 text-white/85 hover:text-white font-mono font-semibold text-[13px]">
+              className="crt-item w-full text-left px-4 py-2 pl-5 flex items-center gap-2.5 font-chrome font-semibold text-[13px]" style={{ color: t.chromeText }}>
               <IconImg icon={a.icon} size={20} className="w-5 text-center flex-shrink-0" />{a.title}
             </button>
           ))}
@@ -936,11 +959,11 @@ function Window({ id, title, x, y, w, h, z, color, theme, isFocused, isMaximized
         onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenu({ x: e.clientX, y: e.clientY }); }}
       >
         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c }}></span>
-        <span className="flex-1 truncate font-mono font-semibold text-[13px] tracking-wide" style={{ color: t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{title}</span>
+        <span className="flex-1 truncate font-chrome font-semibold text-[13px] tracking-wide" style={{ color: t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{title}</span>
         <div className="flex gap-1">
-          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onMinimize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim, borderRadius: 6 }}>&#8211;</button>
-          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onToggleMaximize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim, borderRadius: 6 }}>&#9723;</button>
-          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onClose(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim, borderRadius: 6 }}>&times;</button>
+          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onMinimize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: ICON_CARD + "8c", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim, borderRadius: 6 }}>&#8211;</button>
+          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onToggleMaximize(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: ICON_CARD + "8c", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim, borderRadius: 6 }}>&#9723;</button>
+          <button data-winbtn type="button" onClick={(e) => { e.stopPropagation(); onClose(id); }} className="w-[22px] h-[22px] flex items-center justify-center hover:scale-110 transition-transform" style={{ background: ICON_CARD + "8c", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim, borderRadius: 6 }}>&times;</button>
         </div>
       </div>
       <div className="relative flex-1 min-h-0 overflow-y-auto touch-pan-y bg-zinc-900/90">{children}</div>
@@ -3085,15 +3108,15 @@ function Taskbar({ onStartClick, running, onRunningClick, theme }) {
   }, []);
   return (
     <div className="fixed left-0 right-0 bottom-0 h-[52px] flex items-center gap-3 px-3 z-[800]" style={{ background: t.taskbarBg, backdropFilter: t.winBlur === "none" ? undefined : "blur(10px)", boxShadow: bevel("out-shallow", t.winBorder) + ", inset 0 1px 0 rgba(0,0,0,.4)" }}>
-      <button type="button" onClick={onStartClick} className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[13px] font-semibold" style={{ background: t.accent, color: "#040200", boxShadow: bevel("out-shallow", t.accent) }}>&#9635; Start</button>
+      <button type="button" onClick={onStartClick} className="flex items-center gap-1.5 px-3 py-1.5 font-chrome text-[13px] font-semibold" style={{ background: t.accent, color: t.chromeText, boxShadow: bevel("out-shallow", t.accent) }}>&#9635; Start</button>
       <div className="flex-1 flex gap-1.5 overflow-x-auto">
         {running.map((r) => (
           <button key={r.id} type="button" onClick={() => onRunningClick(r.id)}
-            className="px-2.5 py-1 font-mono font-semibold text-[13px] whitespace-nowrap"
-            style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel(r.focused ? "in-shallow" : "out-shallow", r.focused ? t.accent : t.winBorder), color: r.focused ? t.chromeText : t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{r.title}</button>
+            className="px-2.5 py-1 font-chrome font-semibold text-[13px] whitespace-nowrap"
+            style={{ background: ICON_CARD + "8c", boxShadow: bevel(r.focused ? "in-shallow" : "out-shallow", r.focused ? t.accent : t.winBorder), color: r.focused ? t.chromeText : t.chromeTextDim, fontFamily: t.fontChrome || undefined }}>{r.title}</button>
         ))}
       </div>
-      <span aria-hidden="true" className="font-mono font-semibold text-[11px]" style={{ color: t.chromeText, fontFamily: t.fontChrome || undefined }}>{clock}</span>
+      <span aria-hidden="true" className="font-chrome font-semibold text-[11px]" style={{ color: t.chromeText, fontFamily: t.fontChrome || undefined }}>{clock}</span>
       {/* onClick triggers the real Ghost signup modal directly (see openGhostSignup
           above) — data-portal="signup" is also set per Ghost's own convention, and
           href/target remain as a fallback if the embed script hasn't loaded at all. */}
@@ -3123,7 +3146,7 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
           winRadius==="0px" ternary) — kept as its own literal because the Start
           menu is proportionally larger than either and reads better very slightly
           more rounded, not because sharing the token would break anything now. */}
-      <div className="fixed left-3 bottom-[60px] w-72 max-h-[70vh] overflow-y-auto py-2 z-[850] font-mono font-semibold text-[13px]"
+      <div className="fixed left-3 bottom-[60px] w-72 max-h-[70vh] overflow-y-auto py-2 z-[850] font-chrome font-semibold text-[13px]"
         style={{ background: t.panelBg, backdropFilter: t.panelBlur, WebkitBackdropFilter: t.panelBlur, borderRadius: "16px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 20px 50px rgba(0,0,0,.45)", fontFamily: t.fontChrome || undefined }}
         onClick={(e) => e.stopPropagation()}>
         {/* The real "Zuper Labs" wordmark, once, as a header — the taskbar itself is
@@ -3489,7 +3512,7 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
     <div className="absolute pointer-events-auto" style={{ left: current.x, top: current.y, zIndex: 500, transition: docked ? "left .4s ease, top .4s ease" : "none" }}
       onPointerDown={onPointerDown}>
       {open && (
-        <div className={"absolute right-0 w-72 p-3 font-mono font-medium text-[13px] flex flex-col " + (openUpward ? "bottom-[166px]" : "top-[176px]")}
+        <div className={"absolute right-0 w-72 p-3 font-chrome font-medium text-[13px] flex flex-col " + (openUpward ? "bottom-[166px]" : "top-[176px]")}
           style={{ background: t.panelBg, backdropFilter: t.panelBlur, borderRadius: t.winRadius === "0px" ? "0px" : "10px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 16px 40px rgba(0,0,0,.5)", maxHeight: panelMaxH, overflowY: "auto" }}>
           <div className="flex items-start justify-end">
             <button type="button" onClick={() => setOpen(false)} className="text-[0.9rem] leading-none px-1" style={{ color: t.chromeTextDim }} aria-label="Hide assistant">×</button>
@@ -3513,13 +3536,13 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
           </div>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {suggestions.map((s, i) => (
-              <button key={i} type="button" disabled={thinking} onClick={() => ask(s)} className="px-2 py-0.5 text-[12px] font-semibold disabled:opacity-40" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>{s}</button>
+              <button key={i} type="button" disabled={thinking} onClick={() => ask(s)} className="px-2 py-0.5 text-[12px] font-semibold disabled:opacity-40" style={{ background: ICON_CARD + "8c", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeTextDim }}>{s}</button>
             ))}
           </div>
           <form onSubmit={onSubmit} className="flex gap-1.5">
             <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask a question…" autoComplete="off" disabled={thinking}
               className="flex-1 px-2 py-1 text-[13px] font-medium bg-transparent outline-none disabled:opacity-40" style={{ border: "none", boxShadow: bevel("in-shallow", t.winBorder), color: t.chromeText, caretColor: t.accent }} />
-            <button type="submit" disabled={thinking} className="px-2.5 py-1 text-[12px] font-semibold disabled:opacity-40" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeText }}>Ask</button>
+            <button type="submit" disabled={thinking} className="px-2.5 py-1 text-[12px] font-semibold disabled:opacity-40" style={{ background: ICON_CARD + "8c", boxShadow: bevel("out-shallow", t.winBorder), color: t.chromeText }}>Ask</button>
           </form>
         </div>
       )}
@@ -3695,7 +3718,7 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
         className="flex flex-col items-center gap-1.5 p-2 transition-transform focus-visible:outline focus-visible:outline-2"
         style={{
           width: Math.max(92, tile + 24), outlineColor: color, transform: pressed ? "scale(.93)" : "scale(1)",
-          background: isImageIcon ? "transparent" : (active ? "rgba(24,19,15,.55)" : "rgba(24,19,15,.32)"),
+          background: isImageIcon ? "transparent" : (active ? ICON_CARD + "c7" : ICON_CARD + "80"),
           backdropFilter: isImageIcon ? undefined : "blur(6px)", WebkitBackdropFilter: isImageIcon ? undefined : "blur(6px)",
           borderRadius: 14, transition: "background-color .15s, transform .1s",
         }}
@@ -3722,7 +3745,7 @@ function DesktopIcon({ id, title, icon, color, pos, iconSize, textSize, theme, o
             <IconImg icon={icon} size={typeof icon === "string" ? glyphSize : Math.round(tile * (isImageIcon ? 0.88 : 0.66))} color={iconColor} />
           </span>
         </span>
-        <span className="text-center leading-tight font-mono font-semibold break-words" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 1px 2px rgba(0,0,0,.9), 0 0 3px rgba(0,0,0,.85), 0 0 8px " + iconColor + "50" }}>{title}</span>
+        <span className="text-center leading-tight font-chrome font-semibold break-words" style={{ fontSize: labelSize, color: t.chromeText, fontFamily: t.fontChrome || undefined, textShadow: "0 1px 2px rgba(0,0,0,.9), 0 0 3px rgba(0,0,0,.85), 0 0 8px " + iconColor + "50" }}>{title}</span>
       </button>
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} theme={t} items={[
@@ -3994,7 +4017,7 @@ function App({ worldData, onReboot }) {
         {toast && <Toast text={toast.text} action={toast.action} onDone={() => setToast(null)} />}
         {launcher && (
           <QuickLauncher title={launcher.title} placeholder={launcher.placeholder} apps={desktopIcons}
-            onOpen={wm.open} onClose={() => setLauncher(null)} />
+            onOpen={wm.open} onClose={() => setLauncher(null)} theme={theme} />
         )}
       </div>
 

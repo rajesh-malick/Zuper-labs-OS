@@ -135,7 +135,26 @@
        isolated retro interface, but a whole desktop OS at that size reads as a pixel-art
        poster, not a dense old OS. Each component below picks the matching tier — see
        the table in project notes for the full element -> tier mapping. */
+    /* Design-token palette — sampled directly from the paper-craft wallpaper photo, so
+       these match it exactly rather than approximating it. Mirrored as plain hex JS
+       constants in app.jsx (BG_CREAM/OLIVE_GROUND/CHARCOAL/ICON_CARD/ACCENT_ORANGE/
+       TEXT_PRIMARY/TEXT_SECONDARY) — kept in sync manually rather than read via
+       getComputedStyle, since several call sites (bevel()'s shade() math, canvas-drawn
+       icons) need real hex values to do arithmetic on, not a `var(--x)` reference a
+       browser resolves at paint time. Chrome-scoped only: this replaces the OS shell's
+       amber/black CRT palette (taskbar, Start menu, window chrome, icon labels,
+       context/quick-launcher menus) — Terminal.app's own text, every window CONTENT
+       pane (readme/dashboard/quiz/arcade), the boot screen, and the mobile fallback are
+       deliberately untouched; CRT_GREEN (app.jsx) still drives all of those exactly as
+       before. */
     :root {
+      --bg-cream: #EEE1C8;
+      --olive-ground: #968B5F;
+      --charcoal: #605756;
+      --icon-card: #4F4138;
+      --accent-orange: #E67E38;
+      --text-primary: #F5F0E8;
+      --text-secondary: #B8A98E;
       --font-pixel: 'JetBrains Mono', 'Inconsolata', 'Courier New', monospace;
       --text-xs: 10px;
       --text-sm: 12px;
@@ -144,24 +163,42 @@
       --text-xl: 20px;
     }
     html, body, #root { height: 100%; margin: 0; background: #040200; }
-    /* Platform-wide font is JetBrains Mono (OFL-licensed, freely usable) per direct
-       reference — used for every piece of UI text (body copy, chrome, terminal) except
-       the "ZUPER LABS" background watermark, which intentionally keeps its own VT323
-       treatment (see GlitchWatermark in app.jsx). */
+    /* Platform-wide DEFAULT stays JetBrains Mono — deliberately not flipped to sans
+       here, even though most chrome now reads Inter (see .font-chrome below). Doing it
+       the other way (defaulting body to sans, then re-asserting mono per element) would
+       silently flip any content-pane text that doesn't carry its own explicit font
+       class over to sans by inheritance — this codebase can't fully guarantee every
+       readme/dashboard/quiz/arcade text node has one. Keeping mono as the safe
+       inherited fallback and having chrome opt INTO sans explicitly is the direction
+       that can't accidentally re-theme content it was never asked to touch. */
     body { font-family: 'JetBrains Mono', 'Inconsolata', 'Courier New', monospace; -webkit-font-smoothing: antialiased; overflow: hidden; overscroll-behavior: none; }
     /* OS-chrome text (icon labels, window titles, badges, taskbar) stays a clean readable
        mono at a real size, with a drop shadow for contrast against the animated background —
-       the same trick windows93.net/real desktop OSes use for icon labels over wallpaper. */
+       the same trick windows93.net/real desktop OSes use for icon labels over wallpaper.
+       Still used by every window CONTENT pane and Terminal.app's own text — untouched. */
     .font-mono { font-family: 'JetBrains Mono', 'Inconsolata', 'Courier New', monospace !important; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 1px rgba(0,0,0,.6); }
     /* Terminal/shell output — same platform-wide font, not the old VT323 retro-terminal
        treatment, so the shell reads consistently with the rest of the UI. */
     .font-terminal { font-family: 'JetBrains Mono', 'Inconsolata', monospace !important; letter-spacing: .01em; }
+    /* OS-chrome sans — Inter (already loaded above), replacing .font-mono specifically
+       on the taskbar/Start menu/context menu/quick launcher/window titles/icon labels/
+       assistant widget. No text-shadow here on purpose: several of these elements (icon
+       labels especially) already set their own precisely-tuned inline text-shadow for
+       legibility against the photo, and a !important shadow here would silently
+       clobber it since !important classes beat inline styles regardless of
+       specificity. The rest sit on the new translucent charcoal glass panels, not the
+       raw photo, so they don't need one. */
+    .font-chrome { font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif !important; }
+    /* Audit finding: OS-level furniture, visible everywhere (chrome and content alike),
+       still on the old amber/near-black CRT colors. Moved onto the new tokens for the
+       same reason ::selection below did — a color-only change, not a font one, so it
+       doesn't risk re-theming content text the way flipping body's font-family would. */
     ::-webkit-scrollbar { width: 12px; height: 12px; }
     ::-webkit-scrollbar-thumb {
-      background: rgba(255,176,0,.28);
-      box-shadow: inset 1px 1px 0 #ffdb8d, inset -1px -1px 0 #040200;
+      background: rgba(230,126,56,.32);
+      box-shadow: inset 1px 1px 0 rgba(245,240,232,.55), inset -1px -1px 0 #040200;
     }
-    ::-webkit-scrollbar-track { background: rgba(20,10,0,.4); box-shadow: inset 1px 1px 0 #040200, inset -1px -1px 0 #3a2214; }
+    ::-webkit-scrollbar-track { background: rgba(79,65,56,.35); box-shadow: inset 1px 1px 0 #040200, inset -1px -1px 0 rgba(79,65,56,.6); }
 
     /* Tailwind's browser CDN JIT unreliably generates CSS for opacity-slash utilities in this
        app (confirmed: it silently drops most text-white/N, border-white/N, bg-white/N, and even
@@ -244,13 +281,15 @@
     @keyframes nudge-in { 0% { opacity: 0; transform: translateY(6px) scale(.96); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
     @keyframes crt-icon-glow { 0%, 100% { filter: drop-shadow(0 0 2px currentColor); } 50% { filter: drop-shadow(0 0 6px currentColor); } }
     html { cursor: default; }
-    ::selection { background: rgba(255,176,0,.35); color: #fff3e0; }
-    /* CRT menu/list rows — a bright-amber hover highlight (not white) and a classic
-       "> " selection cursor prefix, inspired by real phosphor-terminal UIs (amber
-       phosphor monitors were a real, common alternate to green in retro computing). */
+    ::selection { background: rgba(230,126,56,.35); color: #F5F0E8; }
+    /* Chrome menu/list rows — an orange hover highlight (was amber) and a ">" selection
+       cursor prefix. font-family dropped from the arrow glyph (was VT323, the retro-
+       terminal font) — it now just inherits whatever the row's own font is (Inter via
+       .font-chrome for every chrome menu; content lists that still use .crt-item, if
+       any, keep inheriting their own mono). */
     .crt-item { position: relative; transition: background-color .1s; }
-    .crt-item:hover { background-color: rgba(255,176,0,.14) !important; }
-    .crt-item::before { content: ">"; position: absolute; left: 4px; top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity .1s; color: #ffb000; font-family: 'VT323', monospace; font-size: 1.1em; }
+    .crt-item:hover { background-color: rgba(230,126,56,.16) !important; }
+    .crt-item::before { content: ">"; position: absolute; left: 4px; top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity .1s; color: #E67E38; font-size: 1.1em; }
     .crt-item:hover::before { opacity: 1; }
     /* Design-review finding: only DesktopIcon and the assistant widget's trigger button
        had an explicit focus-visible style anywhere in the app - everywhere else (Start
