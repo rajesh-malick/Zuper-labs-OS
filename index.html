@@ -252,6 +252,35 @@
     .crt-item:hover { background-color: rgba(255,176,0,.14) !important; }
     .crt-item::before { content: ">"; position: absolute; left: 4px; top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity .1s; color: #ffb000; font-family: 'VT323', monospace; font-size: 1.1em; }
     .crt-item:hover::before { opacity: 1; }
+    /* Design-review finding: only DesktopIcon and the assistant widget's trigger button
+       had an explicit focus-visible style anywhere in the app - everywhere else (Start
+       menu items, context menu items, window minimize/maximize/close, every Arcade Play
+       button, the Subscribe link, etc.) fell back to the browser default, which measured
+       as a near-black 0.67px outline in this app's dark chrome - effectively invisible to
+       a keyboard-only visitor. A single low-specificity rule here covers every element
+       that doesn't already set its own outline; it's deliberately plain :focus-visible
+       (specificity 0-0-1-0) so it loses to any component's own Tailwind
+       `focus-visible:outline-*` classes (0-0-2-0) rather than fighting them - the two
+       places that already do this correctly are untouched. outline-offset is negative
+       (inset) rather than the more common positive offset specifically so it can never
+       get clipped by a parent's overflow-hidden/overflow-y-auto (context menus, the Start
+       menu list, scrollable window content all have one).
+
+       Caught live, not assumed: a single fixed amber outline (this app's one accent
+       color) is invisible on the Start button, which is itself filled solid amber -
+       same color on same color, confirmed via computed style, not a guess - and would
+       have hit the same problem on at least one Arcade Play button too (each game gets
+       its own accent color around the color wheel, including a yellow one). A single
+       color can't guarantee contrast against every fill this app already uses for its
+       own UI. Two rings instead: a light inset ring (reads against dark chrome and any
+       saturated accent fill) plus a dark ring just outside the element's own edge
+       (reads against the wallpaper's light cream regions). Between the two, at least
+       one is always visible regardless of what's behind or inside the focused element. */
+    :focus-visible {
+      outline: 2px solid rgba(255,255,255,.95);
+      outline-offset: -2px;
+      box-shadow: 0 0 0 4px rgba(4,2,0,.75);
+    }
   </style>
 </head>
 <body>

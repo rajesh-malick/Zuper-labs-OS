@@ -4035,10 +4035,22 @@ function useIsNarrowViewport() {
    phone specifically to check out careers deserves something real, not a wall. Reuses
    the same real worldData the desktop OS itself renders from (no separate/fake content
    to keep in sync), plus the same real closing line the actual DevTools challenge ends
-   on (careers@zuper.co), since the challenge itself can't run here. */
+   on (careers@zuper.co), since the challenge itself can't run here.
+
+   Palette: was the original flat black/pure-amber Mono CRT look (THEME.osBg, plain
+   rgba(20,10,0,X) card fills) — direct design-review finding that this is very
+   plausibly a lot of visitors' actual FIRST look at Zuper Labs (careers links get
+   opened on phones constantly), and it read as a different, older product than the
+   warm paper-craft desktop it's the entry point for. Doesn't load the wallpaper photo
+   itself (real mobile-data weight for a background image that can't even pan/matter
+   here) — just the same warm charcoal/cream/amber family the desktop's window chrome
+   and icons now use, plus rounded corners on the cards instead of hard squares, so it
+   reads as the same product without the asset cost. */
+const MOBILE_BG = "#1a140f";
+const MOBILE_CARD_BG = "rgba(255,235,210,.05)";
 function MobileFallback({ worldData, onContinue }) {
   return (
-    <div className="min-h-screen w-full font-terminal" style={{ background: THEME.osBg, color: CRT_GREEN }}>
+    <div className="min-h-screen w-full font-terminal" style={{ background: MOBILE_BG, color: CRT_GREEN }}>
       <div className="max-w-lg mx-auto px-5 py-8">
         <img src="./assets/zuper-wordmark.png" alt="Zuper Labs" className="mb-5" style={{ width: "min(70vw, 280px)" }} />
         <p className="text-[15px] leading-relaxed mb-1" style={{ color: "#ffd98a" }}>ZUPER OS [concept build]</p>
@@ -4053,7 +4065,7 @@ function MobileFallback({ worldData, onContinue }) {
             engineering roles just to look fuller. Same content as the terminal's
             `cat open-roles.md` (see careers cwd in run()), so the story matches
             whichever entry point a candidate happens to use. */}
-        <div className="mb-7 p-4" style={{ background: "rgba(20,10,0,.4)", boxShadow: bevel("out-shallow", CRT_GREEN) }}>
+        <div className="mb-7 p-4 rounded-xl" style={{ background: MOBILE_CARD_BG, boxShadow: bevel("out-shallow", CRT_GREEN) }}>
           <h2 className="m-0 mb-1.5 text-[15px] font-bold" style={{ color: "#ffd98a" }}>Open roles — pulled live, not invented</h2>
           <div className="mb-2">
             <div className="text-[14px] font-bold" style={{ color: CRT_GREEN }}>Senior Executive — Technical Implementation</div>
@@ -4082,7 +4094,7 @@ function MobileFallback({ worldData, onContinue }) {
         {!worldData && <p className="text-[13px]" style={{ color: "#c98a2e" }}>Loading…</p>}
         <div className="flex flex-col gap-2 mb-8">
           {worldData && worldData.map((c) => (
-            <div key={c.id} className="p-3" style={{ background: "rgba(20,10,0,.3)", boxShadow: bevel("out-shallow", CRT_GREEN) }}>
+            <div key={c.id} className="p-3 rounded-lg" style={{ background: MOBILE_CARD_BG, boxShadow: bevel("out-shallow", CRT_GREEN) }}>
               <div className="text-[13px] font-bold mb-0.5" style={{ color: "#ffd98a" }}>{c.name || c.id}</div>
               {c.entities && c.entities.length > 0 && (
                 <div className="text-[12px] leading-relaxed" style={{ color: "#c98a2e" }}>{c.entities.map((e) => e.name).join(" · ")}</div>
