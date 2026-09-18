@@ -3935,7 +3935,7 @@ function DesktopBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true" style={{ zIndex: 0 }}>
       <img src="./assets/desktop-background.webp" alt="" draggable={false}
-        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "24% 62%" }} />
+        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 46%" }} />
     </div>
   );
 }
