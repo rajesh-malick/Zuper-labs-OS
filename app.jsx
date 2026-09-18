@@ -697,13 +697,13 @@ function QuickLauncher({ title, placeholder, apps, onOpen, onClose, theme }) {
    boot-wordmark-fly-center to viewport-center at a larger scale, fading out. ---------- */
 function BootWordmarkFly({ onComplete }) {
   useEffect(() => {
-    const t = setTimeout(onComplete, 550);
+    const t = setTimeout(onComplete, 850);
     return () => clearTimeout(t);
     // eslint-disable-next-line
   }, []);
   return (
     <img src="./assets/zuper-wordmark.png" alt="" aria-hidden="true"
-      style={{ position: "fixed", top: 24, left: 24, width: "min(60vw, 340px)", animation: "boot-wordmark-fly-center .55s cubic-bezier(.3,.1,.3,1) both" }} />
+      style={{ position: "fixed", top: 24, left: 24, width: "min(60vw, 340px)", animation: "boot-wordmark-fly-center .85s cubic-bezier(.3,.1,.3,1) both" }} />
   );
 }
 
@@ -792,7 +792,7 @@ function BootScreen({ onDone, extraLine }) {
      buffer is generous over that stage's own timeline, in case its onComplete timer
      never fires for some reason. */
   useEffect(() => {
-    const ms = stage === "reveal" ? 3800 : stage === "transition" ? 1000 : 7000;
+    const ms = stage === "reveal" ? 3800 : stage === "transition" ? 1300 : 7000;
     const safety = setTimeout(finish, ms);
     function onKey() { finish(); }
     window.addEventListener("keydown", onKey);
