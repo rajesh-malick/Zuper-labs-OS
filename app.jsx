@@ -1234,7 +1234,18 @@ function RecycleBinWindow({ trashedItems, onRestore, onRestoreAll }) {
    Zuper's wider product suite - direct follow-up: since the other 11 real clusters and
    Terminal.app already exist and work (just not pinned to the 4-icon desktop, see
    DESKTOP_VISIBLE_IDS), it makes more sense for this to actually open them than to fake
-   not having them. Single click, matching every other icon on the desktop now. */
+   not having them. Single click, matching every other icon on the desktop now.
+
+   Icon size bumped 30 -> 48: direct feedback that the new paper-craft cluster icons
+   (ai-intelligence/security-compliance/customer-portal/inventory-management/
+   integration-hub/predictive-analytics/terminal) never actually appeared as photos
+   anywhere, since every place that rendered them - this grid included - stayed below
+   IconImg's 36px legibility threshold and silently fell back to the minimal line
+   icon. The ask was specifically to see them where they already are (this drawer),
+   not to add them to the 4-icon desktop (Sameer's direct request stays untouched).
+   48px clears the threshold with real margin in a 3-column grid that already had
+   the room. QuickLauncher/Trash/Start-menu list rows stay at 20px on purpose - those
+   are dense single-line rows, exactly the case the threshold exists to protect. */
 function AppDrawerWindow({ apps, onOpen }) {
   return (
     <div className="p-4 font-mono">
@@ -1243,7 +1254,7 @@ function AppDrawerWindow({ apps, onOpen }) {
         {apps.map((a) => (
           <button key={a.id} type="button" onClick={() => onOpen(a.id)}
             className="flex flex-col items-center gap-1.5 p-2 rounded hover:bg-white/5">
-            <IconImg icon={a.icon} size={30} color={CRT_GREEN} />
+            <IconImg icon={a.icon} size={48} color={CRT_GREEN} />
             <span className="text-[12px] font-semibold text-white/85 text-center leading-tight break-words">{a.title}</span>
           </button>
         ))}
