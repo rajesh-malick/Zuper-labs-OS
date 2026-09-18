@@ -3187,11 +3187,17 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
           <img src="./assets/zuper-wordmark.png" alt="Zuper Labs" style={{ height: 22 }} />
         </div>
         <div className="px-4 pt-1.5 pb-1.5 text-[11px] font-semibold uppercase tracking-wide" style={{ color: t.chromeTextDim, opacity: .7 }}>Programs</div>
+        {/* Icon size bumped 20 -> 36 (the IconImg minimum-legibility threshold) for
+            the same reason as AppDrawerWindow: every real paper-craft cluster photo
+            was silently falling back to its minimal line glyph below 36px, so this
+            list never showed them even though the underlying assets were correct.
+            36 is the smallest size that clears the gate, chosen over a bigger jump
+            (e.g. the drawer's 48) to keep this already-long scrolling list compact. */}
         {topApps.map((a) => (
-          <button key={a.id} type="button" className="crt-item w-full text-left px-4 py-2 pl-5 flex items-center gap-2.5" style={{ color: t.chromeText }}
+          <button key={a.id} type="button" className="crt-item w-full text-left px-4 py-2.5 pl-5 flex items-center gap-2.5" style={{ color: t.chromeText }}
             onMouseEnter={() => setHoverId(a.id)} onMouseLeave={() => setHoverId((h) => (h === a.id ? null : h))}
             onClick={() => onOpen(a.id)}>
-            <IconImg icon={a.icon} size={20} className="w-5 text-center flex-shrink-0" color={hoverId === a.id ? t.accent : ICON_NEUTRAL} />{a.title}
+            <IconImg icon={a.icon} size={36} className="w-9 text-center flex-shrink-0" color={hoverId === a.id ? t.accent : ICON_NEUTRAL} />{a.title}
           </button>
         ))}
         <div className="my-1.5 border-t" style={{ borderColor: t.winBorder }}></div>
