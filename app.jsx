@@ -4271,7 +4271,7 @@ function MobileFallback({ worldData, onContinue }) {
         <div className="flex flex-col gap-2 mb-8">
           {worldData && worldData.map((c) => (
             <div key={c.id} className="p-3 rounded-lg" style={{ background: MOBILE_CARD_BG, boxShadow: bevel("out-shallow", CRT_GREEN) }}>
-              <div className="text-[13px] font-bold mb-0.5" style={{ color: "#ffd98a" }}>{c.name || c.id}</div>
+              <div className="text-[13px] font-bold mb-0.5" style={{ color: "#ffd98a" }}>{humanizeAppName(c.id)}</div>
               {c.entities && c.entities.length > 0 && (
                 <div className="text-[12px] leading-relaxed" style={{ color: "#c98a2e" }}>{c.entities.map((e) => e.name).join(" · ")}</div>
               )}
