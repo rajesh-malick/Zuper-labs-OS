@@ -7,6 +7,12 @@
   <meta name="description" content="A design-concept exploration of labs.zuper.co as a desktop-OS shell, built with React + Tailwind. Not the real site." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=VT323&family=Inconsolata:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Boot sequence's final-stage video, preloaded in parallel with everything else so
+       it's already cached by the time the terminal boot-log finishes and BootScreen
+       mounts the video element - avoids a fetch-triggered stall/black frame right
+       when it's needed. Small (277KB, audio stripped) so this doesn't meaningfully
+       add to initial load. -->
+  <link rel="preload" as="video" href="./assets/boot-final-logo.mp4" type="video/mp4" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>

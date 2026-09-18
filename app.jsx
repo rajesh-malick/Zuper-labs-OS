@@ -686,12 +686,29 @@ function QuickLauncher({ title, placeholder, apps, onOpen, onClose, theme }) {
   );
 }
 
+/* ---------- Boot video "seen this session" gate — sessionStorage, same persistence
+   scope the careers terminal puzzle already uses for its own per-session state
+   (sessionStorage.__zuper_idx). Deliberately sessionStorage, not localStorage: the ask
+   was "genuinely fresh session (first load), not every navigation back to the
+   desktop" - sessionStorage matches that exactly (survives a Reboot or page refresh
+   within the same tab, clears on a new tab/window), where localStorage would suppress
+   it forever after the first-ever visit and a plain in-memory flag would replay it on
+   every Reboot along with the rest of the boot log. ---------- */
+const BOOT_VIDEO_SEEN_KEY = "zuper-os-boot-video-seen";
+function hasSeenBootVideo() { try { return sessionStorage.getItem(BOOT_VIDEO_SEEN_KEY) === "1"; } catch (e) { return false; } }
+function markBootVideoSeen() { try { sessionStorage.setItem(BOOT_VIDEO_SEEN_KEY, "1"); } catch (e) {} }
+
 /* ================= Boot screen ================= */
 function BootScreen({ onDone, extraLine }) {
   const linesRef = useRef(buildLines());
   const lines = linesRef.current;
   const [visibleCount, setVisibleCount] = useState(0);
   const [fading, setFading] = useState(false);
+  /* Computed once per mount (a fresh BootScreen instance per boot, via Root's bootKey)
+     rather than re-read live, so a video that finishes mid-boot can't retroactively
+     change this run's own path. */
+  const skipVideo = useRef(hasSeenBootVideo()).current;
+  const [stage, setStage] = useState("log"); // "log" | "video"
 
   /* Fixed for every visitor — direct request, after the first version read the real
      navigator/screen data (browser, core count, language, resolution), so the boot log
@@ -719,13 +736,29 @@ function BootScreen({ onDone, extraLine }) {
     return () => clearTimeout(t);
   }, [visibleCount, lines.length]);
 
+  /* Once the log finishes, the final stage is either the video (fresh session) or the
+     existing "> ready." / click-to-continue prompt (already seen this session, so the
+     video is skipped entirely and behavior is unchanged from before this stage
+     existed). Marks "seen" the moment the video stage is entered, not on completion -
+     skipping the video (click/key) still counts as having seen it for this session,
+     it shouldn't force a replay on the next Reboot just because it wasn't watched to
+     the end. */
   useEffect(() => {
-    const safety = setTimeout(finish, 7000);
+    if (visibleCount < lines.length || skipVideo) return;
+    setStage("video");
+    markBootVideoSeen();
+  }, [visibleCount, lines.length, skipVideo]);
+
+  /* Re-armed per stage (not a single mount-only timer) so the video gets its own
+     fresh safety window starting from when IT begins, not from page load - 12s covers
+     the 10s clip plus buffer in case 'ended' never fires (e.g. a decode failure). */
+  useEffect(() => {
+    const safety = setTimeout(finish, stage === "video" ? 12000 : 7000);
     function onKey() { finish(); }
     window.addEventListener("keydown", onKey);
     return () => { clearTimeout(safety); window.removeEventListener("keydown", onKey); };
     // eslint-disable-next-line
-  }, []);
+  }, [stage]);
 
   function finish() {
     setFading((f) => { if (f) return f; setTimeout(onDone, 250); return true; });
@@ -745,20 +778,40 @@ function BootScreen({ onDone, extraLine }) {
       onClick={finish}
     >
       <BootHudFrame />
-      <BootGlitchMark progress={progress} />
-      {/* The real "Zuper Labs" wordmark image, once, above the boot log — direct
-          request to use the real brand asset instead of a plain text line. */}
-      <img src="./assets/zuper-wordmark.png" alt="Zuper Labs" className="mb-4" style={{ width: "min(60vw, 340px)", position: "relative" }} />
-      <div style={{ position: "relative" }}>
-        {lines.slice(0, visibleCount).join("\n")}
-        {visibleCount >= lines.length && extraLine && "\n" + extraLine}
-        {visibleCount >= lines.length && "\n> ready."}
-      </div>
-      <div className="mt-5" style={{ position: "relative", maxWidth: 260 }}>
-        <BootProgressBar progress={progress} />
-      </div>
-      {visibleCount >= lines.length && (
-        <div className="mt-5 text-white/48" style={{ position: "relative" }}>[ click or press any key to continue ]</div>
+      {stage === "video" ? (
+        /* Final stage: wordmark -> terminal log (above) -> this video -> desktop.
+           Full takeover of the stage (log/wordmark/glitch-mark unmount) rather than
+           overlaying them - a clean hero moment for the actual brand animation
+           instead of terminal chrome competing with it. Sized by width only (no
+           forced aspect-ratio wrapper) so the video's own 16:9 intrinsic ratio sets
+           the height - that's what avoids letterboxing for a 1280x720 source, not an
+           object-fit trick. onEnded auto-advances; the same click-anywhere/press-any-
+           key skip already wired on the outer container (onClick={finish}, the
+           keydown listener above) works here too, same as every other boot stage. */
+        <div className="fixed inset-0 flex flex-col items-center justify-center gap-4">
+          <video src="./assets/boot-final-logo.mp4" autoPlay muted playsInline preload="auto"
+            onEnded={finish}
+            style={{ width: "min(85vw, 960px)", height: "auto", display: "block", boxShadow: "0 20px 60px rgba(0,0,0,.5)" }} />
+          <div className="text-white/48" style={{ position: "relative" }}>[ click or press any key to skip ]</div>
+        </div>
+      ) : (
+        <React.Fragment>
+          <BootGlitchMark progress={progress} />
+          {/* The real "Zuper Labs" wordmark image, once, above the boot log — direct
+              request to use the real brand asset instead of a plain text line. */}
+          <img src="./assets/zuper-wordmark.png" alt="Zuper Labs" className="mb-4" style={{ width: "min(60vw, 340px)", position: "relative" }} />
+          <div style={{ position: "relative" }}>
+            {lines.slice(0, visibleCount).join("\n")}
+            {visibleCount >= lines.length && extraLine && "\n" + extraLine}
+            {visibleCount >= lines.length && "\n> ready."}
+          </div>
+          <div className="mt-5" style={{ position: "relative", maxWidth: 260 }}>
+            <BootProgressBar progress={progress} />
+          </div>
+          {visibleCount >= lines.length && (
+            <div className="mt-5 text-white/48" style={{ position: "relative" }}>[ click or press any key to continue ]</div>
+          )}
+        </React.Fragment>
       )}
     </div>
   );
