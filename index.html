@@ -7,12 +7,6 @@
   <meta name="description" content="A design-concept exploration of labs.zuper.co as a desktop-OS shell, built with React + Tailwind. Not the real site." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=VT323&family=Inconsolata:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <!-- Boot sequence's final-stage video, preloaded in parallel with everything else so
-       it's already cached by the time the terminal boot-log finishes and BootScreen
-       mounts the video element - avoids a fetch-triggered stall/black frame right
-       when it's needed. Small (277KB, audio stripped) so this doesn't meaningfully
-       add to initial load. -->
-  <link rel="preload" as="video" href="./assets/boot-final-logo.mp4" type="video/mp4" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -286,6 +280,21 @@
     /* nudge-in: entrance for the proactive suggestion bubble near the assistant. */
     @keyframes nudge-in { 0% { opacity: 0; transform: translateY(6px) scale(.96); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
     @keyframes crt-icon-glow { 0%, 100% { filter: drop-shadow(0 0 2px currentColor); } 50% { filter: drop-shadow(0 0 6px currentColor); } }
+    /* Boot sequence's final stage: an original recreation of the supplied brand
+       reveal (4 parallelogram tiles flying in to assemble the Z mark, then a
+       loading-bar sweep with a traveling glow, then the existing boot-screen fade
+       takes over) - built natively instead of embedding the source video, so it's
+       full-screen, matches the OS's own dark palette, and scales to any viewport
+       instead of sitting in a fixed-size box. Each tile's start position/rotation is
+       supplied per-element via the --from-x/--from-y/--from-r custom properties (set
+       inline in app.jsx) rather than four near-duplicate keyframes. */
+    @keyframes boot-tile-in {
+      0% { transform: translate(var(--from-x), var(--from-y)) rotate(var(--from-r)) scale(.4); opacity: 0; }
+      65% { transform: translate(0, 0) rotate(-4deg) scale(1.06); opacity: 1; }
+      100% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+    }
+    @keyframes boot-bar-glow { 0% { left: -6%; opacity: 0; } 8%, 92% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
+    @keyframes boot-bar-fill { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
     html { cursor: default; }
     ::selection { background: rgba(230,126,56,.35); color: #F5F0E8; }
     /* Chrome menu/list rows — an orange hover highlight (was amber) and a ">" selection

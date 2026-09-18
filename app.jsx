@@ -686,7 +686,7 @@ function QuickLauncher({ title, placeholder, apps, onOpen, onClose, theme }) {
   );
 }
 
-/* ---------- Boot video "seen this session" gate — sessionStorage, same persistence
+/* ---------- Boot reveal "seen this session" gate — sessionStorage, same persistence
    scope the careers terminal puzzle already uses for its own per-session state
    (sessionStorage.__zuper_idx). Deliberately sessionStorage, not localStorage: the ask
    was "genuinely fresh session (first load), not every navigation back to the
@@ -694,9 +694,57 @@ function QuickLauncher({ title, placeholder, apps, onOpen, onClose, theme }) {
    within the same tab, clears on a new tab/window), where localStorage would suppress
    it forever after the first-ever visit and a plain in-memory flag would replay it on
    every Reboot along with the rest of the boot log. ---------- */
-const BOOT_VIDEO_SEEN_KEY = "zuper-os-boot-video-seen";
-function hasSeenBootVideo() { try { return sessionStorage.getItem(BOOT_VIDEO_SEEN_KEY) === "1"; } catch (e) { return false; } }
-function markBootVideoSeen() { try { sessionStorage.setItem(BOOT_VIDEO_SEEN_KEY, "1"); } catch (e) {} }
+const BOOT_REVEAL_SEEN_KEY = "zuper-os-boot-reveal-seen";
+function hasSeenBootReveal() { try { return sessionStorage.getItem(BOOT_REVEAL_SEEN_KEY) === "1"; } catch (e) { return false; } }
+function markBootRevealSeen() { try { sessionStorage.setItem(BOOT_REVEAL_SEEN_KEY, "1"); } catch (e) {} }
+
+/* ---------- Boot logo reveal — an original recreation of the supplied brand-reveal
+   video's choreography (4 parallelogram tiles fly in and assemble the Z mark, a
+   loading-bar sweep with a traveling glow, then the boot screen's own fade takes
+   over), not the video itself: built as CSS transforms/keyframes so it's full-screen
+   at any viewport size and sits on the OS's own dark palette instead of a fixed-size
+   boxed clip on a mismatched light background. Timeline (ms, relative to mount):
+   0-960 tiles fly in staggered, 960-1600 hold assembled, 1600-3200 bar fills with a
+   traveling highlight, 3200-3700 hold at full bar, then onComplete fires and the
+   existing BootScreen fade (300ms) takes it the rest of the way to the desktop. ---------- */
+const BOOT_REVEAL_TILES = [
+  { color: "#E67E38", x: 0, y: 0, fromX: -220, fromY: -160, fromR: -70 },
+  { color: "#E67E38", x: 1, y: 1, fromX: 240, fromY: -120, fromR: 55 },
+  { color: "#B8A98E", x: -1, y: 2, fromX: -260, fromY: 140, fromR: -50 },
+  { color: "#B8A98E", x: 0, y: 3, fromX: 220, fromY: 200, fromR: 65 },
+];
+function BootLogoReveal({ onComplete }) {
+  useEffect(() => {
+    const t = setTimeout(onComplete, 3700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line
+  }, []);
+  const tile = 58, stepX = 76, stepY = 78;
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center gap-10">
+      <div aria-hidden="true" style={{ position: "relative", width: 3 * tile + 2 * stepX, height: 4 * tile + 2 * stepY }}>
+        {BOOT_REVEAL_TILES.map((t2, i) => (
+          <div key={i} style={{
+            position: "absolute", left: "50%", top: "50%", width: tile, height: tile,
+            marginLeft: -tile / 2 + t2.x * stepX, marginTop: -tile / 2 + t2.y * stepY - (1.5 * stepY),
+            background: t2.color, borderRadius: 4, boxShadow: "0 10px 24px rgba(0,0,0,.35)",
+            "--from-x": t2.fromX + "px", "--from-y": t2.fromY + "px", "--from-r": t2.fromR + "deg",
+            transform: "skewX(-38deg)",
+            animation: "boot-tile-in .7s cubic-bezier(.2,.8,.3,1.1) " + (i * 0.12) + "s both",
+          }} />
+        ))}
+        {/* Floating sparkle accent, matching the reference video's twinkle - reuses the
+            same dot-pulse keyframe already defined for the assistant's thinking dots. */}
+        <div aria-hidden="true" style={{ position: "absolute", right: -34, bottom: 6, width: 10, height: 10, background: "#E67E38", clipPath: "polygon(50% 0%, 65% 35%, 100% 50%, 65% 65%, 50% 100%, 35% 65%, 0% 50%, 35% 35%)", animation: "dot-pulse 1.8s ease-in-out infinite", animationDelay: "1s" }} />
+      </div>
+      <div style={{ position: "relative", width: "min(50vw, 260px)", height: 3, background: "rgba(255,255,255,.15)", borderRadius: 2, overflow: "hidden", opacity: 0, animation: "nudge-in .3s ease-out 1.05s forwards" }}>
+        <div style={{ position: "absolute", inset: 0, background: "#E67E38", transform: "scaleX(0)", transformOrigin: "left", animation: "boot-bar-fill 1.6s ease-in-out 1.3s forwards" }} />
+        <div style={{ position: "absolute", top: "-3px", left: "-6%", width: 12, height: 9, borderRadius: "50%", background: "#fff3e0", boxShadow: "0 0 12px 4px #E67E38", animation: "boot-bar-glow 1.6s ease-in-out 1.3s" }} />
+      </div>
+      <div className="text-white/48 font-terminal text-[1.25rem]" style={{ position: "relative" }}>[ click or press any key to skip ]</div>
+    </div>
+  );
+}
 
 /* ================= Boot screen ================= */
 function BootScreen({ onDone, extraLine }) {
@@ -705,10 +753,10 @@ function BootScreen({ onDone, extraLine }) {
   const [visibleCount, setVisibleCount] = useState(0);
   const [fading, setFading] = useState(false);
   /* Computed once per mount (a fresh BootScreen instance per boot, via Root's bootKey)
-     rather than re-read live, so a video that finishes mid-boot can't retroactively
+     rather than re-read live, so a reveal that finishes mid-boot can't retroactively
      change this run's own path. */
-  const skipVideo = useRef(hasSeenBootVideo()).current;
-  const [stage, setStage] = useState("log"); // "log" | "video"
+  const skipReveal = useRef(hasSeenBootReveal()).current;
+  const [stage, setStage] = useState("log"); // "log" | "reveal"
 
   /* Fixed for every visitor — direct request, after the first version read the real
      navigator/screen data (browser, core count, language, resolution), so the boot log
@@ -736,24 +784,25 @@ function BootScreen({ onDone, extraLine }) {
     return () => clearTimeout(t);
   }, [visibleCount, lines.length]);
 
-  /* Once the log finishes, the final stage is either the video (fresh session) or the
-     existing "> ready." / click-to-continue prompt (already seen this session, so the
-     video is skipped entirely and behavior is unchanged from before this stage
-     existed). Marks "seen" the moment the video stage is entered, not on completion -
-     skipping the video (click/key) still counts as having seen it for this session,
-     it shouldn't force a replay on the next Reboot just because it wasn't watched to
-     the end. */
+  /* Once the log finishes, the final stage is either the logo reveal (fresh session)
+     or the existing "> ready." / click-to-continue prompt (already seen this session,
+     so the reveal is skipped entirely and behavior is unchanged from before this
+     stage existed). Marks "seen" the moment the reveal stage is entered, not on
+     completion - skipping it early (click/key) still counts as having seen it for
+     this session, it shouldn't force a replay on the next Reboot just because it
+     wasn't watched to the end. */
   useEffect(() => {
-    if (visibleCount < lines.length || skipVideo) return;
-    setStage("video");
-    markBootVideoSeen();
-  }, [visibleCount, lines.length, skipVideo]);
+    if (visibleCount < lines.length || skipReveal) return;
+    setStage("reveal");
+    markBootRevealSeen();
+  }, [visibleCount, lines.length, skipReveal]);
 
-  /* Re-armed per stage (not a single mount-only timer) so the video gets its own
-     fresh safety window starting from when IT begins, not from page load - 12s covers
-     the 10s clip plus buffer in case 'ended' never fires (e.g. a decode failure). */
+  /* Re-armed per stage (not a single mount-only timer) so the reveal gets its own
+     fresh safety window starting from when IT begins, not from page load - 5s is a
+     generous buffer over the reveal's own ~3.7s timeline, in case its onComplete
+     timer never fires for some reason. */
   useEffect(() => {
-    const safety = setTimeout(finish, stage === "video" ? 12000 : 7000);
+    const safety = setTimeout(finish, stage === "reveal" ? 5000 : 7000);
     function onKey() { finish(); }
     window.addEventListener("keydown", onKey);
     return () => { clearTimeout(safety); window.removeEventListener("keydown", onKey); };
@@ -778,22 +827,15 @@ function BootScreen({ onDone, extraLine }) {
       onClick={finish}
     >
       <BootHudFrame />
-      {stage === "video" ? (
-        /* Final stage: wordmark -> terminal log (above) -> this video -> desktop.
+      {stage === "reveal" ? (
+        /* Final stage: wordmark -> terminal log (above) -> this reveal -> desktop.
            Full takeover of the stage (log/wordmark/glitch-mark unmount) rather than
-           overlaying them - a clean hero moment for the actual brand animation
-           instead of terminal chrome competing with it. Sized by width only (no
-           forced aspect-ratio wrapper) so the video's own 16:9 intrinsic ratio sets
-           the height - that's what avoids letterboxing for a 1280x720 source, not an
-           object-fit trick. onEnded auto-advances; the same click-anywhere/press-any-
-           key skip already wired on the outer container (onClick={finish}, the
-           keydown listener above) works here too, same as every other boot stage. */
-        <div className="fixed inset-0 flex flex-col items-center justify-center gap-4">
-          <video src="./assets/boot-final-logo.mp4" autoPlay muted playsInline preload="auto"
-            onEnded={finish}
-            style={{ width: "min(85vw, 960px)", height: "auto", display: "block", boxShadow: "0 20px 60px rgba(0,0,0,.5)" }} />
-          <div className="text-white/48" style={{ position: "relative" }}>[ click or press any key to skip ]</div>
-        </div>
+           overlaying them - a clean hero moment for the logo animation instead of
+           terminal chrome competing with it. onComplete auto-advances; the same
+           click-anywhere/press-any-key skip already wired on the outer container
+           (onClick={finish}, the keydown listener above) works here too, same as
+           every other boot stage. */
+        <BootLogoReveal onComplete={finish} />
       ) : (
         <React.Fragment>
           <BootGlitchMark progress={progress} />
