@@ -280,16 +280,25 @@
     /* nudge-in: entrance for the proactive suggestion bubble near the assistant. */
     @keyframes nudge-in { 0% { opacity: 0; transform: translateY(6px) scale(.96); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
     @keyframes crt-icon-glow { 0%, 100% { filter: drop-shadow(0 0 2px currentColor); } 50% { filter: drop-shadow(0 0 6px currentColor); } }
-    /* Boot sequence's final stage: the real Z mark (assets/zuper-z-mark.svg) punches
-       in with a bouncy zoom-in scale, the wordmark fades in beside it, then a
-       loading-bar sweep with a traveling glow, then the existing boot-screen fade
-       takes over - full-screen, on the OS's own dark palette, scales to any
-       viewport. Plays every boot, no session gating. */
-    @keyframes boot-z-punch {
-      0% { transform: scale(.15); opacity: 0; }
-      65% { transform: scale(1.12); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
+    /* Boot sequence, per two annotated screenshots: once the terminal log finishes,
+       the log's own wordmark flies from its top-left spot to center, zooms up, and
+       vanishes (boot-wordmark-fly-center) - a bridge into the reveal stage, where
+       the real Z mark's two actual path pieces converge from top/bottom and the
+       wordmark slides in from the right, then the existing loading-bar sweep plays,
+       then the boot screen's own fade takes over. Full-screen, on the OS's own dark
+       palette, scales to any viewport. Plays every boot, no session gating. The
+       "50% - 50%" pieces of the calc() below center the element on its own size:
+       50vw/50vh (viewport center) minus 50% (half the element's own width/height,
+       since translate() percentages are relative to the element itself) minus the
+       24px left/top it starts at (the log header's own p-6 padding). */
+    @keyframes boot-wordmark-fly-center {
+      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+      75% { transform: translate(calc(50vw - 50% - 24px), calc(50vh - 50% - 24px)) scale(1.7); opacity: 1; }
+      100% { transform: translate(calc(50vw - 50% - 24px), calc(50vh - 50% - 24px)) scale(2.3); opacity: 0; }
     }
+    @keyframes boot-piece-from-top { 0% { transform: translateY(-55vh) scale(.6); opacity: 0; } 55% { opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+    @keyframes boot-piece-from-bottom { 0% { transform: translateY(55vh) scale(.6); opacity: 0; } 55% { opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+    @keyframes boot-piece-from-right { 0% { transform: translateX(45vw); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
     @keyframes boot-bar-glow { 0% { left: -6%; opacity: 0; } 8%, 92% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
     @keyframes boot-bar-fill { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
     html { cursor: default; }

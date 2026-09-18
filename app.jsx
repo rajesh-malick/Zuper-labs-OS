@@ -686,36 +686,59 @@ function QuickLauncher({ title, placeholder, apps, onOpen, onClose, theme }) {
   );
 }
 
-/* ---------- Boot logo reveal — the real Z mark (assets/zuper-z-mark.svg, the actual
-   brand glyph, not a hand-built approximation) punches in with a bouncy zoom-in
-   scale, the real wordmark fades in beside it to complete the lockup, then a
-   loading-bar sweep with a traveling glow, then the boot screen's own fade takes it
-   the rest of the way to the desktop. Direct correction after the first version's
-   hand-drawn parallelogram tiles didn't actually match the real logo's shape - this
-   uses the same SVG paths as assets/zuper-logo.svg (the assistant's own icon), just
-   without that asset's white rounded-badge backing, since a big white square would
-   fight the boot screen's own dark background. Plays every boot with no session
-   gating - direct request, this one's meant to be seen on every refresh. Timeline
-   (ms, relative to mount): 0-650 Z punches in, 500-900 wordmark fades in (overlapping
-   the Z's settle), 900-1500 hold, 1500-3100 bar fills with a traveling highlight,
-   3100-3600 hold at full bar, then onComplete fires. ---------- */
+/* ---------- Boot wordmark transition — direct request with an annotated screenshot:
+   once the terminal log finishes, the "[ Zuper Labs ]" wordmark that's been sitting
+   top-left as the log's own header should fly from that spot to the center, zoom
+   up, and vanish - a bridge between the log stage and the logo-piece reveal below,
+   instead of the log's header just hard-cutting to the next stage. This renders a
+   second, independently-positioned copy of the wordmark (the log's own copy
+   unmounts when this stage starts) that starts at the log header's on-screen spot
+   (top:24px/left:24px, matching the log's own p-6 padding) and animates via
+   boot-wordmark-fly-center to viewport-center at a larger scale, fading out. ---------- */
+function BootWordmarkFly({ onComplete }) {
+  useEffect(() => {
+    const t = setTimeout(onComplete, 550);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line
+  }, []);
+  return (
+    <img src="./assets/zuper-wordmark.png" alt="" aria-hidden="true"
+      style={{ position: "fixed", top: 24, left: 24, width: "min(60vw, 340px)", animation: "boot-wordmark-fly-center .55s cubic-bezier(.3,.1,.3,1) both" }} />
+  );
+}
+
+/* ---------- Boot logo reveal — the real Z mark's two actual path pieces (same
+   geometry as assets/zuper-logo.svg, inlined here as raw SVG paths instead of an
+   <img> so each piece can carry its own independent entrance animation) converge
+   from top and bottom, the real wordmark slides in from the
+   right, then a loading-bar sweep with a traveling glow, then the boot screen's
+   own fade takes it the rest of the way to the desktop - per a second annotated
+   screenshot showing arrows converging on the lockup from multiple directions.
+   Plays every boot with no session gating. Timeline (ms, relative to mount): 0-600
+   the two Z pieces fly in from top/bottom, 150-750 wordmark slides in from the
+   right, 750-1150 hold, 1150-2750 bar fills with a traveling highlight, 2750-3250
+   hold at full bar, then onComplete fires. ---------- */
 function BootLogoReveal({ onComplete }) {
   useEffect(() => {
-    const t = setTimeout(onComplete, 3600);
+    const t = setTimeout(onComplete, 3250);
     return () => clearTimeout(t);
     // eslint-disable-next-line
   }, []);
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center gap-8">
       <div className="flex items-center gap-4" style={{ position: "relative" }}>
-        <img src="./assets/zuper-z-mark.svg" alt="" aria-hidden="true"
-          style={{ width: "min(22vw, 120px)", filter: "drop-shadow(0 14px 28px rgba(0,0,0,.4))", animation: "boot-z-punch .65s cubic-bezier(.2,1.4,.4,1) both" }} />
+        <svg viewBox="0 0 512 512" aria-hidden="true" style={{ width: "min(22vw, 120px)", filter: "drop-shadow(0 14px 28px rgba(0,0,0,.4))" }}>
+          <path fill="#fd5000" style={{ transformBox: "fill-box", transformOrigin: "center", animation: "boot-piece-from-top .6s cubic-bezier(.2,.8,.3,1.1) both" }}
+            d="M235.43 83.01C286.71 83.01 337.99 83.01 389.27 83.01C366.23 118.36 343.18 153.72 320.14 189.07C357.72 189.07 395.3 189.07 432.88 189.07C412.66 220.05 392.44 251.02 372.22 281.99C334.54 281.99 296.86 281.99 259.18 281.99C279.19 251.02 299.2 220.05 319.21 189.07C268.21 189.07 217.22 189.07 166.22 189.07C189.29 153.72 212.36 118.36 235.43 83.01Z" />
+          <path fill="#393a3c" style={{ transformBox: "fill-box", transformOrigin: "center", animation: "boot-piece-from-bottom .6s cubic-bezier(.2,.8,.3,1.1) .08s both" }}
+            d="M251.95 229.31C232.04 260.26 212.13 291.21 192.21 322.17C243.1 322.17 293.99 322.17 344.88 322.17C321.8 357.54 298.72 392.92 275.64 428.3C224.52 428.3 173.39 428.3 122.27 428.3C145.19 393 168.11 357.7 191.03 322.4C184.04 320.84 171.9 322.17 164.35 322.17C145.65 322.17 126.95 322.17 108.24 322.17C101.08 322.17 93.91 322.17 86.74 322.17C84.37 322.17 80.41 322.93 78.54 321.46C98.86 290.74 119.18 260.02 139.5 229.31C176.98 229.31 214.47 229.31 251.95 229.31Z" />
+        </svg>
         <img src="./assets/zuper-wordmark.png" alt="Zuper Labs"
-          style={{ width: "min(34vw, 220px)", opacity: 0, animation: "nudge-in .45s ease-out .5s forwards" }} />
+          style={{ width: "min(34vw, 220px)", opacity: 0, animation: "boot-piece-from-right .5s ease-out .15s forwards" }} />
       </div>
-      <div style={{ position: "relative", width: "min(50vw, 260px)", height: 3, background: "rgba(255,255,255,.15)", borderRadius: 2, overflow: "hidden", opacity: 0, animation: "nudge-in .3s ease-out .95s forwards" }}>
-        <div style={{ position: "absolute", inset: 0, background: "#E67E38", transform: "scaleX(0)", transformOrigin: "left", animation: "boot-bar-fill 1.6s ease-in-out 1.2s forwards" }} />
-        <div style={{ position: "absolute", top: "-3px", left: "-6%", width: 12, height: 9, borderRadius: "50%", background: "#fff3e0", boxShadow: "0 0 12px 4px #E67E38", animation: "boot-bar-glow 1.6s ease-in-out 1.2s" }} />
+      <div style={{ position: "relative", width: "min(50vw, 260px)", height: 3, background: "rgba(255,255,255,.15)", borderRadius: 2, overflow: "hidden", opacity: 0, animation: "nudge-in .3s ease-out .75s forwards" }}>
+        <div style={{ position: "absolute", inset: 0, background: "#E67E38", transform: "scaleX(0)", transformOrigin: "left", animation: "boot-bar-fill 1.6s ease-in-out 1.15s forwards" }} />
+        <div style={{ position: "absolute", top: "-3px", left: "-6%", width: 12, height: 9, borderRadius: "50%", background: "#fff3e0", boxShadow: "0 0 12px 4px #E67E38", animation: "boot-bar-glow 1.6s ease-in-out 1.15s" }} />
       </div>
       <div className="text-white/48 font-terminal text-[1.25rem]" style={{ position: "relative" }}>[ click or press any key to skip ]</div>
     </div>
@@ -728,7 +751,7 @@ function BootScreen({ onDone, extraLine }) {
   const lines = linesRef.current;
   const [visibleCount, setVisibleCount] = useState(0);
   const [fading, setFading] = useState(false);
-  const [stage, setStage] = useState("log"); // "log" | "reveal"
+  const [stage, setStage] = useState("log"); // "log" | "transition" | "reveal"
 
   /* Fixed for every visitor — direct request, after the first version read the real
      navigator/screen data (browser, core count, language, resolution), so the boot log
@@ -756,19 +779,21 @@ function BootScreen({ onDone, extraLine }) {
     return () => clearTimeout(t);
   }, [visibleCount, lines.length]);
 
-  /* Once the log finishes, always move into the logo reveal - direct request, this
-     plays every boot (every refresh, every Reboot), no "seen this session" gating. */
+  /* Once the log finishes, always move into the wordmark-fly transition, then the
+     logo-piece reveal - direct request, this plays every boot (every refresh, every
+     Reboot), no "seen this session" gating. */
   useEffect(() => {
     if (visibleCount < lines.length) return;
-    setStage("reveal");
+    setStage("transition");
   }, [visibleCount, lines.length]);
 
-  /* Re-armed per stage (not a single mount-only timer) so the reveal gets its own
-     fresh safety window starting from when IT begins, not from page load - 4.2s is a
-     generous buffer over the reveal's own ~3.6s timeline, in case its onComplete
-     timer never fires for some reason. */
+  /* Re-armed per stage (not a single mount-only timer) so each stage gets its own
+     fresh safety window starting from when IT begins, not from page load - each
+     buffer is generous over that stage's own timeline, in case its onComplete timer
+     never fires for some reason. */
   useEffect(() => {
-    const safety = setTimeout(finish, stage === "reveal" ? 4200 : 7000);
+    const ms = stage === "reveal" ? 3800 : stage === "transition" ? 1000 : 7000;
+    const safety = setTimeout(finish, ms);
     function onKey() { finish(); }
     window.addEventListener("keydown", onKey);
     return () => { clearTimeout(safety); window.removeEventListener("keydown", onKey); };
@@ -794,14 +819,16 @@ function BootScreen({ onDone, extraLine }) {
     >
       <BootHudFrame />
       {stage === "reveal" ? (
-        /* Final stage: wordmark -> terminal log (above) -> this reveal -> desktop.
-           Full takeover of the stage (log/wordmark/glitch-mark unmount) rather than
-           overlaying them - a clean hero moment for the logo animation instead of
-           terminal chrome competing with it. onComplete auto-advances; the same
-           click-anywhere/press-any-key skip already wired on the outer container
-           (onClick={finish}, the keydown listener above) works here too, same as
-           every other boot stage. */
+        /* Final stage: wordmark -> terminal log -> wordmark-fly transition -> this
+           reveal -> desktop. Full takeover of the stage (log/wordmark/glitch-mark
+           unmount) rather than overlaying them - a clean hero moment for the logo
+           animation instead of terminal chrome competing with it. onComplete auto-
+           advances; the same click-anywhere/press-any-key skip already wired on the
+           outer container (onClick={finish}, the keydown listener above) works here
+           too, same as every other boot stage. */
         <BootLogoReveal onComplete={finish} />
+      ) : stage === "transition" ? (
+        <BootWordmarkFly onComplete={() => setStage("reveal")} />
       ) : (
         <React.Fragment>
           <BootGlitchMark progress={progress} />
