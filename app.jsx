@@ -3187,37 +3187,47 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
           ContextMenu/AssistantWidget round too, via their existing
           winRadius==="0px" ternary) — kept as its own literal because the Start
           menu is proportionally larger than either and reads better very slightly
-          more rounded, not because sharing the token would break anything now. */}
-      <div className="fixed left-3 bottom-[60px] w-72 max-h-[70vh] overflow-y-auto py-2 z-[850] font-chrome font-semibold text-[13px]"
+          more rounded, not because sharing the token would break anything now.
+
+          Scrolling lives on an INNER div, not this one — Chromium doesn't clip an
+          element's own box-shadow/backdrop-filter to its border-radius correctly
+          when that same element also has overflow-y:auto and an actual scrollbar
+          (confirmed live: the bevel's shadow color squared off past the curve on
+          the scrollbar's edge only, both right corners, while the non-scrollbar
+          left corners rounded fine). This outer shell just clips via overflow-
+          hidden with no scrollbar of its own; the inner div does the scrolling. */}
+      <div className="fixed left-3 bottom-[60px] w-72 overflow-hidden z-[850] font-chrome font-semibold text-[13px]"
         style={{ background: t.panelBg, backdropFilter: t.panelBlur, WebkitBackdropFilter: t.panelBlur, borderRadius: "16px", boxShadow: bevel("out-deep", t.winBorder) + ", 0 20px 50px rgba(0,0,0,.45)", fontFamily: t.fontChrome || undefined }}
         onClick={(e) => e.stopPropagation()}>
-        {/* The real "Zuper Labs" wordmark, once, as a header — the taskbar itself is
-            already dense (running-app buttons, clock, Subscribe), so the Start menu
-            is the tasteful spot for a stronger real-brand presence in the OS chrome. */}
-        <div className="px-4 pt-2 pb-2 border-b" style={{ borderColor: t.winBorder }}>
-          <img src="./assets/zuper-wordmark.png" alt="Zuper Labs" style={{ height: 22 }} />
+        <div className="max-h-[70vh] overflow-y-auto py-2">
+          {/* The real "Zuper Labs" wordmark, once, as a header — the taskbar itself is
+              already dense (running-app buttons, clock, Subscribe), so the Start menu
+              is the tasteful spot for a stronger real-brand presence in the OS chrome. */}
+          <div className="px-4 pt-2 pb-2 border-b" style={{ borderColor: t.winBorder }}>
+            <img src="./assets/zuper-wordmark.png" alt="Zuper Labs" style={{ height: 22 }} />
+          </div>
+          <div className="px-4 pt-1.5 pb-1.5 text-[11px] font-semibold uppercase tracking-wide" style={{ color: t.chromeTextDim, opacity: .7 }}>Programs</div>
+          {/* Icon size bumped 20 -> 36 (the IconImg minimum-legibility threshold) for
+              the same reason as AppDrawerWindow: every real paper-craft cluster photo
+              was silently falling back to its minimal line glyph below 36px, so this
+              list never showed them even though the underlying assets were correct.
+              36 is the smallest size that clears the gate, chosen over a bigger jump
+              (e.g. the drawer's 48) to keep this already-long scrolling list compact. */}
+          {topApps.map((a) => (
+            <button key={a.id} type="button" className="crt-item w-full text-left px-4 py-2.5 pl-5 flex items-center gap-2.5" style={{ color: t.chromeText }}
+              onMouseEnter={() => setHoverId(a.id)} onMouseLeave={() => setHoverId((h) => (h === a.id ? null : h))}
+              onClick={() => onOpen(a.id)}>
+              <IconImg icon={a.icon} size={36} className="w-9 text-center flex-shrink-0" color={hoverId === a.id ? t.accent : ICON_NEUTRAL} />{a.title}
+            </button>
+          ))}
+          <div className="my-1.5 border-t" style={{ borderColor: t.winBorder }}></div>
+          {item("🖥️ Fullscreen", onFullscreen)}
+          {item("🔎 Find", onFind)}
+          {item("▶ Run...", onRun)}
+          {item("🗑️ Recycle Bin" + (trashedCount > 0 ? " (" + trashedCount + ")" : ""), onRecycleBin)}
+          {item("🔄 Reboot", onReboot)}
+          {item("👤 Session", onSession)}
         </div>
-        <div className="px-4 pt-1.5 pb-1.5 text-[11px] font-semibold uppercase tracking-wide" style={{ color: t.chromeTextDim, opacity: .7 }}>Programs</div>
-        {/* Icon size bumped 20 -> 36 (the IconImg minimum-legibility threshold) for
-            the same reason as AppDrawerWindow: every real paper-craft cluster photo
-            was silently falling back to its minimal line glyph below 36px, so this
-            list never showed them even though the underlying assets were correct.
-            36 is the smallest size that clears the gate, chosen over a bigger jump
-            (e.g. the drawer's 48) to keep this already-long scrolling list compact. */}
-        {topApps.map((a) => (
-          <button key={a.id} type="button" className="crt-item w-full text-left px-4 py-2.5 pl-5 flex items-center gap-2.5" style={{ color: t.chromeText }}
-            onMouseEnter={() => setHoverId(a.id)} onMouseLeave={() => setHoverId((h) => (h === a.id ? null : h))}
-            onClick={() => onOpen(a.id)}>
-            <IconImg icon={a.icon} size={36} className="w-9 text-center flex-shrink-0" color={hoverId === a.id ? t.accent : ICON_NEUTRAL} />{a.title}
-          </button>
-        ))}
-        <div className="my-1.5 border-t" style={{ borderColor: t.winBorder }}></div>
-        {item("🖥️ Fullscreen", onFullscreen)}
-        {item("🔎 Find", onFind)}
-        {item("▶ Run...", onRun)}
-        {item("🗑️ Recycle Bin" + (trashedCount > 0 ? " (" + trashedCount + ")" : ""), onRecycleBin)}
-        {item("🔄 Reboot", onReboot)}
-        {item("👤 Session", onSession)}
       </div>
     </React.Fragment>
   );
