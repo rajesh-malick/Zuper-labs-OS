@@ -686,60 +686,36 @@ function QuickLauncher({ title, placeholder, apps, onOpen, onClose, theme }) {
   );
 }
 
-/* ---------- Boot reveal "seen this session" gate — sessionStorage, same persistence
-   scope the careers terminal puzzle already uses for its own per-session state
-   (sessionStorage.__zuper_idx). Deliberately sessionStorage, not localStorage: the ask
-   was "genuinely fresh session (first load), not every navigation back to the
-   desktop" - sessionStorage matches that exactly (survives a Reboot or page refresh
-   within the same tab, clears on a new tab/window), where localStorage would suppress
-   it forever after the first-ever visit and a plain in-memory flag would replay it on
-   every Reboot along with the rest of the boot log. ---------- */
-const BOOT_REVEAL_SEEN_KEY = "zuper-os-boot-reveal-seen";
-function hasSeenBootReveal() { try { return sessionStorage.getItem(BOOT_REVEAL_SEEN_KEY) === "1"; } catch (e) { return false; } }
-function markBootRevealSeen() { try { sessionStorage.setItem(BOOT_REVEAL_SEEN_KEY, "1"); } catch (e) {} }
-
-/* ---------- Boot logo reveal — an original recreation of the supplied brand-reveal
-   video's choreography (4 parallelogram tiles fly in and assemble the Z mark, a
-   loading-bar sweep with a traveling glow, then the boot screen's own fade takes
-   over), not the video itself: built as CSS transforms/keyframes so it's full-screen
-   at any viewport size and sits on the OS's own dark palette instead of a fixed-size
-   boxed clip on a mismatched light background. Timeline (ms, relative to mount):
-   0-960 tiles fly in staggered, 960-1600 hold assembled, 1600-3200 bar fills with a
-   traveling highlight, 3200-3700 hold at full bar, then onComplete fires and the
-   existing BootScreen fade (300ms) takes it the rest of the way to the desktop. ---------- */
-const BOOT_REVEAL_TILES = [
-  { color: "#E67E38", x: 0, y: 0, fromX: -220, fromY: -160, fromR: -70 },
-  { color: "#E67E38", x: 1, y: 1, fromX: 240, fromY: -120, fromR: 55 },
-  { color: "#B8A98E", x: -1, y: 2, fromX: -260, fromY: 140, fromR: -50 },
-  { color: "#B8A98E", x: 0, y: 3, fromX: 220, fromY: 200, fromR: 65 },
-];
+/* ---------- Boot logo reveal — the real Z mark (assets/zuper-z-mark.svg, the actual
+   brand glyph, not a hand-built approximation) punches in with a bouncy zoom-in
+   scale, the real wordmark fades in beside it to complete the lockup, then a
+   loading-bar sweep with a traveling glow, then the boot screen's own fade takes it
+   the rest of the way to the desktop. Direct correction after the first version's
+   hand-drawn parallelogram tiles didn't actually match the real logo's shape - this
+   uses the same SVG paths as assets/zuper-logo.svg (the assistant's own icon), just
+   without that asset's white rounded-badge backing, since a big white square would
+   fight the boot screen's own dark background. Plays every boot with no session
+   gating - direct request, this one's meant to be seen on every refresh. Timeline
+   (ms, relative to mount): 0-650 Z punches in, 500-900 wordmark fades in (overlapping
+   the Z's settle), 900-1500 hold, 1500-3100 bar fills with a traveling highlight,
+   3100-3600 hold at full bar, then onComplete fires. ---------- */
 function BootLogoReveal({ onComplete }) {
   useEffect(() => {
-    const t = setTimeout(onComplete, 3700);
+    const t = setTimeout(onComplete, 3600);
     return () => clearTimeout(t);
     // eslint-disable-next-line
   }, []);
-  const tile = 58, stepX = 76, stepY = 78;
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center gap-10">
-      <div aria-hidden="true" style={{ position: "relative", width: 3 * tile + 2 * stepX, height: 4 * tile + 2 * stepY }}>
-        {BOOT_REVEAL_TILES.map((t2, i) => (
-          <div key={i} style={{
-            position: "absolute", left: "50%", top: "50%", width: tile, height: tile,
-            marginLeft: -tile / 2 + t2.x * stepX, marginTop: -tile / 2 + t2.y * stepY - (1.5 * stepY),
-            background: t2.color, borderRadius: 4, boxShadow: "0 10px 24px rgba(0,0,0,.35)",
-            "--from-x": t2.fromX + "px", "--from-y": t2.fromY + "px", "--from-r": t2.fromR + "deg",
-            transform: "skewX(-38deg)",
-            animation: "boot-tile-in .7s cubic-bezier(.2,.8,.3,1.1) " + (i * 0.12) + "s both",
-          }} />
-        ))}
-        {/* Floating sparkle accent, matching the reference video's twinkle - reuses the
-            same dot-pulse keyframe already defined for the assistant's thinking dots. */}
-        <div aria-hidden="true" style={{ position: "absolute", right: -34, bottom: 6, width: 10, height: 10, background: "#E67E38", clipPath: "polygon(50% 0%, 65% 35%, 100% 50%, 65% 65%, 50% 100%, 35% 65%, 0% 50%, 35% 35%)", animation: "dot-pulse 1.8s ease-in-out infinite", animationDelay: "1s" }} />
+    <div className="fixed inset-0 flex flex-col items-center justify-center gap-8">
+      <div className="flex items-center gap-4" style={{ position: "relative" }}>
+        <img src="./assets/zuper-z-mark.svg" alt="" aria-hidden="true"
+          style={{ width: "min(22vw, 120px)", filter: "drop-shadow(0 14px 28px rgba(0,0,0,.4))", animation: "boot-z-punch .65s cubic-bezier(.2,1.4,.4,1) both" }} />
+        <img src="./assets/zuper-wordmark.png" alt="Zuper Labs"
+          style={{ width: "min(34vw, 220px)", opacity: 0, animation: "nudge-in .45s ease-out .5s forwards" }} />
       </div>
-      <div style={{ position: "relative", width: "min(50vw, 260px)", height: 3, background: "rgba(255,255,255,.15)", borderRadius: 2, overflow: "hidden", opacity: 0, animation: "nudge-in .3s ease-out 1.05s forwards" }}>
-        <div style={{ position: "absolute", inset: 0, background: "#E67E38", transform: "scaleX(0)", transformOrigin: "left", animation: "boot-bar-fill 1.6s ease-in-out 1.3s forwards" }} />
-        <div style={{ position: "absolute", top: "-3px", left: "-6%", width: 12, height: 9, borderRadius: "50%", background: "#fff3e0", boxShadow: "0 0 12px 4px #E67E38", animation: "boot-bar-glow 1.6s ease-in-out 1.3s" }} />
+      <div style={{ position: "relative", width: "min(50vw, 260px)", height: 3, background: "rgba(255,255,255,.15)", borderRadius: 2, overflow: "hidden", opacity: 0, animation: "nudge-in .3s ease-out .95s forwards" }}>
+        <div style={{ position: "absolute", inset: 0, background: "#E67E38", transform: "scaleX(0)", transformOrigin: "left", animation: "boot-bar-fill 1.6s ease-in-out 1.2s forwards" }} />
+        <div style={{ position: "absolute", top: "-3px", left: "-6%", width: 12, height: 9, borderRadius: "50%", background: "#fff3e0", boxShadow: "0 0 12px 4px #E67E38", animation: "boot-bar-glow 1.6s ease-in-out 1.2s" }} />
       </div>
       <div className="text-white/48 font-terminal text-[1.25rem]" style={{ position: "relative" }}>[ click or press any key to skip ]</div>
     </div>
@@ -752,10 +728,6 @@ function BootScreen({ onDone, extraLine }) {
   const lines = linesRef.current;
   const [visibleCount, setVisibleCount] = useState(0);
   const [fading, setFading] = useState(false);
-  /* Computed once per mount (a fresh BootScreen instance per boot, via Root's bootKey)
-     rather than re-read live, so a reveal that finishes mid-boot can't retroactively
-     change this run's own path. */
-  const skipReveal = useRef(hasSeenBootReveal()).current;
   const [stage, setStage] = useState("log"); // "log" | "reveal"
 
   /* Fixed for every visitor — direct request, after the first version read the real
@@ -784,25 +756,19 @@ function BootScreen({ onDone, extraLine }) {
     return () => clearTimeout(t);
   }, [visibleCount, lines.length]);
 
-  /* Once the log finishes, the final stage is either the logo reveal (fresh session)
-     or the existing "> ready." / click-to-continue prompt (already seen this session,
-     so the reveal is skipped entirely and behavior is unchanged from before this
-     stage existed). Marks "seen" the moment the reveal stage is entered, not on
-     completion - skipping it early (click/key) still counts as having seen it for
-     this session, it shouldn't force a replay on the next Reboot just because it
-     wasn't watched to the end. */
+  /* Once the log finishes, always move into the logo reveal - direct request, this
+     plays every boot (every refresh, every Reboot), no "seen this session" gating. */
   useEffect(() => {
-    if (visibleCount < lines.length || skipReveal) return;
+    if (visibleCount < lines.length) return;
     setStage("reveal");
-    markBootRevealSeen();
-  }, [visibleCount, lines.length, skipReveal]);
+  }, [visibleCount, lines.length]);
 
   /* Re-armed per stage (not a single mount-only timer) so the reveal gets its own
-     fresh safety window starting from when IT begins, not from page load - 5s is a
-     generous buffer over the reveal's own ~3.7s timeline, in case its onComplete
+     fresh safety window starting from when IT begins, not from page load - 4.2s is a
+     generous buffer over the reveal's own ~3.6s timeline, in case its onComplete
      timer never fires for some reason. */
   useEffect(() => {
-    const safety = setTimeout(finish, stage === "reveal" ? 5000 : 7000);
+    const safety = setTimeout(finish, stage === "reveal" ? 4200 : 7000);
     function onKey() { finish(); }
     window.addEventListener("keydown", onKey);
     return () => { clearTimeout(safety); window.removeEventListener("keydown", onKey); };

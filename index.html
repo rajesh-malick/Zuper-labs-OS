@@ -280,18 +280,15 @@
     /* nudge-in: entrance for the proactive suggestion bubble near the assistant. */
     @keyframes nudge-in { 0% { opacity: 0; transform: translateY(6px) scale(.96); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
     @keyframes crt-icon-glow { 0%, 100% { filter: drop-shadow(0 0 2px currentColor); } 50% { filter: drop-shadow(0 0 6px currentColor); } }
-    /* Boot sequence's final stage: an original recreation of the supplied brand
-       reveal (4 parallelogram tiles flying in to assemble the Z mark, then a
+    /* Boot sequence's final stage: the real Z mark (assets/zuper-z-mark.svg) punches
+       in with a bouncy zoom-in scale, the wordmark fades in beside it, then a
        loading-bar sweep with a traveling glow, then the existing boot-screen fade
-       takes over) - built natively instead of embedding the source video, so it's
-       full-screen, matches the OS's own dark palette, and scales to any viewport
-       instead of sitting in a fixed-size box. Each tile's start position/rotation is
-       supplied per-element via the --from-x/--from-y/--from-r custom properties (set
-       inline in app.jsx) rather than four near-duplicate keyframes. */
-    @keyframes boot-tile-in {
-      0% { transform: translate(var(--from-x), var(--from-y)) rotate(var(--from-r)) scale(.4); opacity: 0; }
-      65% { transform: translate(0, 0) rotate(-4deg) scale(1.06); opacity: 1; }
-      100% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+       takes over - full-screen, on the OS's own dark palette, scales to any
+       viewport. Plays every boot, no session gating. */
+    @keyframes boot-z-punch {
+      0% { transform: scale(.15); opacity: 0; }
+      65% { transform: scale(1.12); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
     }
     @keyframes boot-bar-glow { 0% { left: -6%; opacity: 0; } 8%, 92% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
     @keyframes boot-bar-fill { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
