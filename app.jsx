@@ -141,6 +141,17 @@ function bevel(kind, accentHex) {
   if (kind === "in-shallow") return "inset 1px 1px 0 " + lo2 + ", inset -1px -1px 0 " + hi2;
   return "none";
 }
+/* Display-name cleanup: cluster/app ids were also doubling as their shown labels
+   (folder-style "ai-intelligence/", DOS-style "Zuper_Arcade.exe") as part of the
+   retro-OS conceit, but that read as raw slugs rather than real names - direct
+   request to drop the "/", "-", ".exe"/".app" and show plain Title Case names
+   instead. The id itself is untouched (still drives routing/localStorage/the
+   terminal's cd path), only this display label changes. */
+const APP_NAME_OVERRIDES = { "ai-intelligence": "AI Intelligence", "workflows-cluster": "Workflows", "security-compliance": "Security & Compliance" };
+function humanizeAppName(id) {
+  if (APP_NAME_OVERRIDES[id]) return APP_NAME_OVERRIDES[id];
+  return id.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
 function rand(n) { return Math.floor(Math.random() * n); }
 function shuffle(arr) {
   var a = arr.slice();
@@ -182,18 +193,18 @@ function FloatPops({ pops }) {
 
 /* ---------- Concept app file per real cluster (UI convenience naming — not confirmed real Zuper product names) ---------- */
 const CLUSTER_APPS = {
-  "command-center": "CommandConsole.app",
-  "core-platform": "CorePlatform.app",
-  "ai-intelligence": "ZuperAI.app",
-  "workflows-cluster": "WorkflowBuilder.exe",
-  "field-operations": "LiveDispatch.app",
-  "security-compliance": "AuditLogs.exe",
-  "customer-portal": "InvoicingPortal.app",
-  "data-pipeline": "APIGateway.sys",
-  "payment-processing": "InvoicingPortal.app",
-  "inventory-management": "PartsTracker.app",
-  "integration-hub": "APIGateway.sys",
-  "predictive-analytics": "ZuperAI.app",
+  "command-center": "Command Console",
+  "core-platform": "Core Platform",
+  "ai-intelligence": "Zuper AI",
+  "workflows-cluster": "Workflow Builder",
+  "field-operations": "Live Dispatch",
+  "security-compliance": "Audit Logs",
+  "customer-portal": "Invoicing Portal",
+  "data-pipeline": "API Gateway",
+  "payment-processing": "Invoicing Portal",
+  "inventory-management": "Parts Tracker",
+  "integration-hub": "API Gateway",
+  "predictive-analytics": "Zuper AI",
 };
 /* ---------- Vintage pixel-art icons — hand-authored original shapes (not traced or
    copied from any icon pack/marketplace/artist), rendered at native 24x24 canvas
@@ -3827,7 +3838,7 @@ function DesktopBackground() {
 /* ================= App ================= */
 function App({ worldData, onReboot }) {
   const clusterApps = useMemo(() => worldData.map((c, i) => ({
-    id: c.id, title: c.id + "/", icon: CLUSTER_ICONS[c.id] || "\u{1F4C1}", kind: "folder",
+    id: c.id, title: humanizeAppName(c.id), icon: CLUSTER_ICONS[c.id] || "\u{1F4C1}", kind: "folder",
     rect: { x: 40 + (i % 5) * 6, y: 40 + (i % 7) * 6, w: 380, h: 300 },
   })), [worldData]);
 
@@ -3847,16 +3858,16 @@ function App({ worldData, onReboot }) {
     /* Wider default than most windows on purpose — the arcade menu is a horizontal row
        of cabinets now (no vertical scrolling through a stacked list), so it needs the
        width to show most of them without a sideways scroll too. */
-    { id: "zuper-arcade", title: "Zuper_Arcade.exe", icon: CLUSTER_ICONS["zuper-arcade"], kind: "arcade", rect: { x: 260, y: 30, w: 860, h: 560 } },
+    { id: "zuper-arcade", title: "Zuper Arcade", icon: CLUSTER_ICONS["zuper-arcade"], kind: "arcade", rect: { x: 260, y: 30, w: 860, h: 560 } },
     /* Wider/taller default open size — direct request, after the old 380x340
        default made the prompt path (e.g. "guest@zuper-web-os:/desktop/ai-
        intelligence$") wrap across 2-3 lines by default, cramped and awkward
        to read, requiring a manual resize every time just to use it comfortably. */
-    { id: "terminal", title: "Terminal.app", icon: CLUSTER_ICONS["terminal"], kind: "terminal", rect: { x: 220, y: 60, w: 880, h: 520 } },
+    { id: "terminal", title: "Terminal", icon: CLUSTER_ICONS["terminal"], kind: "terminal", rect: { x: 220, y: 60, w: 880, h: 520 } },
     /* Opens a real app-drawer window listing every app not pinned to the 4-icon desktop
        (see AppDrawerWindow / hiddenApps below) — every one of them already exists and
        works, this is just where they live now that they're off the desktop itself. */
-    { id: "more-apps", title: "More_Apps.exe", icon: CLUSTER_ICONS["more-apps"], kind: "app-drawer", rect: { x: 300, y: 60, w: 420, h: 460 } },
+    { id: "more-apps", title: "More Apps", icon: CLUSTER_ICONS["more-apps"], kind: "app-drawer", rect: { x: 300, y: 60, w: 420, h: 460 } },
   ], []);
 
   const hiddenWindows = useMemo(() => [
