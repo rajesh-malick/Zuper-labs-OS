@@ -3439,6 +3439,78 @@ function answerFromWorldData(worldData, question) {
    known limitation in the README. */
 const LLM_SESSION_LIMIT = 30;
 
+/* ---------- Assistant mascot, take 3: an original paper-craft-style robot character
+   (head/visor/torso/arms/legs, cream-and-charcoal shell with the real Z badge on its
+   chest) replacing the flat-logo identity — direct request, built from a reference
+   expression sheet the user shared, hand-drawn here as SVG shapes/CSS (same "style is
+   fair inspiration, don't trace the specific art" discipline as every mascot before
+   it: wrench -> CRT-robot -> logo -> this). Every existing interaction channel (drag,
+   click-to-open, greet/bye/hover/thinking/fidget/excited) is preserved - only the
+   pose/eye-shape driving each one changed, not the trigger logic in AssistantWidget
+   itself. viewBox is 0 0 80 160, matching the widget button's own 80x160 footprint 1:1
+   (no extra scaling math needed at the call site). ---------- */
+const ROBOT_EYE_PATHS = {
+  /* smile: idle, greet, fidget, excited/done - the reference's default happy face. */
+  smile: "M30,34 Q34,28 38,34 M42,34 Q46,28 50,34",
+  /* dash: thinking - a level, focused look while a request is in flight. */
+  dash: "M29,32 L37,32 M43,32 L51,32",
+  /* alert: hover/notice - a quick surprised ">< " perk-up. */
+  alert: "M30,27 L36,32 L30,37 M50,27 L44,32 L50,37",
+};
+function RobotEyes({ shape, color }) {
+  return (
+    <path d={ROBOT_EYE_PATHS[shape] || ROBOT_EYE_PATHS.smile} stroke={color} strokeWidth="3" fill="none"
+      strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 3px " + color + ")", transition: "d .15s ease" }} />
+  );
+}
+/* The real Z badge - identical path data to assets/zuper-logo.svg's two colored
+   pieces, nested at chest scale rather than re-approximated, so the mascot's chest
+   badge is pixel-true to the real mark instead of a lookalike. */
+function RobotBadge({ x, y, size }) {
+  return (
+    <svg x={x} y={y} width={size} height={size} viewBox="0 0 512 512">
+      <rect width="512" height="512" rx="90" fill="#151312" />
+      <path fill="#393a3c" d="M251.95 229.31C232.04 260.26 212.13 291.21 192.21 322.17C243.1 322.17 293.99 322.17 344.88 322.17C321.8 357.54 298.72 392.92 275.64 428.3C224.52 428.3 173.39 428.3 122.27 428.3C145.19 393 168.11 357.7 191.03 322.4C184.04 320.84 171.9 322.17 164.35 322.17C145.65 322.17 126.95 322.17 108.24 322.17C101.08 322.17 93.91 322.17 86.74 322.17C84.37 322.17 80.41 322.93 78.54 321.46C98.86 290.74 119.18 260.02 139.5 229.31C176.98 229.31 214.47 229.31 251.95 229.31Z" />
+      <path fill="#fd5000" d="M235.43 83.01C286.71 83.01 337.99 83.01 389.27 83.01C366.23 118.36 343.18 153.72 320.14 189.07C357.72 189.07 395.3 189.07 432.88 189.07C412.66 220.05 392.44 251.02 372.22 281.99C334.54 281.99 296.86 281.99 259.18 281.99C279.19 251.02 299.2 220.05 319.21 189.07C268.21 189.07 217.22 189.07 166.22 189.07C189.29 153.72 212.36 118.36 235.43 83.01Z" />
+    </svg>
+  );
+}
+function RobotMascot({ eyeShape, armPose, showBulb, showCheck, color }) {
+  const rightArmRotation = armPose === "wave" ? -110 : armPose === "raised" ? -55 : 0;
+  return (
+    <svg viewBox="0 0 80 160" width="80" height="160" style={{ position: "absolute", inset: 0, overflow: "visible" }} aria-hidden="true">
+      {/* left arm - stays down for every current pose, kept separate from the right
+          arm so a future pose only needs its own rotation value, not a shared one. */}
+      <rect x="4" y="60" width="10" height="32" rx="4" fill="#2b2723" style={{ transformBox: "fill-box", transformOrigin: "50% 0%" }} />
+      {/* right arm - the one that waves/raises for greet/fidget/excited. */}
+      <g style={{ transformBox: "fill-box", transformOrigin: "50% 0%", transform: "rotate(" + rightArmRotation + "deg)", transition: "transform .3s cubic-bezier(.3,.6,.3,1.4)" }}>
+        <rect x="66" y="60" width="10" height="32" rx="4" fill="#2b2723" />
+        {showBulb && (
+          <g style={{ animation: "dot-pulse 1.1s ease-in-out infinite" }}>
+            <circle cx="71" cy="56" r="5" fill="#ffd98a" style={{ filter: "drop-shadow(0 0 4px " + color + ")" }} />
+            <rect x="69" y="60" width="4" height="3" fill="#8a7a5a" />
+          </g>
+        )}
+      </g>
+      {showCheck && (
+        <g style={{ animation: "nudge-in .3s ease-out both" }}>
+          <circle cx="62" cy="18" r="9" fill={color} />
+          <path d="M58,18 L61,21 L67,14" stroke="#fff3e0" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      )}
+      {/* torso, Z badge, head/visor/eyes, legs */}
+      <rect x="14" y="56" width="52" height="48" rx="10" fill="#e7d8bc" />
+      <RobotBadge x={30} y={68} size={20} />
+      <rect x="20" y="104" width="14" height="20" rx="4" fill="#2b2723" />
+      <rect x="46" y="104" width="14" height="20" rx="4" fill="#2b2723" />
+      <polygon points="34,2 46,2 42,14 38,14" fill={color} />
+      <rect x="16" y="12" width="48" height="42" rx="10" fill="#e7d8bc" />
+      <rect x="22" y="20" width="36" height="24" rx="6" fill="#151312" />
+      <RobotEyes shape={eyeShape} color={color} />
+    </svg>
+  );
+}
+
 function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
   const [pos, setPos] = useState(() => {
     try { return JSON.parse(localStorage.getItem("zuper-os-assistant-pos")); } catch (e) { return null; }
@@ -3748,46 +3820,43 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
         style={{ width: 80, height: 160, animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible", cursor: "grab" }}
         title="Click to ask a question — drag to move me"
         aria-label="Zuper OS assistant — real platform data, Claude when configured. Draggable.">
-        {/* The assistant's visual identity IS the real Zuper Labs logo now (direct
-            request — not an SVG character wearing a badge with the logo on it). It
-            sits in a small device-style bezel (echoes the OS's own dark CRT-case
-            material/gradient) so it still reads as a desktop widget with real depth,
-            not a flat pasted image floating in space, but every prior interaction
-            channel (drag, click-to-open, greet/bye/hover/thinking/excited states,
-            the sound cues) is preserved — just re-expressed as CSS transforms/opacity
-            /glow on the logo image itself instead of swapping SVG sub-parts. */}
+        {/* Take 3 on the assistant's visual identity: an original paper-craft-style
+            robot (RobotMascot, above), replacing the flat logo mark — direct request,
+            built from a reference expression sheet. Every prior interaction channel
+            (drag, click-to-open, greet/bye/hover/thinking/fidget/excited) still drives
+            this exact same figure, just via pose/eye-shape instead of scale/opacity on
+            a flat image. */}
         <div style={{ position: "absolute", left: 0, top: 0, width: 80, height: 160, pointerEvents: "none" }}>
+          {/* ambient glow ring behind the whole figure — brighter/faster on greet,
+              goodbye, or a fresh reply, same as the logo-mark version had. */}
           <div style={{
-            position: "absolute", left: 8, top: 46, width: 64, height: 64, borderRadius: 16,
-            background: "radial-gradient(120% 120% at 35% 22%, #565f5f 0%, #2c3232 55%, #131616 100%)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,.08), inset 0 -2px 4px rgba(0,0,0,.5), 0 2px 4px rgba(0,0,0,.4)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            filter: "drop-shadow(0 10px 14px rgba(0,0,0,.5)) drop-shadow(0 0 7px " + t.accent + "90)",
+            position: "absolute", left: 4, top: 6, width: 72, height: 100, borderRadius: "50%",
+            background: "radial-gradient(circle, " + t.accent + "45 0%, transparent 72%)",
+            animation: (greet || bye || excited) ? "dot-pulse .5s ease-in-out 3" : "dot-pulse 3s ease-in-out infinite",
+          }} />
+          <div style={{
+            position: "relative", width: 80, height: 160,
+            filter: "drop-shadow(0 10px 14px rgba(0,0,0,.5)) drop-shadow(0 0 6px " + t.accent + "80)",
             animation: hover ? "mascot-notice .5s ease-out 1" : thinking ? "dog-think-tilt 1.6s ease-in-out infinite" : fidget ? "mascot-fidget .9s ease-in-out 1" : "mascot-3d-tilt 5s ease-in-out infinite",
+            transform: bye ? "scale(.7) translateY(6px)" : greet ? "scale(1.1)" : hover ? "scale(1.05)" : "scale(1)",
+            opacity: bye ? 0.35 : 1,
+            transition: "transform .25s ease, opacity .35s ease",
           }}>
-            {/* breathing wrapper — a continuous, gentle scale pulse (own nested element
-                so it composes with the plate's own tilt/notice/fidget transform above
-                instead of fighting it for the same CSS property) is what reads as
-                "alive" now that the mascot is a flat logo mark instead of an animated
-                CRT-robot screen. No CRT-style flicker/scanline artifacts here anymore —
-                those belonged to the old character; this is just a clean, calm glow. */}
-            <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", animation: "mascot-breathe 2.6s ease-in-out infinite" }}>
-              {/* ambient glow ring — brighter/faster on greet, goodbye, or a fresh reply */}
-              <div style={{
-                position: "absolute", inset: -6, borderRadius: "50%",
-                background: "radial-gradient(circle, " + t.accent + "50 0%, transparent 72%)",
-                animation: (greet || bye || excited) ? "dot-pulse .5s ease-in-out 3" : "dot-pulse 3s ease-in-out infinite",
-              }} />
-              <img src="./assets/zuper-logo.svg" alt="Zuper Labs" draggable={false} style={{
-                position: "relative", width: 42, height: 42, objectFit: "contain",
-                filter: "drop-shadow(0 0 6px " + t.accent + "a0)",
-                transform: bye ? "scale(.7) translateY(6px)" : greet ? "scale(1.18)" : hover ? "scale(1.08)" : "scale(1)",
-                opacity: bye ? 0.35 : 1,
-                transition: "transform .25s ease, opacity .35s ease",
-              }} />
-              {/* thinking indicator — same three-dot pulse the terminal-screen version used */}
+            {/* breathing wrapper — a continuous, gentle scale pulse, its own nested
+                element so it composes with the outer tilt/notice/fidget transform
+                instead of fighting it for the same CSS property. */}
+            <div style={{ position: "relative", width: "100%", height: "100%", animation: "mascot-breathe 2.6s ease-in-out infinite" }}>
+              <RobotMascot
+                eyeShape={hover ? "alert" : thinking ? "dash" : "smile"}
+                armPose={greet ? "wave" : (fidget || excited) ? "raised" : "down"}
+                showBulb={fidget}
+                showCheck={excited}
+                color={t.accent}
+              />
+              {/* thinking indicator — same three-dot pulse the terminal-screen and
+                  logo-mark versions both used, now floating over the visor. */}
               {thinking && (
-                <div style={{ position: "absolute", bottom: 8, display: "flex", gap: 3 }}>
+                <div style={{ position: "absolute", left: 0, top: 46, width: 80, display: "flex", justifyContent: "center", gap: 3 }}>
                   <span style={{ width: 4, height: 4, borderRadius: "50%", background: t.accent, filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite" }} />
                   <span style={{ width: 4, height: 4, borderRadius: "50%", background: t.accent, filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite", animationDelay: "0.15s" }} />
                   <span style={{ width: 4, height: 4, borderRadius: "50%", background: t.accent, filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite", animationDelay: "0.3s" }} />
@@ -3795,8 +3864,8 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
               )}
             </div>
           </div>
-          {/* small grounding shadow, standing in for the old tank-tread base */}
-          <div style={{ position: "absolute", left: 22, top: 118, width: 36, height: 8, borderRadius: "50%", background: "rgba(0,0,0,.45)", filter: "blur(2px)" }} />
+          {/* small grounding shadow under the feet */}
+          <div style={{ position: "absolute", left: 20, top: 130, width: 40, height: 8, borderRadius: "50%", background: "rgba(0,0,0,.45)", filter: "blur(2px)" }} />
         </div>
       </button>
     </div>
