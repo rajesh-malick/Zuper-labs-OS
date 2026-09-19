@@ -562,10 +562,12 @@ const THEME = {
   titlebar: () => "linear-gradient(180deg, " + ICON_CARD + "cc, transparent)",
   accent: ACCENT_ORANGE, chromeText: TEXT_PRIMARY, chromeTextDim: TEXT_SECONDARY,
   /* panelBg/panelBlur (Start menu, context menus, the quick launcher, the assistant
-     panel) — same charcoal glass as winBg, same reasoning: translucent + blurred so
+     panel, and now the taskbar itself — direct request to make it glassmorphic like
+     every other floating chrome surface instead of the one remaining flat opaque
+     bar) — same charcoal glass as winBg, same reasoning: translucent + blurred so
      the wallpaper's warm tones/texture show through softly instead of a flat
      rectangle dropped on top of the photo. */
-  taskbarBg: CHARCOAL, panelBg: "rgba(96,87,86,.74)", panelBlur: "blur(20px)",
+  panelBg: "rgba(96,87,86,.74)", panelBlur: "blur(20px)",
   fontChrome: "'Inter','Segoe UI',-apple-system,sans-serif",
 };
 /* ================= CRT desktop background: static scanlines + accent-color vignette ================= */
@@ -3237,7 +3239,7 @@ function Taskbar({ onStartClick, running, onRunningClick, theme }) {
     tick(); const id = setInterval(tick, 15000); return () => clearInterval(id);
   }, []);
   return (
-    <div className="fixed left-0 right-0 bottom-0 h-[52px] flex items-center gap-3 px-3 z-[800]" style={{ background: t.taskbarBg, backdropFilter: t.winBlur === "none" ? undefined : "blur(10px)", boxShadow: bevel("out-shallow", t.winBorder) + ", inset 0 1px 0 rgba(0,0,0,.4)" }}>
+    <div className="fixed left-0 right-0 bottom-0 h-[52px] flex items-center gap-3 px-3 z-[800]" style={{ background: t.panelBg, backdropFilter: t.panelBlur, WebkitBackdropFilter: t.panelBlur, boxShadow: bevel("out-shallow", t.winBorder) + ", inset 0 1px 0 rgba(0,0,0,.4)" }}>
       <button type="button" onClick={onStartClick} className="flex items-center gap-1.5 px-3 py-1.5 font-chrome text-[13px] font-semibold" style={{ background: t.accent, color: t.chromeText, boxShadow: bevel("out-shallow", t.accent) }}>&#9635; Start</button>
       <div className="flex-1 flex gap-1.5 overflow-x-auto">
         {running.map((r) => (
