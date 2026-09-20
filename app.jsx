@@ -755,6 +755,12 @@ function BootScreen({ onDone, extraLine }) {
   const [fading, setFading] = useState(false);
   const [stage, setStage] = useState("log"); // "log" | "transition" | "reveal"
 
+  /* ZEE event hook #1: boot sequence starts -> thinking. Fires once, on mount - a
+     fresh BootScreen instance exists per boot (Root remounts it via bootKey on every
+     Reboot too), so this genuinely fires "every time the boot sequence starts",
+     not just the first-ever page load. */
+  useEffect(() => { setMascotState("thinking"); }, []);
+
   /* Fixed for every visitor — direct request, after the first version read the real
      navigator/screen data (browser, core count, language, resolution), so the boot log
      looked different on every device and every visit. */
@@ -959,6 +965,10 @@ function useWindowManager(defs) {
   const open = useCallback((id) => {
     setState((prev) => (prev[id] ? Object.assign({}, prev, { [id]: Object.assign({}, prev[id], { open: true, minimized: false }) }) : prev));
     focus(id);
+    /* ZEE event hook #3: a window opens -> curious. Every window-open path in the app
+       (desktop icons, Start Menu, context menus, the More Apps drawer) funnels
+       through this one function, so this single call covers all of them. */
+    setMascotState("curious");
   }, [focus]);
 
   const close = useCallback((id) => {
@@ -2636,17 +2646,20 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
       const code = dash === -1 ? "" : trimmed.slice(dash + 1);
       if (key === expected.key && code === expected.code) {
         playArcadeSuccessSound();
+        setMascotState("success"); // ZEE event hook #5: puzzle level solved
         const level2Lines = careersStartLevel2(careersAnswerRef, careersTimerRef);
         const next = { step: 2 }; setCareersProgress(next); saveCareersProgress(next);
         trackEvent("Careers Level 1 solved");
         pushLines([{ text: "LEVEL 1 COMPLETE", kind: "heading" }, "────────────────────────────────", ""].concat(level2Lines));
       } else {
         playArcadeFailSound();
+        setMascotState("warning"); // ZEE event hook #6: wrong answer
         setLines((prev) => prev.concat([{ text: "That answer didn't check out. Double-check it and try again.", kind: "err" }]));
       }
     } else {
       if (trimmed === expected.key) {
         playArcadeSuccessSound();
+        setMascotState("success"); // ZEE event hook #5: puzzle level solved
         careersCleanupLevel2(careersTimerRef);
         careersAnswerRef.current = null;
         const next = { step: 3 }; setCareersProgress(next); saveCareersProgress(next);
@@ -2675,6 +2688,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         });
       } else {
         playArcadeFailSound();
+        setMascotState("warning"); // ZEE event hook #6: wrong answer
         setLines((prev) => prev.concat([{ text: "That answer didn't check out. Double-check it and try again.", kind: "err" }]));
       }
     }
@@ -2708,6 +2722,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         // Same fix as careersSubmitNotify below: surface the server's actual
         // detail/error instead of guessing. 503 stays a fixed message since "not
         // configured yet" is already the real, specific reason.
+        setMascotState("alert"); // ZEE event hook #6b (real infra failure - second, more alarmed error tier)
         const detail = data && (data.detail || data.error);
         const text = r.status === 503
           ? "Email notifications aren't configured yet — check back soon."
@@ -2715,6 +2730,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         setLines((prev) => prev.concat([{ text, kind: "err" }]));
       }
     } catch (err) {
+      setMascotState("alert"); // ZEE event hook #6b
       const detail = err && err.message;
       setLines((prev) => prev.concat([{ text: detail ? "Couldn't reach the server: " + detail : "Couldn't reach the server. Check your connection and try again.", kind: "err" }]));
     }
@@ -2736,6 +2752,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         // Surface the server's actual detail/error instead of guessing — it already
         // sends one (see api/careers-submit.js's 502/500 branches). 503 stays a fixed
         // message since "not configured yet" is already the real, specific reason.
+        setMascotState("alert"); // ZEE event hook #6b (real infra failure, e.g. the notify.sh/Resend error)
         const detail = data && (data.detail || data.error);
         const text = r.status === 503
           ? "Email notifications aren't configured yet — check back soon."
@@ -2743,6 +2760,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         setLines((prev) => prev.concat([{ text, kind: "err" }]));
       }
     } catch (err) {
+      setMascotState("alert"); // ZEE event hook #6b
       const detail = err && err.message;
       setLines((prev) => prev.concat([{ text: detail ? "Couldn't reach the server: " + detail : "Couldn't reach the server. Check your connection and try again.", kind: "err" }]));
     }
@@ -2956,6 +2974,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
       const scriptArgs = scriptArgsArr.join(" ");
       if (cwd === "careers" && scriptName === "solve.sh") {
         if (careersProgress.step === 1) {
+          setMascotState("thinking"); // ZEE event hook #4: careers puzzle actively running
           out.push({ text: "Connecting to jsonplaceholder…", kind: "out" });
           setLines((prev) => prev.concat(out));
           careersSolveLevel1(careersAnswerRef).then((introLines) => pushLines(introLines));
@@ -3441,75 +3460,86 @@ function answerFromWorldData(worldData, question) {
    known limitation in the README. */
 const LLM_SESSION_LIMIT = 30;
 
-/* ---------- Assistant mascot, take 3: an original paper-craft-style robot character
-   (head/visor/torso/arms/legs, cream-and-charcoal shell with the real Z badge on its
-   chest) replacing the flat-logo identity — direct request, built from a reference
-   expression sheet the user shared, hand-drawn here as SVG shapes/CSS (same "style is
-   fair inspiration, don't trace the specific art" discipline as every mascot before
-   it: wrench -> CRT-robot -> logo -> this). Every existing interaction channel (drag,
-   click-to-open, greet/bye/hover/thinking/fidget/excited) is preserved - only the
-   pose/eye-shape driving each one changed, not the trigger logic in AssistantWidget
-   itself. viewBox is 0 0 80 160, matching the widget button's own 80x160 footprint 1:1
-   (no extra scaling math needed at the call site). ---------- */
-const ROBOT_EYE_PATHS = {
-  /* smile: idle, greet, fidget, excited/done - the reference's default happy face. */
-  smile: "M30,34 Q34,28 38,34 M42,34 Q46,28 50,34",
-  /* dash: thinking - a level, focused look while a request is in flight. */
-  dash: "M29,32 L37,32 M43,32 L51,32",
-  /* alert: hover/notice - a quick surprised ">< " perk-up. */
-  alert: "M30,27 L36,32 L30,37 M50,27 L44,32 L50,37",
+/* ---------- ZEE: the assistant mascot, take 4 — real per-pose art (10 transparent
+   PNGs the user generated, converted to WebP) driven by a genuine OS-level state
+   machine, replacing take 3's hand-drawn SVG robot (shipped, then immediately
+   superseded once real pose art existed — confirmed with the user before deleting
+   it). Every consumer (Root, the window manager, the careers challenge, this widget
+   itself) can call setMascotState(...) directly with zero prop-drilling. ---------- */
+
+/* A plain module-level pub/sub, not React Context/Redux/Zustand: this is one big
+   app.jsx with no build step and no state library anywhere in it already, and every
+   producer/consumer lives in the same module scope — a subscribe/set pair is the
+   smallest thing that actually fits, and it's reachable from literally anywhere in
+   this file (Root, useWindowManager, the careers terminal) without threading a
+   Provider through the Root/App split. */
+const MASCOT_POSES = {
+  idle: "./assets/mascot-idle.webp", thinking: "./assets/mascot-thinking.webp",
+  curious: "./assets/mascot-curious.webp", success: "./assets/mascot-success.webp",
+  warning: "./assets/mascot-warning.webp", alert: "./assets/mascot-alert.webp",
+  sleeping: "./assets/mascot-sleeping.webp", idea: "./assets/mascot-idea.webp",
+  done: "./assets/mascot-done.webp", running: "./assets/mascot-running.webp",
 };
-function RobotEyes({ shape, color }) {
-  return (
-    <path d={ROBOT_EYE_PATHS[shape] || ROBOT_EYE_PATHS.smile} stroke={color} strokeWidth="3" fill="none"
-      strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 3px " + color + ")", transition: "d .15s ease" }} />
-  );
+/* States in here are momentary reactions — they auto-revert to idle after their own
+   ms value so callers don't each have to remember to clean up after themselves.
+   thinking/running/sleeping are deliberately absent: they represent an ONGOING
+   condition (a request in flight, a puzzle actively being worked, no interaction),
+   so they persist until whatever set them explicitly clears them (or, for sleeping,
+   until the next real interaction wakes it via bumpActivity). */
+const MASCOT_TRANSIENT_MS = { curious: 2500, success: 2600, warning: 2000, alert: 2200, idea: 3000, done: 2600 };
+let mascotState = "idle";
+const mascotListeners = new Set();
+function setMascotState(state) {
+  if (!MASCOT_POSES[state] || state === mascotState) return;
+  mascotState = state;
+  mascotListeners.forEach((fn) => fn(state));
 }
-/* The real Z badge - identical path data to assets/zuper-logo.svg's two colored
-   pieces, nested at chest scale rather than re-approximated, so the mascot's chest
-   badge is pixel-true to the real mark instead of a lookalike. */
-function RobotBadge({ x, y, size }) {
-  return (
-    <svg x={x} y={y} width={size} height={size} viewBox="0 0 512 512">
-      <rect width="512" height="512" rx="90" fill="#151312" />
-      <path fill="#393a3c" d="M251.95 229.31C232.04 260.26 212.13 291.21 192.21 322.17C243.1 322.17 293.99 322.17 344.88 322.17C321.8 357.54 298.72 392.92 275.64 428.3C224.52 428.3 173.39 428.3 122.27 428.3C145.19 393 168.11 357.7 191.03 322.4C184.04 320.84 171.9 322.17 164.35 322.17C145.65 322.17 126.95 322.17 108.24 322.17C101.08 322.17 93.91 322.17 86.74 322.17C84.37 322.17 80.41 322.93 78.54 321.46C98.86 290.74 119.18 260.02 139.5 229.31C176.98 229.31 214.47 229.31 251.95 229.31Z" />
-      <path fill="#fd5000" d="M235.43 83.01C286.71 83.01 337.99 83.01 389.27 83.01C366.23 118.36 343.18 153.72 320.14 189.07C357.72 189.07 395.3 189.07 432.88 189.07C412.66 220.05 392.44 251.02 372.22 281.99C334.54 281.99 296.86 281.99 259.18 281.99C279.19 251.02 299.2 220.05 319.21 189.07C268.21 189.07 217.22 189.07 166.22 189.07C189.29 153.72 212.36 118.36 235.43 83.01Z" />
-    </svg>
-  );
+function useMascotState() {
+  const [state, setState] = useState(mascotState);
+  useEffect(() => {
+    mascotListeners.add(setState);
+    return () => mascotListeners.delete(setState);
+  }, []);
+  /* Auto-revert for the transient states, above. Re-armed on every state change (not
+     a single mount-only timer) so each entry gets its own fresh window; if something
+     else changes the state before this fires, the cleanup below cancels it — the
+     newer state's own effect run decides whether IT needs a revert instead. */
+  useEffect(() => {
+    const ms = MASCOT_TRANSIENT_MS[state];
+    if (!ms) return;
+    const t = setTimeout(() => setMascotState("idle"), ms);
+    return () => clearTimeout(t);
+  }, [state]);
+  return state;
 }
-function RobotMascot({ eyeShape, armPose, showBulb, showCheck, color }) {
-  const rightArmRotation = armPose === "wave" ? -110 : armPose === "raised" ? -55 : 0;
+/* Crossfades between pose images (~220ms) instead of an abrupt <img src> swap — the
+   outgoing pose stays mounted just long enough to fade out while the incoming one
+   fades in on top of it, both via CSS `animation` (not `transition`, which needs a
+   real "before" frame already painted - a fresh animation just plays from its own 0%
+   keyframe the instant it mounts, so there's no race with the state flip). */
+function MascotImage({ state }) {
+  const [shown, setShown] = useState(state);
+  const [prev, setPrev] = useState(null);
+  const prevTimerRef = useRef(null);
+  useEffect(() => {
+    setShown((current) => {
+      if (current === state) return current;
+      setPrev(current);
+      clearTimeout(prevTimerRef.current);
+      prevTimerRef.current = setTimeout(() => setPrev(null), 240);
+      return state;
+    });
+  }, [state]);
+  useEffect(() => () => clearTimeout(prevTimerRef.current), []);
   return (
-    <svg viewBox="0 0 80 160" width="80" height="160" style={{ position: "absolute", inset: 0, overflow: "visible" }} aria-hidden="true">
-      {/* left arm - stays down for every current pose, kept separate from the right
-          arm so a future pose only needs its own rotation value, not a shared one. */}
-      <rect x="4" y="60" width="10" height="32" rx="4" fill="#2b2723" style={{ transformBox: "fill-box", transformOrigin: "50% 0%" }} />
-      {/* right arm - the one that waves/raises for greet/fidget/excited. */}
-      <g style={{ transformBox: "fill-box", transformOrigin: "50% 0%", transform: "rotate(" + rightArmRotation + "deg)", transition: "transform .3s cubic-bezier(.3,.6,.3,1.4)" }}>
-        <rect x="66" y="60" width="10" height="32" rx="4" fill="#2b2723" />
-        {showBulb && (
-          <g style={{ animation: "dot-pulse 1.1s ease-in-out infinite" }}>
-            <circle cx="71" cy="56" r="5" fill="#ffd98a" style={{ filter: "drop-shadow(0 0 4px " + color + ")" }} />
-            <rect x="69" y="60" width="4" height="3" fill="#8a7a5a" />
-          </g>
-        )}
-      </g>
-      {showCheck && (
-        <g style={{ animation: "nudge-in .3s ease-out both" }}>
-          <circle cx="62" cy="18" r="9" fill={color} />
-          <path d="M58,18 L61,21 L67,14" stroke="#fff3e0" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        </g>
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      {prev && (
+        <img key={"p" + prev} src={MASCOT_POSES[prev]} alt="" draggable={false}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", animation: "mascot-fade-out .22s ease-out both" }} />
       )}
-      {/* torso, Z badge, head/visor/eyes, legs */}
-      <rect x="14" y="56" width="52" height="48" rx="10" fill="#e7d8bc" />
-      <RobotBadge x={30} y={68} size={20} />
-      <rect x="20" y="104" width="14" height="20" rx="4" fill="#2b2723" />
-      <rect x="46" y="104" width="14" height="20" rx="4" fill="#2b2723" />
-      <polygon points="34,2 46,2 42,14 38,14" fill={color} />
-      <rect x="16" y="12" width="48" height="42" rx="10" fill="#e7d8bc" />
-      <rect x="22" y="20" width="36" height="24" rx="6" fill="#151312" />
-      <RobotEyes shape={eyeShape} color={color} />
-    </svg>
+      <img key={"c" + shown} src={MASCOT_POSES[shown]} alt="Zee" draggable={false}
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", animation: "mascot-fade-in .22s ease-out both" }} />
+    </div>
   );
 }
 
@@ -3525,12 +3555,11 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
   const logRef = useRef(null);
   const dragRef = useRef({ dragging: false, moved: false, startX: 0, startY: 0, startLeft: 0, startTop: 0 });
   const t = theme || THEME;
+  const mascotState = useMascotState();
 
-  /* Original animation "states" for the mascot — same interaction vocabulary classic
-     assistant characters use (a greeting gesture on open, a goodbye on close, a
-     hover-notice, idle fidgets, a thinking pose while waiting, an excited response)
-     but hand-built here as CSS/SVG transforms on our own original character, not any
-     borrowed sprite frames. */
+  /* Greet/bye stay a local scale/opacity "pop" on open/close (unchanged from before) —
+     the global mascot pose (idle/thinking/curious/etc.) is a separate, independent
+     layer underneath; opening the chat doesn't need its own pose, just this bounce. */
   const [greet, setGreet] = useState(false);
   const [bye, setBye] = useState(false);
   const prevOpenRef = useRef(false);
@@ -3550,37 +3579,40 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
     prevOpenRef.current = open;
   }, [open]);
 
-  const [excited, setExcited] = useState(false);
-  useEffect(() => {
-    const last = messages[messages.length - 1];
-    if (last && last.role === "assistant") {
-      setExcited(true);
-      const id = setTimeout(() => setExcited(false), 1400);
-      return () => clearTimeout(id);
-    }
-  }, [messages]);
-
   /* Hover-notice — a quick "perk up" when the pointer lands on the mascot, the same
      kind of always-alive touch-reactivity classic assistant characters have. */
   const [hover, setHover] = useState(false);
 
-  /* Idle fidgets — small unprompted gestures on a randomized timer while the panel is
-     closed, so the character feels alive even when nobody's interacting with it
-     (mirrors the idle-animation habit of classic assistant characters), not just
-     when clicked/hovered. */
-  const [fidget, setFidget] = useState(false);
+  /* Idle sway — a small unprompted tilt on a 4-8s randomized timer while the panel is
+     closed, so ZEE feels alive even when nobody's interacting with it. Deliberately
+     NOT a pose change (there's no dedicated "fidget" pose image) - just a brief CSS
+     sway on whatever pose is already showing. Held for 900ms then cleared, same
+     pattern the old fidget timer used. */
+  const [swaying, setSwaying] = useState(false);
   useEffect(() => {
     if (open) return;
     let waitId, holdId;
     function schedule() {
       waitId = setTimeout(() => {
-        setFidget(true);
-        holdId = setTimeout(() => { setFidget(false); schedule(); }, 900);
-      }, 12000 + Math.random() * 10000);
+        setSwaying(true);
+        holdId = setTimeout(() => { setSwaying(false); schedule(); }, 900);
+      }, 4000 + Math.random() * 4000);
     }
     schedule();
     return () => { clearTimeout(waitId); clearTimeout(holdId); };
   }, [open]);
+
+  /* Sleeping — no interaction anywhere in the OS for 75s (bumpActivity resets this;
+     it's already wired to hover/drag/click) puts ZEE to sleep. Any interaction after
+     that wakes it back to idle (see bumpActivity below), per direct spec: "any user
+     interaction after sleeping -> idle". Skipped entirely while the chat panel is
+     open or a reply is in flight - falling asleep mid-conversation would be odd. */
+  const [idleTick, setIdleTick] = useState(0);
+  useEffect(() => {
+    if (open || thinking) return;
+    const id = setTimeout(() => setMascotState("sleeping"), 75000);
+    return () => clearTimeout(id);
+  }, [open, thinking, idleTick]);
 
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [messages, open, thinking]);
 
@@ -3590,6 +3622,7 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
     setMessages((m) => [...m, { role: "user", text: text }]);
     setInput("");
     setThinking(true);
+    setMascotState("thinking");
     let answer = null, source = "local";
     if (llmCallsRef.current < LLM_SESSION_LIMIT) {
       try {
@@ -3606,6 +3639,7 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
     }
     if (!answer) answer = answerFromWorldData(worldData, text);
     setThinking(false);
+    setMascotState("success");
     setMessages((m) => [...m, { role: "assistant", text: answer, source: source }]);
   }
 
@@ -3644,6 +3678,8 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
   function bumpActivity() {
     setNudgeTick((k) => k + 1);
     setNudge(null);
+    setIdleTick((k) => k + 1);
+    if (mascotState === "sleeping") setMascotState("idle");
   }
   useEffect(() => {
     /* Design review finding: the nudge bubble used to fire even while a Terminal/
@@ -3655,6 +3691,10 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
     if (open || thinking || hasFocusedWindow) { setNudge(null); return; }
     const id = setTimeout(() => {
       setNudge(nudgeSuggestions[Math.floor(Math.random() * nudgeSuggestions.length)]);
+      /* The nudge bubble is itself trying to draw attention — it'd be an odd mixed
+         signal for ZEE to visibly be asleep right next to it, so this always wakes
+         it back to idle first, same as any other real interaction would. */
+      setMascotState("idle");
     }, 90000);
     return () => clearTimeout(id);
   }, [open, thinking, hasFocusedWindow, nudgeTick, nudgeSuggestions]);
@@ -3819,46 +3859,42 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
       <button type="button" onClickCapture={onClickCapture} onClick={() => setOpen((o) => !o)}
         onMouseEnter={() => { setHover(true); bumpActivity(); }} onMouseLeave={() => setHover(false)}
         className="flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
-        style={{ width: 80, height: 160, animation: "zuper-bob 3s ease-in-out infinite", outlineColor: t.accent, overflow: "visible", cursor: "grab" }}
-        title="Click to ask a question — drag to move me"
-        aria-label="Zuper OS assistant — real platform data, Claude when configured. Draggable.">
-        {/* Take 3 on the assistant's visual identity: an original paper-craft-style
-            robot (RobotMascot, above), replacing the flat logo mark — direct request,
-            built from a reference expression sheet. Every prior interaction channel
-            (drag, click-to-open, greet/bye/hover/thinking/fidget/excited) still drives
-            this exact same figure, just via pose/eye-shape instead of scale/opacity on
-            a flat image. */}
-        <div style={{ position: "absolute", left: 0, top: 0, width: 80, height: 160, pointerEvents: "none" }}>
-          {/* ambient glow ring behind the whole figure — brighter/faster on greet,
-              goodbye, or a fresh reply, same as the logo-mark version had. */}
+        style={{ width: 84, height: 106, outlineColor: t.accent, overflow: "visible", cursor: "grab" }}
+        title="Need something? Click to ask — drag to move me"
+        aria-label="Zee, the Zuper OS assistant — real platform data, Claude when configured. Draggable.">
+        {/* ZEE take 4: real pose art (MascotImage/useMascotState, above) instead of a
+            hand-drawn character. Deliberately calm at rest per direct spec - no
+            constant bouncing, no permanent glow: breathing is the only continuous
+            motion (explicitly asked for), the ambient glow ring only appears for the
+            brief greet/bye/success moments, and the only other idle motion is the
+            occasional 4-8s sway, not a always-on tilt loop. */}
+        <div style={{ position: "absolute", left: 0, top: 0, width: 84, height: 106, pointerEvents: "none" }}>
+          {/* ambient glow ring — only visible for the brief greet/goodbye/fresh-reply
+              window, fully off at rest (no permanent glow, per spec). */}
+          {(greet || bye || mascotState === "success") && (
+            <div style={{
+              position: "absolute", left: 4, top: 4, width: 76, height: 76, borderRadius: "50%",
+              background: "radial-gradient(circle, " + t.accent + "45 0%, transparent 72%)",
+              animation: "dot-pulse .5s ease-in-out 3",
+            }} />
+          )}
           <div style={{
-            position: "absolute", left: 4, top: 6, width: 72, height: 100, borderRadius: "50%",
-            background: "radial-gradient(circle, " + t.accent + "45 0%, transparent 72%)",
-            animation: (greet || bye || excited) ? "dot-pulse .5s ease-in-out 3" : "dot-pulse 3s ease-in-out infinite",
-          }} />
-          <div style={{
-            position: "relative", width: 80, height: 160,
-            filter: "drop-shadow(0 10px 14px rgba(0,0,0,.5)) drop-shadow(0 0 6px " + t.accent + "80)",
-            animation: hover ? "mascot-notice .5s ease-out 1" : thinking ? "dog-think-tilt 1.6s ease-in-out infinite" : fidget ? "mascot-fidget .9s ease-in-out 1" : "mascot-3d-tilt 5s ease-in-out infinite",
+            position: "relative", width: 84, height: 106,
+            filter: "drop-shadow(0 10px 14px rgba(0,0,0,.5))" + ((greet || bye || mascotState === "success") ? " drop-shadow(0 0 6px " + t.accent + "80)" : ""),
+            animation: hover ? "mascot-notice .5s ease-out 1" : (mascotState === "warning" || mascotState === "alert") ? "arcade-shake .4s ease-in-out 1" : swaying ? "mascot-sway 1s ease-in-out 1" : "none",
             transform: bye ? "scale(.7) translateY(6px)" : greet ? "scale(1.1)" : hover ? "scale(1.05)" : "scale(1)",
             opacity: bye ? 0.35 : 1,
             transition: "transform .25s ease, opacity .35s ease",
           }}>
-            {/* breathing wrapper — a continuous, gentle scale pulse, its own nested
-                element so it composes with the outer tilt/notice/fidget transform
-                instead of fighting it for the same CSS property. */}
+            {/* breathing — the one continuous ambient motion, explicitly asked for; its
+                own nested element so it composes with the notice/shake/sway transform
+                above instead of fighting it for the same CSS property. */}
             <div style={{ position: "relative", width: "100%", height: "100%", animation: "mascot-breathe 2.6s ease-in-out infinite" }}>
-              <RobotMascot
-                eyeShape={hover ? "alert" : thinking ? "dash" : "smile"}
-                armPose={greet ? "wave" : (fidget || excited) ? "raised" : "down"}
-                showBulb={fidget}
-                showCheck={excited}
-                color={t.accent}
-              />
-              {/* thinking indicator — same three-dot pulse the terminal-screen and
-                  logo-mark versions both used, now floating over the visor. */}
+              <MascotImage state={mascotState} />
+              {/* local chat-thinking indicator — a supplementary "actively typing" cue
+                  layered on top of the thinking pose while a request is in flight. */}
               {thinking && (
-                <div style={{ position: "absolute", left: 0, top: 46, width: 80, display: "flex", justifyContent: "center", gap: 3 }}>
+                <div style={{ position: "absolute", left: 0, bottom: 6, width: 84, display: "flex", justifyContent: "center", gap: 3 }}>
                   <span style={{ width: 4, height: 4, borderRadius: "50%", background: t.accent, filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite" }} />
                   <span style={{ width: 4, height: 4, borderRadius: "50%", background: t.accent, filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite", animationDelay: "0.15s" }} />
                   <span style={{ width: 4, height: 4, borderRadius: "50%", background: t.accent, filter: "drop-shadow(0 0 2px " + t.accent + ")", animation: "dot-pulse 1s ease-in-out infinite", animationDelay: "0.3s" }} />
@@ -3866,8 +3902,9 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
               )}
             </div>
           </div>
-          {/* small grounding shadow under the feet */}
-          <div style={{ position: "absolute", left: 20, top: 130, width: 40, height: 8, borderRadius: "50%", background: "rgba(0,0,0,.45)", filter: "blur(2px)" }} />
+          {/* small grounding shadow under the feet — the pose art is a plain
+              transparent cutout with no baked-in shadow of its own. */}
+          <div style={{ position: "absolute", left: 22, top: 96, width: 40, height: 7, borderRadius: "50%", background: "rgba(0,0,0,.4)", filter: "blur(2px)" }} />
         </div>
       </button>
     </div>
@@ -4381,6 +4418,10 @@ function Root() {
     if (!ready) return;
     const raf = requestAnimationFrame(() => setAppVisible(true));
     const hideBootTimer = setTimeout(() => setShowBoot(false), 350);
+    /* ZEE event hook #2: boot completes / desktop loads -> success, then settles to
+       idle on its own via MASCOT_TRANSIENT_MS - no separate timer needed here for
+       the "settle after a few seconds" part. */
+    setMascotState("success");
     return () => { cancelAnimationFrame(raf); clearTimeout(hideBootTimer); };
   }, [ready]);
 

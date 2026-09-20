@@ -236,47 +236,40 @@
     .select-text { user-select: text !important; -webkit-user-select: text !important; }
     .overflow-y-auto { overflow-y: auto !important; }
     .overflow-x-hidden { overflow-x: hidden !important; }
-    @keyframes zuper-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
     /* Arcade game "juice" — shared across Pipe Flow / Spinning Plates / Fraud or
        Fine?: a shake on failure, a floating score/status pop that drifts up and
-       fades, and a pulsing warning state for anything about to fail. */
+       fades, and a pulsing warning state for anything about to fail. Also reused
+       directly by ZEE's warning/alert mascot states (below) - same "something's
+       wrong" shake, no need for a second near-identical keyframe. */
     @keyframes arcade-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
     @keyframes arcade-pop-fade { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(1.15); } }
     @keyframes arcade-pulse-critical { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
-    /* Assistant mascot animation states — original, hand-built states (idle blink,
-       greeting ear-wiggle, thinking head-tilt, tail-wag) in the same spirit as a
-       classic assistant character's named animations, but our own transforms on our
-       own drawn shapes, not borrowed sprite frames. */
-    @keyframes dog-blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.12); } }
-    @keyframes dog-ear-wiggle { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-10deg); } }
-    @keyframes dog-think-tilt { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-5deg); } }
-    /* Real CSS 3D transform (perspective + rotateY) on the whole mascot SVG — genuine
-       3D depth on a flat drawing, a much lighter-weight way to get visible
-       dimensionality than a full WebGL/Three.js rewrite. */
-    @keyframes mascot-3d-tilt { 0%, 100% { transform: perspective(420px) rotateY(0deg); } 50% { transform: perspective(420px) rotateY(16deg); } }
-    /* Hover-notice (a quick "perk up" perspective bump on pointer-enter) and idle
-       fidget (a small unprompted head wobble on a randomized timer) — the extra
-       always-alive touch/idle reactivity classic assistant characters have, built
-       from scratch as CSS transforms on this original character. */
+    /* Hover-notice — a quick "perk up" perspective bump on pointer-enter, one of the
+       few surviving animations from the mascot's earlier hand-drawn-SVG eras (still
+       works fine on the current real-pose-art version, since it's just a transform
+       on the whole figure, not tied to the old drawn shapes). */
     @keyframes mascot-notice { 0% { transform: perspective(420px) rotateY(0deg) scale(1); } 35% { transform: perspective(420px) rotateY(-10deg) scale(1.08); } 65% { transform: perspective(420px) rotateY(6deg) scale(1.03); } 100% { transform: perspective(420px) rotateY(0deg) scale(1); } }
-    @keyframes mascot-fidget { 0%, 100% { transform: rotate(0deg); } 20% { transform: rotate(-4deg); } 40% { transform: rotate(3deg); } 60% { transform: rotate(-2deg); } 80% { transform: rotate(1deg); } }
-    /* A hard on/off opacity toggle — how a real terminal cursor blinks — for the
-       CRT-robot mascot's >_ glyph, distinct from dog-blink's eyelid squash. */
+    /* A hard on/off opacity toggle — how a real terminal cursor blinks. */
     @keyframes term-cursor-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
     /* dot-pulse: a loading-dots/glow-ring pulse, used by the assistant's thinking
-       indicator and its ambient glow ring. (screen-scan-sweep, the old CRT-robot's
-       hover "get attention" scan bar, was removed along with the rest of that
-       character's screen-content states — no longer applicable to the logo-based
-       assistant.) */
+       indicator and its ambient glow ring. */
     @keyframes dot-pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
-    .assistant-eye { transform-box: fill-box; transform-origin: center; animation: dog-blink 4.5s ease-in-out infinite; }
-    /* mascot-breathe: a continuous, gentle scale pulse on the logo-based assistant's
-       inner content (glow ring + logo) — this is what makes it read as a living thing
-       rather than a static app icon now that it's a flat logo mark instead of an
-       animated character screen. Always running, layered on a separate nested element
-       so it composes with the outer plate's own tilt/notice/fidget transforms instead
-       of fighting them for the same `transform` property. */
+    /* mascot-breathe: the one continuous ambient motion ZEE has at rest (explicitly
+       asked for) - a slow, gentle scale pulse on its own nested element so it
+       composes with the outer notice/shake/sway transform instead of fighting it for
+       the same `transform` property. */
     @keyframes mascot-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.055); } }
+    /* mascot-sway: the occasional (4-8s randomized interval, timed in app.jsx) idle
+       tilt - deliberately the ONLY other idle motion besides breathing, replacing an
+       earlier always-on tilt loop per direct feedback: "do NOT add constant
+       bouncing... motion should be occasional and purposeful, not distracting." */
+    @keyframes mascot-sway { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-4deg); } }
+    /* mascot-fade-in/out: the ~220ms crossfade between ZEE's pose images (see
+       MascotImage in app.jsx) - a fresh `animation` (not `transition`) so a newly-
+       mounted image just plays from its own 0% keyframe immediately, no race with
+       whatever opacity it "was at" before. */
+    @keyframes mascot-fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes mascot-fade-out { 0% { opacity: 1; } 100% { opacity: 0; } }
     /* nudge-in: entrance for the proactive suggestion bubble near the assistant. */
     @keyframes nudge-in { 0% { opacity: 0; transform: translateY(6px) scale(.96); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
     @keyframes crt-icon-glow { 0%, 100% { filter: drop-shadow(0 0 2px currentColor); } 50% { filter: drop-shadow(0 0 6px currentColor); } }
