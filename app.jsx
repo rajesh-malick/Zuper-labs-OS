@@ -2143,13 +2143,20 @@ function FraudOrFineGame({ onComplete, accent }) {
 }
 
 const GAMES = [
-  { id: "route-racer", title: "Route Racer", cluster: "field-operations", desc: "Grid-navigation puzzle. Visit every job site before you run out of moves.", summary: "Concept takeaway: Zuper's real dispatch system routes technicians around live traffic and job constraints automatically — this mini-game is an illustrative analogy, not a simulation of the real routing engine." },
-  { id: "dispatch-tetris", title: "Dispatch Tetris", cluster: null, desc: "Schedule-fitting puzzle. Place each incoming job into an open technician slot.", summary: "Concept takeaway: Zuper's real scheduling tools fit incoming jobs into technician availability automatically — this mini-game is an illustrative analogy, not a simulation of the real scheduling engine." },
-  { id: "workflow-wiring", title: "Workflow Wiring", cluster: "workflows-cluster", desc: "Connect event triggers to automated actions in a logic puzzle.", summary: "Concept takeaway: Zuper's real workflow automation connects triggers to actions behind the scenes — this mini-game is an illustrative analogy, not a simulation of the real automation engine." },
-  { id: "system-stabilizer", title: "System Stabilizer", cluster: "core-platform", desc: "Resource-management mini-game. Keep every system meter in range.", summary: "Concept takeaway: Zuper's real platform monitors and balances system load automatically — this mini-game is an illustrative analogy, not a simulation of real infrastructure telemetry." },
-  { id: "pipe-flow", title: "Pipe Flow", cluster: "data-pipeline", desc: "Rotate-the-segment puzzle. Connect the source to the target before time runs out — grows each level.", summary: "Concept takeaway: Zuper's real data pipeline moves information between systems automatically, already connected — this mini-game is an illustrative analogy, not a simulation of the real pipeline." },
-  { id: "spinning-plates", title: "Spinning Plates", cluster: "command-center", desc: "Real-time survival. Ping each system before it goes critical — more come online the longer you last.", summary: "Concept takeaway: Zuper's real command center monitors every system at once so nothing goes critical unnoticed — this mini-game is an illustrative analogy, not a simulation of real monitoring." },
-  { id: "fraud-or-fine", title: "Fraud or Fine?", cluster: "payment-processing", desc: "Fast judgment call. Approve or flag each transaction before the clock runs out — some legit ones look suspicious on purpose.", summary: "Concept takeaway: Zuper's real payment processing screens transactions for risk automatically — this mini-game is an illustrative analogy, not a simulation of a real fraud model." },
+  { id: "route-racer", title: "Route Racer", cluster: "field-operations", desc: "Grid-navigation puzzle. Visit every job site before you run out of moves.", summary: "Concept takeaway: Zuper's real dispatch system routes technicians around live traffic and job constraints automatically — this mini-game is an illustrative analogy, not a simulation of the real routing engine.", docsConcept: "Scheduling & Dispatching", docsBlurb: "the Dispatch Board and Maps modules handle job scheduling, technician assignment, and route optimization" },
+  { id: "dispatch-tetris", title: "Dispatch Tetris", cluster: null, desc: "Schedule-fitting puzzle. Place each incoming job into an open technician slot.", summary: "Concept takeaway: Zuper's real scheduling tools fit incoming jobs into technician availability automatically — this mini-game is an illustrative analogy, not a simulation of the real scheduling engine.", docsConcept: "Scheduling & Dispatching", docsBlurb: "the Calendar module schedules and manages jobs assigned to field technicians" },
+  { id: "workflow-wiring", title: "Workflow Wiring", cluster: "workflows-cluster", desc: "Connect event triggers to automated actions in a logic puzzle.", summary: "Concept takeaway: Zuper's real workflow automation connects triggers to actions behind the scenes — this mini-game is an illustrative analogy, not a simulation of the real automation engine.", docsConcept: "Custom Workflows and Onsite Checklists", docsBlurb: "teams connect triggers to automated actions and required onsite steps" },
+  { id: "system-stabilizer", title: "System Stabilizer", cluster: "core-platform", desc: "Resource-management mini-game. Keep every system meter in range.", summary: "Concept takeaway: Zuper's real platform monitors and balances system load automatically — this mini-game is an illustrative analogy, not a simulation of real infrastructure telemetry.", docsConcept: "Dashboard", docsBlurb: "the Dashboard module surfaces key metrics from every module in one place, so nothing drifts out of range unnoticed" },
+  { id: "pipe-flow", title: "Pipe Flow", cluster: "data-pipeline", desc: "Rotate-the-segment puzzle. Connect the source to the target before time runs out — grows each level.", summary: "Concept takeaway: Zuper's real data pipeline moves information between systems automatically, already connected — this mini-game is an illustrative analogy, not a simulation of the real pipeline.", docsConcept: "Transfer Orders", docsBlurb: "the Transfer Orders module streamlines moving inventory between locations, source to destination" },
+  { id: "spinning-plates", title: "Spinning Plates", cluster: "command-center", desc: "Real-time survival. Ping each system before it goes critical — more come online the longer you last.", summary: "Concept takeaway: Zuper's real command center monitors every system at once so nothing goes critical unnoticed — this mini-game is an illustrative analogy, not a simulation of real monitoring.", docsConcept: "the Dispatch Board", docsBlurb: "it gives a centralized view of every job — including which ones are unscheduled, unassigned, or turning overdue — before anything goes critical" },
+  /* "Fraud or Fine?" previously claimed "Zuper's real payment processing screens
+     transactions for risk automatically" - docs.zuper.co's real Accounting concept
+     never describes a fraud/risk-scoring capability, only quote and invoice
+     management. Corrected per direct request to ground every game's takeaway in
+     docs.zuper.co's actual product concepts (fetched and read this session), not
+     invented/overstated capabilities - the game itself (approve-or-flag judgment
+     calls) is unchanged, only the claim about what Zuper's real product does. */
+  { id: "fraud-or-fine", title: "Fraud or Fine?", cluster: "payment-processing", desc: "Fast judgment call. Approve or flag each transaction before the clock runs out — some legit ones look suspicious on purpose.", summary: "Concept takeaway: Zuper's real Accounting module creates, manages, and sends quotes and invoices to customers — this mini-game is an illustrative analogy for fast financial judgment calls, not a simulation of a real fraud-detection model (Zuper's docs don't describe one).", docsConcept: "Accounting (Quotes & Invoices)", docsBlurb: "the Accounting module creates, manages, and sends quotes and invoices to customers — Zuper's docs don't describe an automated fraud-risk model" },
 ];
 /* Clusters that already have a matching arcade game don't get their own desktop
    folder icon anymore — they're "in the arcade" now, per direct request. Derived
@@ -2187,12 +2194,19 @@ const DESKTOP_VISIBLE_IDS = new Set(["careers", "blog", "zuper-arcade", "more-ap
    hasn't loaded yet. */
 function gameSummaryText(game, worldData) {
   const c = game.cluster && worldData ? findCluster(worldData, game.cluster) : null;
-  if (!c) return game.summary;
+  /* docs.zuper.co/Getting_Started/Concepts (fetched and read this session) is the
+     official product-concept reference — a different, more precise vocabulary than
+     the labs.zuper.co "cluster" world data below (Work Order Management, Scheduling
+     & Dispatching, Accounting, etc. vs. server/agent/database entities). Both are
+     real Zuper sources; this stitches the two together instead of only ever citing
+     the cluster's own generic entities. */
+  const docsPart = game.docsConcept ? " In Zuper's real product, this maps to " + game.docsConcept + " — " + game.docsBlurb + "." : "";
+  if (!c) return game.summary + docsPart;
   const names = c.entities.slice(0, 3).map((e) => e.name).join(", ");
   const flowPart = c.flows.length ? " and " + c.flows.length + " real data flow" + (c.flows.length === 1 ? "" : "s") : "";
   return "Concept takeaway: " + c.name + " is a real Zuper cluster — " + c.entities.length + " real "
     + (c.entities.length === 1 ? "entity" : "entities") + (names ? " (" + names + ")" : "") + flowPart
-    + ". This mini-game is an illustrative analogy, not a simulation of the real system.";
+    + "." + docsPart + " This mini-game is an illustrative analogy, not a simulation of the real system.";
 }
 
 function ArcadeWindow({ worldData }) {
