@@ -2568,6 +2568,14 @@ function ShareCardOverlay({ onClose }) {
    completable/known at a given cwd, reused by both the completion and the
    validity-coloring logic below. */
 const TERMINAL_VERBS = ["help", "ls", "cd", "pwd", "cat", "bash", "whoami", "date", "clear"];
+/* Short nicknames for the verbs above — real shell muscle memory (ll, cls). Resolved
+   in run() before dispatch (only the leading token, same rule as the bare-file.sh/.md
+   rewrite right below it); the ORIGINAL typed text is still what's echoed to
+   scrollback and saved to history, same as a real shell never rewrites what you
+   typed. Recognized everywhere TERMINAL_VERBS is (completion, live coloring) so an
+   alias reads as a real known command, not a typo. */
+const TERMINAL_ALIASES = { ll: "ls", la: "ls", cls: "clear", h: "help", "?": "help" };
+const TERMINAL_KNOWN_WORDS = TERMINAL_VERBS.concat(Object.keys(TERMINAL_ALIASES));
 function terminalCwdFiles(cwd) {
   if (cwd === "careers") return ["readme.md", "product.md", "open-roles.md", "challenge-preview.md"];
   if (cwd === "careers/server") return ["access.log"];
@@ -2604,7 +2612,7 @@ function terminalLongestCommonPrefix(strs) {
    nothing past the first arg (a key, an email, a link) is realistically completable. */
 function terminalCompletions(input, cwd, worldData) {
   const spaceIdx = input.indexOf(" ");
-  if (spaceIdx === -1) return TERMINAL_VERBS.concat(terminalCwdFiles(cwd)).concat(terminalCwdScripts(cwd));
+  if (spaceIdx === -1) return TERMINAL_KNOWN_WORDS.concat(terminalCwdFiles(cwd)).concat(terminalCwdScripts(cwd));
   const verb = input.slice(0, spaceIdx).toLowerCase();
   const rest = input.slice(spaceIdx + 1);
   if (rest.indexOf(" ") !== -1) return [];
@@ -2614,18 +2622,37 @@ function terminalCompletions(input, cwd, worldData) {
   return [];
 }
 /* Live validity color for the verb being typed — green once it's a full match (a real
-   command, or a bare file.sh/file.md that the run() normalization will accept), white
-   while it's still a plausible prefix of something, red once it can't possibly resolve
-   to anything. Only ever colors the first word; arguments after it stay plain white. */
+   command, an alias, or a bare file.sh/file.md that the run() normalization will
+   accept), white while it's still a plausible prefix of something, red once it can't
+   possibly resolve to anything. Only ever colors the first word; arguments after it
+   stay plain white. */
 function terminalInputColor(input) {
   const trimmedStart = input.replace(/^\s+/, "");
   if (!trimmedStart) return "#ffffff";
   const spaceIdx = trimmedStart.indexOf(" ");
   const word = (spaceIdx === -1 ? trimmedStart : trimmedStart.slice(0, spaceIdx)).toLowerCase();
   if (!word) return "#ffffff";
-  if (TERMINAL_VERBS.indexOf(word) !== -1 || /\.(sh|md)$/i.test(word)) return "#8aff8a";
-  if (spaceIdx === -1 && TERMINAL_VERBS.some((v) => v.indexOf(word) === 0)) return "#ffffff";
+  if (TERMINAL_KNOWN_WORDS.indexOf(word) !== -1 || /\.(sh|md)$/i.test(word)) return "#8aff8a";
+  if (spaceIdx === -1 && TERMINAL_KNOWN_WORDS.some((v) => v.indexOf(word) === 0)) return "#ffffff";
   return "#ff8080";
+}
+/* Ctrl+/ reverse-i-search — same idea as a real shell's Ctrl+R, just rebound: Chrome
+   (and every other browser) hard-reserves Ctrl+R for page reload — confirmed live,
+   it reloads the actual tab before any page JS ever sees the keydown, no
+   preventDefault can stop it, same as Ctrl+T/N/W. Ctrl+/ is the closest common
+   substitute other web apps use for exactly this reason (Slack, Gmail, GitHub).
+   Searches history backward for an entry CONTAINING the query (not just a prefix,
+   unlike the ghost suggestion above), starting at fromIdx and working toward index
+   0. Returns both the matched text and its index so the caller can resume searching
+   older from there on the next Ctrl+/ or Up. */
+function terminalSearchMatch(query, history, fromIdx) {
+  if (!query) return null;
+  const q = query.toLowerCase();
+  const start = Math.min(fromIdx, history.length - 1);
+  for (let i = start; i >= 0; i--) {
+    if (history[i].toLowerCase().indexOf(q) !== -1) return { text: history[i], idx: i };
+  }
+  return null;
 }
 /* Fish-style auto-suggestion: most recent history entry that starts with (and is
    longer than) what's typed so far. Most-recent-first so retyping something you just
@@ -2655,6 +2682,15 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
      signal of candidate strength reaches Raghav/Sameer instead of vanishing. */
   const [lastQuizScore, setLastQuizScore] = useState(null);
   const [shareCardOpen, setShareCardOpen] = useState(false);
+  /* Ctrl+/ reverse history search (rebound from the real shell's Ctrl+R — Chrome
+     hard-reserves that one for page reload, see terminalSearchMatch below) — null
+     when not searching, else { matchIdx, savedInput }. matchIdx is the highest
+     history index still eligible to match (inclusive); Ctrl+/ again (or Up/Down
+     while searching) moves it older/newer. savedInput is whatever was in the input
+     before search started, restored on Escape/Ctrl+G. Reuses the same `input` state
+     as the live query buffer instead of a second field — simpler wiring, and it's
+     exactly what gets replaced with the matched command on Enter anyway. */
+  const [searchMode, setSearchMode] = useState(null);
   const careersAnswerRef = useRef(null);
   const careersTimerRef = useRef(null);
   const logRef = useRef(null);
@@ -2840,7 +2876,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
      repeat clicks on the same icon, so this effect always re-fires. */
   useEffect(() => {
     if (!jumpTo || !findCluster(worldData, jumpTo.cwd)) return;
-    const introLines = [{ text: "guest@zuper-web-os:/desktop$ cd " + jumpTo.cwd, kind: "cmd" }];
+    const introLines = [{ text: "guest@zuper-web-os:/desktop$ cd " + jumpTo.cwd, kind: "cmd", color: "#8aff8a" }];
     if (jumpTo.cwd === "careers") {
       trackEvent("Careers opened");
       /* Clicking the careers icon lands you here already cd'd in — but nothing said
@@ -2870,7 +2906,11 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   function run(cmd) {
     const trimmed = cmd.trim();
     if (trimmed === "") return;
-    const out = [{ text: promptString() + " " + trimmed, kind: "cmd" }];
+    /* Echoed command keeps the exact color it showed while being typed (green/white/
+       red from terminalInputColor) instead of resetting to plain white once it scrolls
+       into history — direct request, so a glance back up the scrollback still shows
+       which commands were recognized. */
+    const out = [{ text: promptString() + " " + trimmed, kind: "cmd", color: terminalInputColor(trimmed) }];
 
     if (quizState) {
       if (trimmed.toLowerCase() === "cancel") {
@@ -2921,11 +2961,20 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
        decides WHICH verb a bare/./-prefixed filename resolves to before the normal
        dispatch runs. Only rewrites the leading token, so it can't misfire on some
        later argument that happens to end in .sh/.md (e.g. a pasted URL). */
-    const firstTok = trimmed.split(/\s+/)[0] || "";
-    let effective = trimmed;
-    if (/^\.\/[\w.-]+\.sh$/i.test(firstTok)) effective = "bash " + trimmed.slice(2);
-    else if (/^[\w.-]+\.sh$/i.test(firstTok)) effective = "bash " + trimmed;
-    else if (/^[\w.-]+\.md$/i.test(firstTok)) effective = "cat " + trimmed;
+    /* Alias resolution happens first and only rewrites the leading token, same rule
+       as the bare-file.sh/.md rewrite below (and composes with it: "ll" resolves to
+       "ls" before that check ever runs). trimmed itself — what actually gets echoed
+       and saved to history above/below — is never touched, same as a real shell
+       never rewrites what you typed just because it happened to be an alias. */
+    const firstTok0 = trimmed.split(/\s+/)[0] || "";
+    const aliasFor = TERMINAL_ALIASES[firstTok0.toLowerCase()];
+    const aliasResolved = aliasFor ? aliasFor + trimmed.slice(firstTok0.length) : trimmed;
+
+    const firstTok = aliasResolved.split(/\s+/)[0] || "";
+    let effective = aliasResolved;
+    if (/^\.\/[\w.-]+\.sh$/i.test(firstTok)) effective = "bash " + aliasResolved.slice(2);
+    else if (/^[\w.-]+\.sh$/i.test(firstTok)) effective = "bash " + aliasResolved;
+    else if (/^[\w.-]+\.md$/i.test(firstTok)) effective = "cat " + aliasResolved;
 
     const [verb, ...rest] = effective.split(/\s+/);
     const arg = rest.join(" ");
@@ -2934,7 +2983,9 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
     if (verb === "help") {
       out.push({ text: "Commands: help, ls, cd <dir>, pwd, cat <file>, bash <file.sh>, whoami, date, clear", kind: "out" });
       out.push({ text: "Shortcuts: ./file.sh, file.sh, and bare file.md all work too — no need to type bash/cat first.", kind: "out" });
+      out.push({ text: "Aliases: ll/la -> ls, cls -> clear, h/? -> help.", kind: "out" });
       out.push({ text: "Tab completes, Up/Down cycles history, faded text is a suggestion — press → to accept it.", kind: "out" });
+      out.push({ text: "Ctrl+/ searches history — type to narrow, Ctrl+/ again for an older match, Enter to use it, Esc to cancel.", kind: "out" });
     }
     else if (verb === "pwd") { out.push({ text: promptPath(), kind: "out" }); }
     else if (verb === "whoami") { out.push({ text: "guest@zuper-web-os", kind: "out" }); }
@@ -3119,6 +3170,54 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
      completion/coloring make sense mid-quiz, so everything past the Enter branch bails
      out early while quizState is set. */
   function handleTermKeyDown(e) {
+    /* Ctrl+/ reverse-i-search (see terminalSearchMatch above for why it's not Ctrl+R)
+       — checked before everything else (including Enter) since it needs to
+       intercept Enter's normal "run the command" behavior while active. First
+       Ctrl+/ opens search mode from an empty query; each subsequent Ctrl+/ (or Up,
+       once searching) re-searches from just before the current match, cycling to
+       progressively older matches — same shape as a real shell's. */
+    if (e.ctrlKey && e.key === "/") {
+      e.preventDefault();
+      if (quizState) return;
+      if (!searchMode) { setSearchMode({ matchIdx: historyRef.current.length - 1, savedInput: input }); setInput(""); }
+      else {
+        const current = terminalSearchMatch(input, historyRef.current, searchMode.matchIdx);
+        if (current) setSearchMode({ matchIdx: current.idx - 1, savedInput: searchMode.savedInput });
+      }
+      return;
+    }
+    if (searchMode) {
+      if (e.key === "Escape" || (e.ctrlKey && (e.key === "g" || e.key === "G"))) {
+        e.preventDefault();
+        setInput(searchMode.savedInput);
+        setSearchMode(null);
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const m = terminalSearchMatch(input, historyRef.current, searchMode.matchIdx);
+        setInput(m ? m.text : searchMode.savedInput);
+        setSearchMode(null);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const current = terminalSearchMatch(input, historyRef.current, searchMode.matchIdx);
+        if (current) setSearchMode((s) => ({ savedInput: s.savedInput, matchIdx: current.idx - 1 }));
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSearchMode((s) => ({ savedInput: s.savedInput, matchIdx: Math.min(historyRef.current.length - 1, s.matchIdx + 1) }));
+        return;
+      }
+      /* Anything else (typing a character, Backspace, etc.) falls through with no
+         preventDefault — the real <input>'s own onChange handles it normally, and
+         that onChange resets matchIdx back to "most recent" for the new query. Every
+         other normal-mode key below (Tab, ArrowRight, plain Enter/Up/Down) is
+         deliberately skipped while searching — none of them mean the same thing here. */
+      return;
+    }
     if (e.key === "Enter") {
       const val = input;
       const trimmedVal = val.trim();
@@ -3178,6 +3277,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
   const inputRestPart = inputSpaceIdx === -1 ? "" : input.slice(inputSpaceIdx);
   const inputVerbColor = quizState ? "#ffffff" : terminalInputColor(input);
   const ghostSuggestion = quizState ? null : terminalGhostSuggestion(input, historyRef.current);
+  const searchMatch = searchMode ? terminalSearchMatch(input, historyRef.current, searchMode.matchIdx) : null;
 
   /* The live prompt line lives INSIDE the scrolling log, right after the last output
      line — same as a real terminal (cmd.exe, a shell), where there's no separate
@@ -3218,9 +3318,16 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
            ordinary body text stays plain CRT green. */}
         {lines.map((l, i) => (
           <div key={i}
-            className={l.kind === "err" ? "text-red-400" : l.kind === "cmd" ? "text-white" : l.kind === "heading" || l.kind === "label" ? "font-bold tracking-wide" : ""}
+            className={l.kind === "err" ? "text-red-400" : l.kind === "heading" || l.kind === "label" ? "font-bold tracking-wide" : ""}
             style={
               l.kind === "out" ? { color: CRT_GREEN, opacity: 0.85 }
+              /* Keeps whatever color it showed live while being typed (see run()) —
+                 direct request, so scrollback still shows at a glance which commands
+                 were recognized, instead of every submitted command flattening to
+                 plain white. Falls back to white for the rare "cmd" line pushed
+                 without one (there are none left, but a missing color shouldn't
+                 render unstyled/black). */
+              : l.kind === "cmd" ? { color: l.color || "#ffffff" }
               : l.kind === "heading" ? { color: CONCEPT }
               : l.kind === "label" ? { color: "#ffd98a" }
               : l.kind === "choice" ? { color: "#ffd98a", opacity: 0.85 }
@@ -3240,7 +3347,15 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
           </button>
         )}
         <div className="flex items-center gap-2">
-          <span style={{ color: CRT_GREEN }}>{promptString()}</span>
+          {/* Reverse-i-search swaps the whole prompt for the classic bash-style
+              "(reverse-i-search)`query': match" line — the query is still the same
+              live `input` state (see handleTermKeyDown/onChange below), just
+              displayed differently while searchMode is active. */}
+          {searchMode ? (
+            <span style={{ color: "#ffd98a" }}>(reverse-i-search)`</span>
+          ) : (
+            <span style={{ color: CRT_GREEN }}>{promptString()}</span>
+          )}
           {/* A real <input> still does all the work (value/onChange/focus/keydown) but
               is fully invisible (opacity 0, including its own native caret) — what's
               actually shown is this styled text plus a blinking block cursor after
@@ -3248,22 +3363,45 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
               instead of a thin, easy-to-miss native i-beam caret sitting right after
               the prompt's own "$". */}
           <div className="relative flex-1">
-            {/* Verb colored live (green = recognized, white = still a valid prefix,
-                red = won't resolve to anything) — arguments after it stay plain white,
-                same as before. */}
-            <span style={{ whiteSpace: "pre" }}>
-              <span style={{ color: inputVerbColor }}>{inputVerbPart}</span>
-              <span className="text-white">{inputRestPart}</span>
-            </span>
+            {searchMode ? (
+              <span style={{ whiteSpace: "pre" }}>
+                <span className="text-white">{input}</span>
+                <span style={{ color: "#ffd98a" }}>{"': "}</span>
+                <span style={{ color: CRT_GREEN, opacity: 0.85 }}>{searchMatch ? searchMatch.text : "(no match)"}</span>
+              </span>
+            ) : (
+              /* Verb colored live (green = recognized, white = still a valid prefix,
+                 red = won't resolve to anything) — arguments after it stay plain
+                 white, same as before. */
+              <span style={{ whiteSpace: "pre" }}>
+                <span style={{ color: inputVerbColor }}>{inputVerbPart}</span>
+                <span className="text-white">{inputRestPart}</span>
+              </span>
+            )}
             <span aria-hidden="true" style={{
               display: "inline-block", width: "0.6em", height: "1.05em", verticalAlign: "text-bottom",
               background: CRT_GREEN, marginLeft: 1, animation: "term-cursor-blink 1s steps(1) infinite",
             }} />
             {/* Faded auto-suggestion (fish-style) — the rest of the most recent matching
                 history entry, past what's actually been typed. Right arrow (at end of
-                line) accepts it — see handleTermKeyDown. */}
-            {ghostSuggestion && <span aria-hidden="true" style={{ whiteSpace: "pre", opacity: 0.38 }}>{ghostSuggestion.slice(input.length)}</span>}
-            <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleTermKeyDown}
+                line) accepts it — see handleTermKeyDown. Explicit grey (not just a low
+                opacity on inherited text) per direct feedback that this was invisible —
+                with no color of its own set, it was inheriting default black text on
+                this dark background instead of showing at all. */}
+            {!searchMode && ghostSuggestion && (
+              <span aria-hidden="true" style={{ whiteSpace: "pre", color: "#c7c7c7", opacity: 0.55 }}>{ghostSuggestion.slice(input.length)}</span>
+            )}
+            <input ref={inputRef} value={input} onKeyDown={handleTermKeyDown}
+              onChange={(e) => {
+                setInput(e.target.value);
+                /* Every keystroke re-searches from the most recent entry again (not
+                   from wherever a previous Ctrl+/ cycle left off) — otherwise typing
+                   another character while already looking at an older match would
+                   search from that older point instead of jumping back to the best
+                   (most recent) match for the new, longer query. Ctrl+/ or Up
+                   explicitly move the ceiling older; only typing resets it. */
+                if (searchMode) setSearchMode((s) => (s ? { savedInput: s.savedInput, matchIdx: historyRef.current.length - 1 } : s));
+              }}
               className="absolute inset-0 bg-transparent outline-none opacity-0" style={{ caretColor: "transparent" }} spellCheck={false} autoComplete="off" autoFocus aria-label="Terminal command input" />
           </div>
         </div>
