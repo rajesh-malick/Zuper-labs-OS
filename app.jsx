@@ -1445,9 +1445,10 @@ function RouteRacerGame({ onComplete, accent }) {
     const blocked = [], jobs = []; const taken = new Set(["0,0"]);
     while (blocked.length < 9) { const bx = rand(GRID), by = rand(GRID), k = bx + "," + by; if (!taken.has(k)) { blocked.push({ x: bx, y: by }); taken.add(k); } }
     while (jobs.length < 3) { const jx = rand(GRID), jy = rand(GRID), k = jx + "," + jy; if (!taken.has(k)) { jobs.push({ x: jx, y: jy, visited: false }); taken.add(k); } }
-    return { pos: { x: 0, y: 0 }, moves: 0, done: false, blocked: blocked, jobs: jobs, message: "Visit all three job sites before you run out of moves." };
+    return { pos: { x: 0, y: 0 }, moves: 0, done: false, lost: false, blocked: blocked, jobs: jobs, message: "Visit all three job sites before you run out of moves." };
   }
   const [state, setState] = useState(makeState);
+  const [best] = useState(() => loadHighScore("route-racer"));
   function move(dir) {
     setState((prev) => {
       if (prev.done) return prev;
@@ -1461,10 +1462,20 @@ function RouteRacerGame({ onComplete, accent }) {
       if (hitJob) { pushPop("+1 JOB", a); playArcadeSuccessSound(); }
       const movesN = prev.moves + 1;
       const allVisited = jobs.every((j) => j.visited);
-      let done = prev.done, message = prev.message;
-      if (allVisited) { done = true; message = "All job sites reached in " + movesN + " moves."; setTimeout(() => onComplete("Route Racer complete", message), 0); }
-      else if (movesN >= MOVE_LIMIT) { done = true; message = "Out of moves — press Restart to try a new layout."; }
-      return Object.assign({}, prev, { pos: { x: nx, y: ny }, moves: movesN, jobs: jobs, done: done, message: message });
+      let done = prev.done, lost = prev.lost, message = prev.message;
+      if (allVisited) {
+        done = true;
+        const score = (MOVE_LIMIT - movesN) * 10 + 100;
+        const beat = saveHighScore("route-racer", score);
+        const grade = gradeForScore(score, 300, 220, 140);
+        message = "All job sites reached in " + movesN + " moves. Score: " + score + " (Grade " + grade + ")" + (beat ? " — new high score!" : "");
+        setTimeout(() => onComplete("Route Racer complete", message), 0);
+      } else if (movesN >= MOVE_LIMIT) {
+        done = true; lost = true;
+        message = "Out of moves — press Restart to try a new layout.";
+        playArcadeFailSound();
+      }
+      return Object.assign({}, prev, { pos: { x: nx, y: ny }, moves: movesN, jobs: jobs, done: done, lost: lost, message: message });
     });
   }
   useEffect(() => {
@@ -1503,10 +1514,10 @@ function RouteRacerGame({ onComplete, accent }) {
      depending on scroll (which a canvas element doesn't reliably forward wheel events
      through anyway). */
   return (
-    <div className="flex flex-col gap-3 p-4 relative">
+    <div className="flex flex-col gap-3 p-4 relative" style={{ animation: state.lost ? "arcade-shake .4s ease-in-out" : "none" }}>
       <FloatPops pops={pops} />
       <div className="w-full flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
-        <span>Moves: {state.moves} / {MOVE_LIMIT}</span><span>Jobs remaining: {remaining}</span>
+        <span>Moves: {state.moves} / {MOVE_LIMIT}</span><span>Jobs remaining: {remaining}</span><span>Best: {best}</span>
         <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => setState(makeState())}>Restart</button>
       </div>
       <div className="flex items-center justify-center gap-5">
@@ -1539,15 +1550,17 @@ function DispatchTetrisGame({ onComplete, accent }) {
   const [done, setDone] = useState(false);
   const [message, setMessage] = useState("Click a slot to place the current job into that many consecutive open hours.");
   const [invalidCell, setInvalidCell] = useState(null);
+  const [lost, setLost] = useState(false);
   const [pops, setPops] = useState([]);
   const popIdRef = useRef(0);
+  const [best] = useState(() => loadHighScore("dispatch-tetris"));
   function pushPop(text, color) {
     const id = popIdRef.current++;
     setPops((p) => p.concat([{ id, text, color }]));
     setTimeout(() => setPops((p) => p.filter((pp) => pp.id !== id)), 700);
   }
   useEffect(() => { if (done) return; const timer = setInterval(() => setTimeLeft((t) => (t <= 1 ? 0 : t - 1)), 1000); return () => clearInterval(timer); }, [done]);
-  useEffect(() => { if (!done && timeLeft === 0) { setDone(true); setMessage("Time's up. " + score + " job(s) scheduled, " + misses + " skipped."); } /* eslint-disable-next-line */ }, [timeLeft]);
+  useEffect(() => { if (!done && timeLeft === 0) { setDone(true); setLost(true); setMessage("Time's up. " + score + " job(s) scheduled, " + misses + " skipped."); playArcadeFailSound(); } /* eslint-disable-next-line */ }, [timeLeft]);
   function place(t, s) {
     if (done || queue.length === 0) return;
     const dur = queue[0];
@@ -1560,14 +1573,22 @@ function DispatchTetrisGame({ onComplete, accent }) {
     let nq = queue.slice(1); let nMisses = misses;
     if (nq.length > 0 && !anyValidSlot(next, nq[0])) { nMisses += 1; nq = nq.slice(1); }
     setMisses(nMisses); setQueue(nq);
-    if (nq.length === 0) { setDone(true); const summary = newScore + " job(s) scheduled, " + nMisses + " skipped."; setMessage("Queue cleared. " + summary); setTimeout(() => onComplete("Dispatch Tetris complete", summary), 0); }
+    if (nq.length === 0) {
+      setDone(true);
+      const finalScore = newScore * 40 + timeLeft * 3;
+      const beat = saveHighScore("dispatch-tetris", finalScore);
+      const grade = gradeForScore(finalScore, 380, 280, 180);
+      const summary = newScore + " job(s) scheduled, " + nMisses + " skipped. Score: " + finalScore + " (Grade " + grade + ")" + (beat ? " — new high score!" : "");
+      setMessage("Queue cleared. " + summary);
+      setTimeout(() => onComplete("Dispatch Tetris complete", summary), 0);
+    }
   }
-  function restart() { setSchedule(TECHS.map(() => new Array(SLOTS).fill(false))); setQueue(makeQueue()); setScore(0); setMisses(0); setTimeLeft(TIME_LIMIT); setDone(false); setMessage("Click a slot to place the current job into that many consecutive open hours."); }
+  function restart() { setSchedule(TECHS.map(() => new Array(SLOTS).fill(false))); setQueue(makeQueue()); setScore(0); setMisses(0); setTimeLeft(TIME_LIMIT); setDone(false); setLost(false); setMessage("Click a slot to place the current job into that many consecutive open hours."); }
   return (
-    <div className="p-4 flex flex-col gap-3 relative">
+    <div className="p-4 flex flex-col gap-3 relative" style={{ animation: lost ? "arcade-shake .4s ease-in-out" : "none" }}>
       <FloatPops pops={pops} />
       <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
-        <span>Placed: {score}</span><span>Skipped: {misses}</span><span>Time: {timeLeft}s</span>
+        <span>Placed: {score}</span><span>Skipped: {misses}</span><span>Time: {timeLeft}s</span><span>Best: {best}</span>
         <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={restart}>Restart</button>
       </div>
       <div>
@@ -1585,7 +1606,7 @@ function DispatchTetrisGame({ onComplete, accent }) {
                   <button key={s} type="button" aria-label={name + " hour " + (s + 1) + (schedule[t][s] ? " (booked)" : " (open)")} onClick={() => place(t, s)}
                     className="w-8 h-8 transition-colors"
                     style={{
-                      background: isInvalid ? "#fff3e0" : schedule[t][s] ? a + "40" : "rgba(20,10,0,.4)",
+                      background: isInvalid ? "#fff3e0" : schedule[t][s] ? accentAlpha(a, "40") : "rgba(20,10,0,.4)",
                       boxShadow: bevel(isInvalid || schedule[t][s] ? "in-shallow" : "out-shallow", a),
                     }}></button>
                 );
@@ -1610,13 +1631,16 @@ function WorkflowWiringGame({ onComplete, accent }) {
   const a2 = accent || CRT_GREEN;
   const pairsRef = useRef(WIRING_PAIRS);
   const actionsRef = useRef(shuffle(WIRING_PAIRS.map((p) => p.action)));
+  const startRef = useRef(Date.now());
   const [selected, setSelected] = useState(null);
   const [wired, setWired] = useState({});
   const [mistakes, setMistakes] = useState(0);
   const [message, setMessage] = useState("Click a trigger, then click its matching action.");
   const [flashWrong, setFlashWrong] = useState(null);
+  const [shake, setShake] = useState(false);
   const [pops, setPops] = useState([]);
   const popIdRef = useRef(0);
+  const [best] = useState(() => loadHighScore("workflow-wiring"));
   function pushPop(text, color) {
     const id = popIdRef.current++;
     setPops((p) => p.concat([{ id, text, color }]));
@@ -1632,22 +1656,34 @@ function WorkflowWiringGame({ onComplete, accent }) {
       setMessage("Wired: “" + selected + "” → “" + action + "”.");
       pushPop("+WIRED", a2); playArcadeSuccessSound();
       if (Object.keys(nextWired).length === pairsRef.current.length) {
-        const summary = pairsRef.current.length + " trigger(s) wired, " + mistakes + " mistake(s).";
+        const elapsedSeconds = Math.round((Date.now() - startRef.current) / 1000);
+        const score = Math.max(20, 300 - elapsedSeconds * 5 - mistakes * 20);
+        const beat = saveHighScore("workflow-wiring", score);
+        const grade = gradeForScore(score, 260, 180, 100);
+        const summary = pairsRef.current.length + " trigger(s) wired in " + elapsedSeconds + "s, " + mistakes + " mistake(s). Score: " + score + " (Grade " + grade + ")" + (beat ? " — new high score!" : "");
         setMessage("All triggers wired. " + summary);
         setTimeout(() => onComplete("Workflow Wiring complete", summary), 0);
       }
     } else {
       setMistakes((m) => m + 1); setFlashWrong(action); setTimeout(() => setFlashWrong(null), 220);
+      setShake(true); setTimeout(() => setShake(false), 400);
       playArcadeFailSound();
       setMessage("Not a match — try again.");
     }
   }
+  function restart() {
+    actionsRef.current = shuffle(WIRING_PAIRS.map((p) => p.action));
+    startRef.current = Date.now();
+    setWired({}); setSelected(null); setMistakes(0); setFlashWrong(null);
+    setMessage("Click a trigger, then click its matching action.");
+  }
   const allWired = Object.keys(wired).length === pairsRef.current.length;
   return (
-    <div className="p-4 flex flex-col gap-3 relative">
+    <div className="p-4 flex flex-col gap-3 relative" style={{ animation: shake ? "arcade-shake .4s ease-in-out" : "none" }}>
       <FloatPops pops={pops} />
       <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
-        <span>Wired: {Object.keys(wired).length} / {pairsRef.current.length}</span><span>Mistakes: {mistakes}</span>
+        <span>Wired: {Object.keys(wired).length} / {pairsRef.current.length}</span><span>Mistakes: {mistakes}</span><span>Best: {best}</span>
+        <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a2), color: "#ffd98a" }} onClick={restart}>Restart</button>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
@@ -1683,34 +1719,59 @@ function WorkflowWiringGame({ onComplete, accent }) {
   );
 }
 
+/* Direct follow-up request ("harder/deeper mechanics"): the original 30s pass/fail
+   round ended the moment it got interesting — reaching the finish line was the whole
+   game. Converted to an endless survive-as-long-as-you-can mode, same spirit as
+   Spinning Plates' escalating difficulty but keeping its own distinct identity (3
+   meters kept in a safe band via nudge buttons, not a ping-before-it-dies gauge
+   grid): the 30s mark is now a milestone callout, not the end, and drift keeps
+   growing afterward until an overload actually ends the run. */
 function SystemStabilizerGame({ onComplete, accent }) {
   const a = accent || CRT_GREEN;
   const METERS = ["CPU", "Memory", "API Load"];
-  const DURATION = 30;
   const [values, setValues] = useState({ CPU: 50, Memory: 50, "API Load": 50 });
-  const [timeLeft, setTimeLeft] = useState(DURATION);
+  const [elapsed, setElapsed] = useState(0);
   const [done, setDone] = useState(false);
-  const [message, setMessage] = useState("Keep every meter between 25–75 until time runs out.");
+  const [message, setMessage] = useState("Keep every meter between 25–75 for as long as you can.");
+  const [best] = useState(() => loadHighScore("system-stabilizer"));
+  const elapsedRef = useRef(0);
   useEffect(() => {
     if (done) return;
-    const drift = setInterval(() => { setValues((v) => { const nv = {}; METERS.forEach((m) => { nv[m] = clamp(v[m] + (Math.random() - 0.42) * 14, 0, 100); }); return nv; }); }, 900);
-    const timer = setInterval(() => setTimeLeft((t) => (t <= 1 ? 0 : t - 1)), 1000);
+    /* driftRange reads from a ref (kept in sync by the timer interval below) rather
+       than the `elapsed` state directly, so this effect only needs [done] as its
+       dependency — it sets up both intervals exactly once per run instead of tearing
+       them down and rebuilding every second as elapsed ticks. */
+    const drift = setInterval(() => {
+      const driftRange = 14 + Math.min(8, Math.floor(elapsedRef.current / 20) * 2);
+      setValues((v) => { const nv = {}; METERS.forEach((m) => { nv[m] = clamp(v[m] + (Math.random() - 0.42) * driftRange, 0, 100); }); return nv; });
+    }, 900);
+    const timer = setInterval(() => setElapsed((e) => { elapsedRef.current = e + 1; return e + 1; }), 1000);
     return () => { clearInterval(drift); clearInterval(timer); };
     // eslint-disable-next-line
   }, [done]);
   useEffect(() => {
     if (done) return;
     const overloaded = METERS.find((m) => values[m] >= 96 || values[m] <= 4);
-    if (overloaded) { setDone(true); setMessage(overloaded + " overloaded — system unstable. Restart to try again."); }
-    else if (timeLeft === 0) { setDone(true); const summary = "All systems held stable for the full run."; setMessage(summary); setTimeout(() => onComplete("System Stabilizer complete", summary), 0); }
+    if (overloaded) {
+      setDone(true);
+      const score = elapsed;
+      const beat = saveHighScore("system-stabilizer", score);
+      const grade = gradeForScore(score, 90, 60, 30);
+      const summary = overloaded + " overloaded after " + elapsed + "s. Score: " + score + " (Grade " + grade + ")" + (beat ? " — new high score!" : "");
+      setMessage(summary);
+      playArcadeFailSound();
+      setTimeout(() => onComplete("System Stabilizer complete", summary), 0);
+    } else if (elapsed > 0 && elapsed % 30 === 0) {
+      setMessage("Stabilized for " + elapsed + "s — drift is picking up.");
+    }
     // eslint-disable-next-line
-  }, [values, timeLeft]);
+  }, [values]);
   function nudge(meter, dir) { if (done) return; setValues((v) => Object.assign({}, v, { [meter]: clamp(v[meter] + dir * 12, 0, 100) })); }
-  function restart() { setValues({ CPU: 50, Memory: 50, "API Load": 50 }); setTimeLeft(DURATION); setDone(false); setMessage("Keep every meter between 25–75 until time runs out."); }
+  function restart() { setValues({ CPU: 50, Memory: 50, "API Load": 50 }); setElapsed(0); elapsedRef.current = 0; setDone(false); setMessage("Keep every meter between 25–75 for as long as you can."); }
   return (
-    <div className="p-4 flex flex-col gap-4">
+    <div className="p-4 flex flex-col gap-4" style={{ animation: done ? "arcade-shake .4s ease-in-out" : "none" }}>
       <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
-        <span>Time: {timeLeft}s</span>
+        <span>Time: {elapsed}s</span><span>Best: {best}</span>
         <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={restart}>Restart</button>
       </div>
       <div className="flex flex-col gap-3">
@@ -1721,7 +1782,7 @@ function SystemStabilizerGame({ onComplete, accent }) {
             <div key={m} className="flex items-center gap-3">
               <div className="w-20 text-[11px] font-medium font-mono" style={{ color: "#c98a2e" }}>{m}</div>
               <div className="flex-1 h-3 overflow-hidden" style={{ boxShadow: bevel("in-shallow", a), background: "rgba(20,10,0,.5)" }}>
-                <div className="h-full transition-[width]" style={{ width: v + "%", background: meterColor, opacity: safe ? 0.8 : 1, animation: safe ? "none" : "crt-icon-glow 1s ease-in-out infinite" }}></div>
+                <div className="h-full transition-[width]" style={{ width: v + "%", background: meterColor, opacity: safe ? 0.8 : 1, animation: safe ? "none" : "arcade-pulse-critical .5s ease-in-out infinite" }}></div>
               </div>
               <button type="button" className="w-7 h-7" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => nudge(m, -1)}>&#8722;</button>
               <button type="button" className="w-7 h-7" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => nudge(m, 1)}>+</button>
@@ -2142,6 +2203,255 @@ function FraudOrFineGame({ onComplete, accent }) {
   );
 }
 
+/* ================= Property Match — Customer Management =================
+   New mechanic for this arcade (nothing else here is a memory/matching-pairs game):
+   flip two face-down cards at a time, looking for each Property's matching Customer/
+   Organization. A limited attempt budget (not a clock — this one rewards a good
+   memory, not speed) gives it a genuinely different feel from every timer-driven
+   game already in the arcade. */
+const PROPERTY_PAIRS = [
+  { property: "142 Oak Ridge Rd", owner: "Harold Voss" },
+  { property: "88 Meridian Ave, Suite 4", owner: "Bright Horizon Realty" },
+  { property: "9 Cobalt Lane", owner: "Priya Nandakumar" },
+  { property: "310 Foundry St, Bldg B", owner: "Ashcroft Property Group" },
+  { property: "27 Willowmere Ct", owner: "Denise Okafor" },
+  { property: "5 Harbor View Plaza", owner: "Meridian Coastal Holdings" },
+];
+const PROPERTY_MATCH_LIMIT = 20;
+function buildPropertyCards() {
+  const cards = [];
+  PROPERTY_PAIRS.forEach((p, i) => {
+    cards.push({ id: i + "-property", pairIndex: i, text: p.property });
+    cards.push({ id: i + "-owner", pairIndex: i, text: p.owner });
+  });
+  return shuffle(cards);
+}
+function PropertyMatchGame({ onComplete, accent }) {
+  const a = accent || CRT_GREEN;
+  const [cards, setCards] = useState(buildPropertyCards);
+  const [flipped, setFlipped] = useState([]);
+  const [matched, setMatched] = useState(new Set());
+  const [attempts, setAttempts] = useState(0);
+  const [locked, setLocked] = useState(false);
+  const [done, setDone] = useState(false);
+  const [lost, setLost] = useState(false);
+  const [message, setMessage] = useState("Flip two cards to find each property's matching customer.");
+  const [pops, setPops] = useState([]);
+  const popIdRef = useRef(0);
+  const [best] = useState(() => loadHighScore("property-match"));
+  function pushPop(text, color) {
+    const id = popIdRef.current++;
+    setPops((p) => p.concat([{ id, text, color }]));
+    setTimeout(() => setPops((p) => p.filter((pp) => pp.id !== id)), 700);
+  }
+  function finish(matchedSet, attemptsN) {
+    const score = matchedSet.size * 60 + Math.max(0, PROPERTY_MATCH_LIMIT - attemptsN) * 5;
+    const beat = saveHighScore("property-match", score);
+    const grade = gradeForScore(score, 420, 320, 220);
+    const summary = matchedSet.size + " / " + PROPERTY_PAIRS.length + " matched in " + attemptsN + " attempt(s). Score: " + score + " (Grade " + grade + ")" + (beat ? " — new high score!" : "");
+    setDone(true);
+    setMessage(summary);
+    setTimeout(() => onComplete("Property Match complete", summary), 0);
+  }
+  function flip(idx) {
+    if (locked || done) return;
+    if (flipped.includes(idx) || matched.has(cards[idx].pairIndex)) return;
+    const next = flipped.concat([idx]);
+    setFlipped(next);
+    if (next.length === 2) {
+      setLocked(true);
+      const [i1, i2] = next;
+      const isMatch = cards[i1].pairIndex === cards[i2].pairIndex;
+      const attemptsN = attempts + 1;
+      setAttempts(attemptsN);
+      setTimeout(() => {
+        if (isMatch) {
+          const nextMatched = new Set(matched); nextMatched.add(cards[i1].pairIndex);
+          setMatched(nextMatched);
+          pushPop("+MATCH", a); playArcadeSuccessSound();
+          if (nextMatched.size === PROPERTY_PAIRS.length) { finish(nextMatched, attemptsN); }
+          else {
+            setMessage(nextMatched.size + " / " + PROPERTY_PAIRS.length + " matched.");
+            if (attemptsN >= PROPERTY_MATCH_LIMIT) { setLost(true); finish(nextMatched, attemptsN); }
+          }
+        } else {
+          playArcadeFailSound();
+          setMessage("Not a match — try to remember where you saw its pair.");
+          if (attemptsN >= PROPERTY_MATCH_LIMIT) { setLost(true); finish(matched, attemptsN); }
+        }
+        setFlipped([]);
+        setLocked(false);
+      }, 700);
+    }
+  }
+  function restart() {
+    setCards(buildPropertyCards());
+    setFlipped([]); setMatched(new Set()); setAttempts(0); setLocked(false); setDone(false); setLost(false);
+    setMessage("Flip two cards to find each property's matching customer.");
+  }
+  return (
+    <div className="p-4 flex flex-col gap-3 relative" style={{ animation: lost ? "arcade-shake .4s ease-in-out" : "none" }}>
+      <FloatPops pops={pops} />
+      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
+        <span>Matched: {matched.size} / {PROPERTY_PAIRS.length}</span><span>Attempts: {attempts} / {PROPERTY_MATCH_LIMIT}</span><span>Best: {best}</span>
+        <button type="button" className="px-2 py-1" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={restart}>Restart</button>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {cards.map((c, idx) => {
+          const isFlipped = flipped.includes(idx);
+          const isMatched = matched.has(c.pairIndex);
+          const faceUp = isFlipped || isMatched;
+          return (
+            <button key={c.id} type="button" disabled={faceUp || locked || done} onClick={() => flip(idx)}
+              className="h-16 flex items-center justify-center text-center px-1.5 text-[10px] font-semibold leading-tight disabled:cursor-default"
+              style={{ background: isMatched ? accentAlpha(a, "35") : "rgba(20,10,0,.45)", boxShadow: bevel(faceUp ? "in-shallow" : "out-shallow", a), color: faceUp ? "#ffd98a" : a, opacity: isMatched ? 0.75 : 1 }}>
+              {faceUp ? c.text : "?"}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{message}</p>
+    </div>
+  );
+}
+
+/* ================= Work Order Sort — Work Order Management =================
+   Mirrors Fraud or Fine?'s proven shape (timed item stream, 3 lives, combo + speed
+   scoring) since that loop already feels good — but swaps the binary approve/flag
+   judgment call for 3-way categorization, a real mechanic variation rather than a
+   reskin. Keys 1/2/3 work as shortcuts for the three lanes, same spirit as the
+   click buttons. */
+const WORK_ORDER_ITEMS = [
+  { text: "3-month HVAC retrofit across 6 buildings, multiple crews", type: "project" },
+  { text: "Customer called in: leaking faucet needs a look", type: "request" },
+  { text: "Scheduled quarterly elevator inspection for Meridian Tower", type: "job" },
+  { text: "New office buildout — plumbing, electrical, and HVAC phases", type: "project" },
+  { text: "Tenant portal ticket: AC not cooling on the 3rd floor", type: "request" },
+  { text: "One-time water heater replacement for Coastal Properties", type: "job" },
+  { text: "6-week campus-wide fire suppression system overhaul", type: "project" },
+  { text: "Walk-in customer request: garbage disposal jammed", type: "request" },
+  { text: "Monthly generator maintenance for Data Center B", type: "job" },
+  { text: "Multi-site solar install, 4 phases over the next year", type: "project" },
+  { text: "After-hours emergency: no heat reported by tenant", type: "request" },
+  { text: "Annual backflow preventer test for Lakeside Mall", type: "job" },
+];
+const WORK_ORDER_ROUND_TIME = 4;
+const WORK_ORDER_LANES = [{ key: "job", label: "Job" }, { key: "request", label: "Request" }, { key: "project", label: "Project" }];
+function WorkOrderSortGame({ onComplete, accent }) {
+  const a = accent || CRT_GREEN;
+  const orderRef = useRef(shuffle(WORK_ORDER_ITEMS));
+  const [index, setIndex] = useState(0);
+  const [lives, setLives] = useState(3);
+  const [score, setScore] = useState(0);
+  const [combo, setCombo] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(WORK_ORDER_ROUND_TIME);
+  const [locked, setLocked] = useState(false);
+  const [done, setDone] = useState(false);
+  const [message, setMessage] = useState("Sort each ticket into Job, Request, or Project — " + WORK_ORDER_ROUND_TIME + "s each.");
+  const [flash, setFlash] = useState(null);
+  const [pops, setPops] = useState([]);
+  const popIdRef = useRef(0);
+  const [best] = useState(() => loadHighScore("work-order-sort"));
+
+  useEffect(() => {
+    if (done || locked) return;
+    const id = setInterval(() => setTimeLeft((t) => (t <= 1 ? 0 : t - 1)), 1000);
+    return () => clearInterval(id);
+  }, [done, locked, index]);
+  useEffect(() => {
+    if (done || locked) return;
+    if (timeLeft === 0) decide(null);
+    // eslint-disable-next-line
+  }, [timeLeft]);
+  useEffect(() => {
+    if (!done) return;
+    const beat = saveHighScore("work-order-sort", score);
+    const grade = gradeForScore(score, 260, 160, 80);
+    const summary = "Sorted " + (index + 1) + " ticket(s), final score " + score + " (Grade " + grade + ")" + (beat ? " — new high score!" : "");
+    setTimeout(() => onComplete("Work Order Sort complete", summary), 500);
+    // eslint-disable-next-line
+  }, [done]);
+  useEffect(() => {
+    function onKey(e) {
+      if (done || locked) return;
+      const laneIdx = { "1": 0, "2": 1, "3": 2 }[e.key];
+      if (laneIdx != null) decide(WORK_ORDER_LANES[laneIdx].key);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line
+  }, [done, locked, index]);
+
+  function pushPop(text, color) {
+    const id = popIdRef.current++;
+    setPops((p) => p.concat([{ id, text, color }]));
+    setTimeout(() => setPops((p) => p.filter((pp) => pp.id !== id)), 700);
+  }
+  function decide(laneKey) {
+    if (done || locked) return;
+    setLocked(true);
+    const item = orderRef.current[index];
+    const correct = laneKey === item.type;
+    if (correct) {
+      const speedBonus = timeLeft * 2;
+      const nextCombo = combo + 1;
+      const gained = 10 * Math.min(nextCombo, 5) + speedBonus;
+      setScore((s) => s + gained);
+      setCombo(nextCombo);
+      setFlash("good");
+      pushPop("+" + gained + (nextCombo > 1 ? "  x" + Math.min(nextCombo, 5) : ""), a);
+      playArcadeSuccessSound();
+      setMessage("Correctly sorted as " + item.type + ".");
+    } else {
+      setLives((l) => l - 1);
+      setCombo(0);
+      setFlash("bad");
+      pushPop(laneKey === null ? "MISSED" : "WRONG", "#fff3e0");
+      playArcadeFailSound();
+      setMessage("That one was actually a " + item.type + ".");
+    }
+    setTimeout(() => setFlash(null), 260);
+    const nextIndex = index + 1;
+    const outOfLives = !correct && lives - 1 <= 0;
+    if (outOfLives || nextIndex >= orderRef.current.length) {
+      setDone(true);
+    } else {
+      setTimeout(() => { setIndex(nextIndex); setTimeLeft(WORK_ORDER_ROUND_TIME); setLocked(false); }, 500);
+    }
+  }
+  function restart() {
+    orderRef.current = shuffle(WORK_ORDER_ITEMS);
+    setIndex(0); setLives(3); setScore(0); setCombo(0); setTimeLeft(WORK_ORDER_ROUND_TIME); setLocked(false); setDone(false);
+    setMessage("Sort each ticket into Job, Request, or Project — " + WORK_ORDER_ROUND_TIME + "s each.");
+  }
+
+  const item = orderRef.current[index];
+  return (
+    <div className="p-4 flex flex-col gap-3 relative" style={{ animation: flash === "bad" ? "arcade-shake .3s ease-in-out" : "none" }}>
+      <FloatPops pops={pops} />
+      <div className="flex items-center justify-between text-[11px] font-mono font-semibold" style={{ color: "#ffd98a" }}>
+        <span>Score: {score}</span><span>Lives: {"♥".repeat(Math.max(lives, 0))}</span><span>Best: {best}</span>
+      </div>
+      {!done && item && (
+        <div className="p-3.5 flex flex-col gap-1.5" style={{ background: flash === "good" ? "rgba(255,176,0,.18)" : flash === "bad" ? "rgba(255,243,224,.32)" : "rgba(20,10,0,.4)", boxShadow: bevel("out-shallow", a), transition: "background .2s" }}>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold font-mono uppercase tracking-wide" style={{ color: "#c98a2e" }}>Incoming ticket</span>
+            <span className="text-[11px] font-semibold font-mono" style={{ color: "#c98a2e" }}>{timeLeft}s</span>
+          </div>
+          <div className="text-[14px] font-medium" style={{ color: "#ffd98a" }}>{item.text}</div>
+        </div>
+      )}
+      <div className="flex gap-2">
+        {WORK_ORDER_LANES.map((lane, i) => (
+          <button key={lane.key} type="button" disabled={done || locked} className="flex-1 px-3 py-2 text-[13px] font-semibold disabled:opacity-40" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-shallow", a), color: "#ffd98a" }} onClick={() => decide(lane.key)}>{lane.label} <span style={{ opacity: 0.5 }}>({i + 1})</span></button>
+        ))}
+      </div>
+      <p className="text-[14px] font-medium text-center" style={{ color: "#c98a2e" }}>{message}</p>
+      {done && <button type="button" className="self-center px-3 py-1.5 text-[13px] font-semibold" style={{ background: a, color: "#040200", boxShadow: bevel("out-shallow", a) }} onClick={restart}>Restart</button>}
+    </div>
+  );
+}
+
 const GAMES = [
   { id: "route-racer", title: "Route Racer", cluster: "field-operations", desc: "Grid-navigation puzzle. Visit every job site before you run out of moves.", summary: "Concept takeaway: Zuper's real dispatch system routes technicians around live traffic and job constraints automatically.", docsConcept: "Scheduling & Dispatching", docsBlurb: "the Dispatch Board and Maps modules handle job scheduling, technician assignment, and route optimization" },
   { id: "dispatch-tetris", title: "Dispatch Tetris", cluster: null, desc: "Schedule-fitting puzzle. Place each incoming job into an open technician slot.", summary: "Concept takeaway: Zuper's real scheduling tools fit incoming jobs into technician availability automatically.", docsConcept: "Scheduling & Dispatching", docsBlurb: "the Calendar module schedules and manages jobs assigned to field technicians" },
@@ -2157,6 +2467,14 @@ const GAMES = [
      invented/overstated capabilities - the game itself (approve-or-flag judgment
      calls) is unchanged, only the claim about what Zuper's real product does. */
   { id: "fraud-or-fine", title: "Fraud or Fine?", cluster: "payment-processing", desc: "Fast judgment call. Approve or flag each transaction before the clock runs out — some legit ones look suspicious on purpose.", summary: "Concept takeaway: Zuper's real Accounting module creates, manages, and sends quotes and invoices to customers.", docsConcept: "Accounting (Quotes & Invoices)", docsBlurb: "the Accounting module creates, manages, and sends quotes and invoices to customers" },
+  /* Two new games, two real Zuper concepts that had no arcade game at all before —
+     both grounded directly in docs.zuper.co/Getting_Started/Concepts (fetched and
+     read this session). cluster: null like Dispatch Tetris: neither Customer
+     Management nor Work Order Management maps onto a labs.zuper.co "world data"
+     cluster, so gameSummaryText falls back to the static summary + docsConcept
+     below rather than a cluster-entity readout. */
+  { id: "property-match", title: "Property Match", cluster: null, desc: "Memory-match puzzle. Flip cards to pair every property with its customer — no clock, just your memory.", summary: "Concept takeaway: Zuper's real Customer Management keeps every property tied to the right customer or organization.", docsConcept: "Customer Management", docsBlurb: "the Customers, Organizations, and Properties modules track service records and property details in one place" },
+  { id: "work-order-sort", title: "Work Order Sort", cluster: null, desc: "Fast triage. Sort each incoming ticket into Job, Request, or Project before the clock runs out.", summary: "Concept takeaway: Zuper's real Work Order Management creates the right kind of work order — Job, Request, or Project — for each situation.", docsConcept: "Work Order Management", docsBlurb: "the Jobs, Requests, and Projects modules create and track different kinds of work orders for the right audience and timeframe" },
 ];
 /* Clusters that already have a matching arcade game don't get their own desktop
    folder icon anymore — they're "in the arcade" now, per direct request. Derived
@@ -2175,7 +2493,24 @@ const ARCADE_CLUSTER_IDS = new Set(GAMES.filter((g) => g.cluster).map((g) => g.c
    Explicit danger/wrong-answer feedback still always reads as the near-white pulse
    (#fff3e0) used elsewhere in the OS, never red - only the neutral/positive UI got a
    color identity, the "no red errors" convention is untouched. */
-const GAME_ACCENT_BY_ID = Object.fromEntries(GAMES.map((g, i) => [g.id, "hsl(" + (i * 51) % 360 + ", 70%, 62%)"]));
+/* Hue step derived from GAMES.length (not a fixed 51°) so hues stay evenly spread
+   around the wheel regardless of how many games there are — a fixed-degree offset
+   only tiles a full 360° cleanly for specific counts (51°×7≈357° was a near-miss by
+   luck, not by design; it wouldn't hold at 8 or 9 games without visibly bunching). */
+const GAME_ACCENT_BY_ID = Object.fromEntries(GAMES.map((g, i) => [g.id, "hsl(" + Math.round((i * 360) / GAMES.length) % 360 + ", 70%, 62%)"]));
+/* Found while testing this session's cabinet-hover polish: several call sites across
+   the arcade tint a translucent fill by appending a hex alpha suffix directly onto
+   the accent color ("+ \"22\""), which only works when that color is #rrggbb hex —
+   every per-game accent from the map above is an hsl(...) string, so the suffix was
+   landing as invalid CSS and silently rendering fully transparent (the menu cabinet
+   icon badges, Dispatch Tetris's booked-slot tint, Property Match's matched-card
+   tint). Handles both kinds of accent color (hsl(...) from this map, or the hex
+   CRT_GREEN fallback used when no per-game accent is passed) so every "+ alpha-hex"
+   call site can switch to this without caring which one it got. */
+function accentAlpha(color, alphaHex) {
+  if (color && color.indexOf("hsl(") === 0) return color.slice(0, -1) + ", " + (parseInt(alphaHex, 16) / 255).toFixed(2) + ")";
+  return color + alphaHex;
+}
 
 /* Per Sameer, direct request: the desktop itself should only ever show these four
    icons, no matter how many real clusters worldData has. Everything else (every other
@@ -2217,13 +2552,14 @@ function ArcadeWindow({ worldData }) {
   const [view, setView] = useState("menu");
   const [achievement, setAchievement] = useState(null);
   const [summaryText, setSummaryText] = useState("");
+  const [summaryGame, setSummaryGame] = useState(null);
   function onGameComplete(title, resultText) { setAchievement({ title: title, text: resultText + " (Concept only — nothing is transmitted anywhere; any high score shown is kept in this browser's localStorage only.)" }); }
-  function skip(game) { setSummaryText(gameSummaryText(game, worldData)); setView("summary"); setAchievement(null); }
+  function skip(game) { setSummaryText(gameSummaryText(game, worldData)); setSummaryGame(game); setView("summary"); setAchievement(null); }
   function backToMenu() { setView("menu"); setAchievement(null); }
   return (
     <div className="p-4 h-full flex flex-col">
       {view === "menu" && (
-        <React.Fragment>
+        <div className="flex flex-col h-full" style={{ animation: "arcade-view-in .18s ease-out" }}>
           <div className="flex items-center justify-between mb-3 flex-shrink-0">
             <h2 className="m-0 text-[15px] font-bold font-mono tracking-wide" style={{ color: "#ffd98a" }}>SELECT A CABINET</h2>
             <span className="text-[11px] font-semibold font-mono" style={{ color: "#c98a2e" }}>{GAMES.length} games</span>
@@ -2232,14 +2568,18 @@ function ArcadeWindow({ worldData }) {
               cabinet fits in the window at once, no scrolling in either direction at the
               default window size. Each card has its own explicit Play / Skip & Read
               Summary buttons again (the single-click-whole-tile + tiny corner "i" from
-              the previous pass was reduced back down per direct request). */}
+              the previous pass was reduced back down per direct request). Hover lift +
+              brightness bump (transition-transform/hover:brightness, plain Tailwind
+              utilities — no slash-opacity variants, which this codebase's CDN Tailwind
+              build doesn't reliably generate) is the only cabinet-level polish added;
+              deeper per-card treatments weren't asked for. */}
           <div className="flex-1 min-h-0 overflow-y-auto grid gap-3 content-start" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))" }}>
             {GAMES.map((g) => {
               const accent = GAME_ACCENT_BY_ID[g.id];
               return (
-                <div key={g.id} className="flex flex-col items-center gap-2 p-3 text-center"
+                <div key={g.id} className="flex flex-col items-center gap-2 p-3 text-center transition-transform duration-150 hover:-translate-y-0.5 hover:brightness-110"
                   style={{ background: "rgba(20,10,0,.45)", boxShadow: bevel("out-shallow", accent) }}>
-                  <span className="flex items-center justify-center rounded-full flex-shrink-0" style={{ width: 42, height: 42, background: accent + "22", boxShadow: bevel("in-shallow", accent) }}>
+                  <span className="flex items-center justify-center rounded-full flex-shrink-0" style={{ width: 42, height: 42, background: accentAlpha(accent, "22"), boxShadow: bevel("in-shallow", accent) }}>
                     <MinimalIcon shapeKey={g.cluster || "zuper-arcade"} size={22} color={accent} />
                   </span>
                   <h3 className="text-[13px] font-bold m-0 font-mono leading-tight" style={{ color: "#ffd98a" }}>{g.title}</h3>
@@ -2252,10 +2592,14 @@ function ArcadeWindow({ worldData }) {
               );
             })}
           </div>
-        </React.Fragment>
+        </div>
       )}
       {view !== "menu" && (
-        <div className="mt-3">
+        /* key={view}: without it, switching directly between two non-menu views (a
+           game -> summary, or Skip on one game -> Play on another) wouldn't remount
+           this wrapper at all — the arcade-view-in entrance would only ever play on
+           the very first non-menu view, not on every subsequent switch. */
+        <div className="mt-3" key={view} style={{ animation: "arcade-view-in .18s ease-out" }}>
           <button type="button" className="text-[12px] font-semibold hover:brightness-125" style={{ color: GAME_ACCENT_BY_ID[view] || "#c98a2e" }} onClick={backToMenu}>&larr; Back to Arcade</button>
           <div className="mt-1">
             {view === "route-racer" && <RouteRacerGame onComplete={onGameComplete} accent={GAME_ACCENT_BY_ID[view]} />}
@@ -2265,12 +2609,28 @@ function ArcadeWindow({ worldData }) {
             {view === "pipe-flow" && <PipeFlowGame onComplete={onGameComplete} accent={GAME_ACCENT_BY_ID[view]} />}
             {view === "spinning-plates" && <SpinningPlatesGame onComplete={onGameComplete} accent={GAME_ACCENT_BY_ID[view]} />}
             {view === "fraud-or-fine" && <FraudOrFineGame onComplete={onGameComplete} accent={GAME_ACCENT_BY_ID[view]} />}
-            {view === "summary" && <p className="text-[14px] font-medium leading-relaxed p-4" style={{ color: "#ffd98a" }}>{summaryText}</p>}
+            {view === "property-match" && <PropertyMatchGame onComplete={onGameComplete} accent={GAME_ACCENT_BY_ID[view]} />}
+            {view === "work-order-sort" && <WorkOrderSortGame onComplete={onGameComplete} accent={GAME_ACCENT_BY_ID[view]} />}
+            {/* Skip & Read Summary used to land on a single bare <p>, no icon/card/
+                accent — a flat afterthought despite being an equal-weight button on
+                every cabinet tile. Now gets the same icon-badge + bevel-card treatment
+                as the tile it came from, using that game's own accent. */}
+            {view === "summary" && summaryGame && (
+              <div className="p-4" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-deep", GAME_ACCENT_BY_ID[summaryGame.id]) }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="flex items-center justify-center rounded-full flex-shrink-0" style={{ width: 34, height: 34, background: accentAlpha(GAME_ACCENT_BY_ID[summaryGame.id], "22"), boxShadow: bevel("in-shallow", GAME_ACCENT_BY_ID[summaryGame.id]) }}>
+                    <MinimalIcon shapeKey={summaryGame.cluster || "zuper-arcade"} size={18} color={GAME_ACCENT_BY_ID[summaryGame.id]} />
+                  </span>
+                  <h4 className="m-0 text-[14px] font-bold font-mono" style={{ color: "#ffd98a" }}>{summaryGame.title}</h4>
+                </div>
+                <p className="m-0 text-[14px] font-medium leading-relaxed" style={{ color: "#c98a2e" }}>{summaryText}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
       {achievement && (
-        <div className="mt-4 p-3.5" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-deep", CRT_GREEN) }}>
+        <div className="mt-4 p-3.5" style={{ background: "rgba(20,10,0,.5)", boxShadow: bevel("out-deep", CRT_GREEN), animation: "arcade-toast-in .22s ease-out" }}>
           <h4 className="m-0 text-[16px] font-bold font-mono" style={{ color: "#ffd98a" }}>{achievement.title}</h4>
           <p className="m-0 mt-1 text-[14px] font-medium leading-relaxed" style={{ color: "#c98a2e" }}>{achievement.text}</p>
         </div>

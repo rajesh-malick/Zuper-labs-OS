@@ -268,6 +268,13 @@
     @keyframes arcade-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
     @keyframes arcade-pop-fade { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(1.15); } }
     @keyframes arcade-pulse-critical { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+    /* arcade-view-in: entrance for whichever of menu/game/summary is currently
+       mounted in ArcadeWindow, replacing what used to be an instant, unanimated
+       conditional swap. arcade-toast-in: entrance for the post-game achievement
+       panel, which previously just appeared with no animation at all. Both direct
+       follow-up requests ("better gaming" -> menu/UI polish). */
+    @keyframes arcade-view-in { 0% { opacity: 0; transform: scale(.97); } 100% { opacity: 1; transform: scale(1); } }
+    @keyframes arcade-toast-in { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
     /* Hover-notice — a quick "perk up" perspective bump on pointer-enter, one of the
        few surviving animations from the mascot's earlier hand-drawn-SVG eras (still
        works fine on the current real-pose-art version, since it's just a transform
