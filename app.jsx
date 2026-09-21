@@ -3258,7 +3258,7 @@ function Taskbar({ onStartClick, running, onRunningClick, theme }) {
     tick(); const id = setInterval(tick, 15000); return () => clearInterval(id);
   }, []);
   return (
-    <div className="fixed left-0 right-0 bottom-0 h-[52px] flex items-center gap-3 px-3 z-[800]" style={{ background: t.panelBg, backdropFilter: t.panelBlur, WebkitBackdropFilter: t.panelBlur, boxShadow: bevel("out-shallow", t.winBorder) + ", inset 0 1px 0 rgba(0,0,0,.4)" }}>
+    <div className="fixed left-0 right-0 bottom-0 h-[52px] flex items-center gap-3 px-3 z-[800]" style={{ background: "rgba(96,87,86,.38)", backdropFilter: "blur(20px) saturate(1.5)", WebkitBackdropFilter: "blur(20px) saturate(1.5)", boxShadow: bevel("out-shallow", t.winBorder) + ", inset 0 1px 0 rgba(255,255,255,.08), inset 0 1px 0 rgba(0,0,0,.3)" }}>
       <button type="button" onClick={onStartClick} className="flex items-center gap-1.5 px-3 py-1.5 font-chrome text-[13px] font-semibold" style={{ background: t.accent, color: t.chromeText, boxShadow: bevel("out-shallow", t.accent) }}>&#9635; Start</button>
       <div className="flex-1 flex gap-1.5 overflow-x-auto">
         {running.map((r) => (
