@@ -104,7 +104,12 @@
              `none` default and nothing would ever flip it back to `auto`. Syncing to
              the current position on every observed mutation self-heals regardless of
              which specific element is currently in the DOM. */
-          ifr.style.pointerEvents = ifr.style.position === "fixed" ? "" : "auto";
+          var collapsed = ifr.style.position === "fixed";
+          ifr.style.pointerEvents = collapsed ? "" : "auto";
+          /* Same self-healing logic covers visibility (see the static CSS default
+             above for why it starts hidden) — collapsed stays hidden, the real open
+             modal becomes visible the moment Portal sets it to position:relative. */
+          ifr.style.visibility = collapsed ? "" : "visible";
         }
         injectHideStyle();
         syncPointerEvents();
@@ -129,7 +134,20 @@
     /* Static default — see the script above for why this has to be plain CSS and
        not JS-applied: the browser matches it the instant the iframe element exists,
        with no timing gap a real early click could slip through. */
-    #ghost-portal-root iframe { pointer-events: none; }
+    /* visibility: hidden (not just pointer-events: none) — real bug report with a
+       screenshot: the collapsed-state iframe was showing as a solid white box over
+       the desktop. The CSS-injection fix below (injectHideStyle) hides Portal's own
+       trigger button correctly via visibility:hidden on the *inner* element, verified
+       live — but the OUTER iframe itself stays visible, and during Portal's own
+       load/re-render moments (see the "brand new iframe" note below) that outer
+       frame paints its default blank-white canvas before its embedded document's
+       own styles have applied. Hiding the whole outer iframe by default (only ever
+       revealed by syncPointerEvents once Portal flips it to its real open-modal
+       state) can't show that blank flash regardless of inner-content timing.
+       openGhostSignup's programmatic trigger.click() still fires correctly on a
+       visibility:hidden ancestor (synthetic clicks aren't blocked by that, only real
+       mouse events are), so this doesn't break opening the real modal. */
+    #ghost-portal-root iframe { pointer-events: none; visibility: hidden; }
     /* Type scale for a dense retro desktop OS — per direct reference. Deliberately
        smaller/tighter than the boot-screen-style 17-18px JetBrains Mono that inspired
        the font choice: that worked because the cookie dialog it came from is one big
