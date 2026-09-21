@@ -1286,7 +1286,8 @@ function BlogWindow() {
       <p className="text-white/58 text-[10px] font-medium font-mono mb-3">Real posts from zuper.co/blog — click one to read it there.</p>
       {posts && posts.length > 0 && (
         <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter by title or topic…"
-          className="mb-3 px-2.5 py-1.5 text-[13px] font-medium bg-white/5 border border-white/12 rounded text-white placeholder-white/35 outline-none focus:border-white/30" />
+          className="mb-3 px-2.5 py-1.5 text-[13px] font-medium bg-white/5 border border-white/12 rounded text-white placeholder-white/45 outline-none focus:border-white/30"
+          style={{ colorScheme: "dark", forcedColorAdjust: "none" }} />
       )}
       <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-1.5">
         {error && <p className="text-red-400 text-[13px] font-medium">Couldn't load the post list.</p>}
