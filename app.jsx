@@ -205,6 +205,9 @@ const CLUSTER_APPS = {
   "inventory-management": "Parts Tracker",
   "integration-hub": "API Gateway",
   "predictive-analytics": "Zuper AI",
+  /* Real content, not a concept-UI dashboard label like the ones above — this one
+     opens BlogWindow (real posts fetched from zuper.co/blog), not DashboardWindow. */
+  "blog": "Blog Posts",
 };
 /* ---------- Vintage pixel-art icons — hand-authored original shapes (not traced or
    copied from any icon pack/marketplace/artist), rendered at native 24x24 canvas
@@ -1248,6 +1251,57 @@ function DashboardWindow({ clusterId, worldData }) {
         ))}
       </div>
       <p className="text-white/40 text-[10px] font-medium italic mt-4">"{appName}" is a concept UI shell wrapping labs.zuper.co's real entity data — not a confirmed real Zuper product name.</p>
+    </div>
+  );
+}
+
+/* Real content, unlike the rest of this file's cluster windows: every post here is a
+   real, live article on zuper.co/blog (title/author/read-time/excerpt), snapshotted
+   into ./zuper-blog-posts.json at build time since a client-side fetch of zuper.co
+   from this origin would just hit CORS. Clicking a post opens the real article on
+   zuper.co in a new tab — this reader is a concept-UI shell around real links, not a
+   local copy of the articles themselves. */
+function BlogWindow() {
+  const [posts, setPosts] = useState(null);
+  const [error, setError] = useState(false);
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    fetch("./zuper-blog-posts.json").then((r) => r.json()).then(setPosts).catch(() => setError(true));
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!posts) return [];
+    const q = query.trim().toLowerCase();
+    if (!q) return posts;
+    return posts.filter((p) => p.title.toLowerCase().indexOf(q) !== -1 || p.excerpt.toLowerCase().indexOf(q) !== -1);
+  }, [posts, query]);
+
+  return (
+    <div className="p-4 flex flex-col h-full">
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <h1 className="text-white text-[16px] font-bold font-mono">Blog Posts</h1>
+        {posts && <span className="text-white/48 text-[10px] font-semibold font-mono">{filtered.length} of {posts.length}</span>}
+      </div>
+      <p className="text-white/58 text-[10px] font-medium font-mono mb-3">Real posts from zuper.co/blog — click one to read it there.</p>
+      {posts && posts.length > 0 && (
+        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter by title or topic…"
+          className="mb-3 px-2.5 py-1.5 text-[13px] font-medium bg-white/5 border border-white/12 rounded text-white placeholder-white/35 outline-none focus:border-white/30" />
+      )}
+      <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-1.5">
+        {error && <p className="text-red-400 text-[13px] font-medium">Couldn't load the post list.</p>}
+        {!posts && !error && <p className="text-white/48 text-[13px] font-medium">Loading…</p>}
+        {posts && filtered.length === 0 && <p className="text-white/48 text-[13px] font-medium">No posts match "{query}".</p>}
+        {filtered.map((p) => (
+          <a key={p.url} href={"https://www.zuper.co" + p.url} target="_blank" rel="noopener"
+            className="block px-3 py-2.5 rounded border border-white/8 hover:border-white/25 hover:bg-white/5 transition-colors">
+            <div className="text-white text-[14px] font-semibold leading-snug mb-0.5">{p.title}</div>
+            <div className="text-white/62 text-[12px] font-medium leading-snug mb-1">{p.excerpt}</div>
+            <div className="text-white/40 text-[10px] font-semibold font-mono uppercase tracking-wide">{p.author} · {p.readTime}</div>
+          </a>
+        ))}
+      </div>
+      <p className="text-white/40 text-[10px] font-medium italic mt-3 border-t border-white/10 pt-2">Source: zuper.co/blog (fetched this session). Titles, authors, and excerpts are real; this reader's chrome is a concept UI.</p>
     </div>
   );
 }
@@ -2968,6 +3022,7 @@ function TerminalWindow({ worldData, jumpTo, onOpenFolder }) {
         const c = findCluster(worldData, cwd);
         out.push({ text: "# " + c.name, kind: "out" });
         c.entities.forEach((e) => { out.push({ text: "- " + e.name + " (" + e.type + "): " + e.description, kind: "out" }); });
+        if (cwd === "blog") out.push({ text: "(Want the real posts, not this concept summary? Run ls, then open Blog Posts.)", kind: "out" });
       } else out.push({ text: "cat: no such file: " + arg, kind: "err" });
     } else if (verb === "bash") {
       const [scriptName, ...scriptArgsArr] = arg.split(/\s+/);
@@ -4055,7 +4110,7 @@ function App({ worldData, onReboot }) {
       out.push({ id: c.id + "--readme", title: "readme.md", kind: "markdown", clusterId: c.id, rect: Object.assign({}, base, { w: 400, h: 440 }) });
       out.push({ id: c.id + "--status", title: "status.sh", kind: "shell-status", clusterId: c.id, rect: Object.assign({}, base, { x: base.x + 40, y: base.y + 20, w: 380, h: 360 }) });
       out.push({ id: c.id + "--connections", title: "connections.sh", kind: "shell-connections", clusterId: c.id, rect: Object.assign({}, base, { x: base.x + 80, y: base.y + 40, w: 380, h: 360 }) });
-      if (CLUSTER_APPS[c.id]) out.push({ id: c.id + "--app", title: CLUSTER_APPS[c.id], kind: "dashboard", clusterId: c.id, rect: Object.assign({}, base, { x: base.x + 120, y: base.y + 60, w: 460, h: 480 }) });
+      if (CLUSTER_APPS[c.id]) out.push({ id: c.id + "--app", title: CLUSTER_APPS[c.id], kind: c.id === "blog" ? "blog-posts" : "dashboard", clusterId: c.id, rect: Object.assign({}, base, { x: base.x + 120, y: base.y + 60, w: 460, h: 480 }) });
     });
     return out;
   }, [worldData]);
@@ -4234,6 +4289,7 @@ function App({ worldData, onReboot }) {
               {w.kind === "shell-status" && <ShellStatusWindow clusterId={w.clusterId} worldData={worldData} />}
               {w.kind === "shell-connections" && <ShellConnectionsWindow clusterId={w.clusterId} worldData={worldData} />}
               {w.kind === "dashboard" && <DashboardWindow clusterId={w.clusterId} worldData={worldData} />}
+              {w.kind === "blog-posts" && <BlogWindow />}
               {w.kind === "arcade" && <ArcadeWindow worldData={worldData} />}
               {w.kind === "terminal" && <TerminalWindow worldData={worldData} jumpTo={terminalJump} onOpenFolder={wm.open} />}
               {w.kind === "properties" && <PropertiesWindow worldData={worldData} />}
