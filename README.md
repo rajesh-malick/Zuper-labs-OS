@@ -215,20 +215,23 @@ came from — "via Claude" or "local search" — so it's never ambiguous which
 one answered.
 
 **Backend:** `api/ask.js` is a small Vercel serverless function — the only
-backend component in this otherwise fully static project. It holds the
-Anthropic API key server-side (an environment variable, never shipped to
+backend component in this otherwise fully static project. It holds an
+OpenRouter API key server-side (an environment variable, never shipped to
 the browser) and forwards the question plus the real cluster/entity/flow
 data as context, instructing the model to answer only from that real data.
-To enable it:
-1. Create an Anthropic API key at [console.anthropic.com](https://console.anthropic.com/).
+Routes to a free-tier OpenRouter model (`qwen/qwen3.8-27b:free` at the time
+this was wired up — direct request to keep this at zero per-query cost,
+not a paid model). To enable it:
+1. Create an API key at [openrouter.ai/keys](https://openrouter.ai/keys).
 2. In the Vercel project's Settings → Environment Variables, add
-   `ANTHROPIC_API_KEY` with that value, then redeploy.
-3. **Set a spend limit on the Anthropic account.** This endpoint is public
-   once deployed — anyone on the live site can trigger a Claude call. A
-   client-side session cap (`LLM_SESSION_LIMIT` in app.jsx, currently 30
-   calls per browser tab) guards against one runaway tab, but it is *not*
-   real abuse protection (no server-side per-IP rate limiting) — treat the
-   Anthropic account's own spend limit as the real safety net.
+   `OPENROUTER_API_KEY` with that value, then redeploy.
+3. Free-tier models on OpenRouter carry rate limits (not a spend risk, but
+   a heavily-hammered public endpoint could exhaust them and start
+   returning errors). A client-side session cap (`LLM_SESSION_LIMIT` in
+   app.jsx, currently 30 calls per browser tab) guards against one runaway
+   tab; there's no server-side per-IP limiting beyond that. If OpenRouter
+   ever retires this specific free model, swap `MODEL` in api/ask.js for a
+   current one from their [models listing](https://openrouter.ai/models).
 
 Without the key configured (e.g. running the plain static file server
 locally, or before the env var is set on Vercel), `/api/ask` 404s or
@@ -588,9 +591,9 @@ triggers a new production deployment automatically, no manual redeploy
 step or CI config needed. Zero build command (static `index.html`), so
 there's nothing to configure beyond pointing Vercel at the repo root.
 The one exception is `api/ask.js` — Vercel auto-detects it as a serverless
-function with zero extra config, but it needs `ANTHROPIC_API_KEY` set in
-the project's environment variables to actually call Claude (see Desktop
-assistant above).
+function with zero extra config, but it needs `OPENROUTER_API_KEY` set in
+the project's environment variables to actually call the model (see
+Desktop assistant above).
 
 ## Running locally
 

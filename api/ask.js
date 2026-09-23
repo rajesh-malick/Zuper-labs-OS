@@ -1,11 +1,19 @@
-// Vercel serverless function — secure proxy to the Anthropic API.
-// The API key lives only in this server-side environment variable (ANTHROPIC_API_KEY,
+// Vercel serverless function — secure proxy to OpenRouter (openrouter.ai).
+// The API key lives only in this server-side environment variable (OPENROUTER_API_KEY,
 // set in the Vercel project's dashboard), never in client-side code. The frontend
 // (AssistantWidget in app.jsx) POSTs { question } here and falls back to its own local
 // keyword search over zuper-world-data.json if this call fails or the key isn't set.
+//
+// Direct request: no per-query cost, so this routes to one of OpenRouter's genuinely
+// free-tier models (":free" suffix — $0, no charge against the account's credit
+// balance) rather than a paid model like Claude. Verified against OpenRouter's own
+// public /api/v1/models listing (pricing.prompt === "0") at the time this was wired
+// up, not assumed from memory — that catalog changes over time, so if this model ID
+// ever gets retired the fallback to local search below just kicks in until it's
+// swapped for a current one.
 const worldData = require("../zuper-world-data.json");
 
-const MODEL = "claude-haiku-4-5-20251001";
+const MODEL = "qwen/qwen3.8-27b:free";
 const MAX_QUESTION_LENGTH = 500;
 
 function buildContext() {
@@ -27,9 +35,9 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    res.status(503).json({ error: "ANTHROPIC_API_KEY not configured" });
+    res.status(503).json({ error: "OPENROUTER_API_KEY not configured" });
     return;
   }
 
@@ -54,18 +62,26 @@ module.exports = async (req, res) => {
     "REAL PLATFORM DATA (JSON):\n" + buildContext();
 
   try {
-    const upstream = await fetch("https://api.anthropic.com/v1/messages", {
+    // OpenRouter's API is OpenAI-compatible (POST /chat/completions, system+user
+    // messages array, response at choices[0].message.content) — a different shape
+    // from Anthropic's native /v1/messages this originally called. HTTP-Referer/
+    // X-Title are OpenRouter's own recommended (not required) attribution headers,
+    // shown on their dashboard/leaderboards — harmless to include, no secret in them.
+    const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        "authorization": "Bearer " + apiKey,
+        "HTTP-Referer": "https://zuper-labs-os.vercel.app",
+        "X-Title": "Zuper Labs OS - Zee",
       },
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 400,
-        system: systemPrompt,
-        messages: [{ role: "user", content: question }],
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: question },
+        ],
       }),
     });
 
@@ -76,7 +92,7 @@ module.exports = async (req, res) => {
     }
 
     const data = await upstream.json();
-    const answer = data && data.content && data.content[0] && data.content[0].text;
+    const answer = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
     if (!answer) {
       res.status(502).json({ error: "Empty response from model" });
       return;

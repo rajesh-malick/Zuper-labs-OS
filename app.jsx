@@ -3964,11 +3964,12 @@ function StartMenu({ open, onClose, onOpen, topApps, onFullscreen, onFind, onRun
    @react95/clippy ships actual extracted Microsoft Office character assets (confirmed
    by inspecting the published package), so it and @react95/icons were both ruled out
    earlier this session. Tries a real
-   Claude call first (via
-   api/ask.js) grounded in the REAL labs.zuper.co cluster/entity/flow data, falling back
-   to deterministic local keyword search if Claude isn't configured — every answer is
-   tagged with its actual source. Docks near the focused window until manually dragged,
-   then stays put. ================= */
+   LLM call first (via
+   api/ask.js, routed through OpenRouter to a free-tier model — direct request to avoid
+   any per-query cost) grounded in the REAL labs.zuper.co cluster/entity/flow data,
+   falling back to deterministic local keyword search if the API key isn't configured
+   or the call fails — every answer is tagged with its actual source. Docks near the
+   focused window until manually dragged, then stays put. ================= */
 const ASSISTANT_TIPS = [
   "Right-click the desktop for more options, or double-click empty space for New.",
   "Open Display settings to change icon size or text size.",
@@ -4205,7 +4206,7 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
         });
         if (r.ok) {
           const data = await r.json();
-          if (data && data.answer) { answer = data.answer; source = "claude"; llmCallsRef.current += 1; }
+          if (data && data.answer) { answer = data.answer; source = "llm"; llmCallsRef.current += 1; }
         }
       } catch (e) { console.error(e); /* network/API unavailable — fall through to local search */ }
     }
@@ -4231,7 +4232,7 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
      a casual, talked-out-loud version ("hey, know what X is? wanna know!") of the
      same real question the chat's suggestion chips ask — kept as a separate list from
      `suggestions` above so the chips can stay plainly worded while the nudge gets to
-     be chattier; both drive the exact same local-search/Claude question underneath. */
+     be chattier; both drive the exact same local-search/LLM question underneath. */
   const nudgeSuggestions = React.useMemo(() => {
     if (!worldData || !worldData.length) return [{ label: "hey, want a quick tip?", question: "Give me a tip" }];
     const withEntities = worldData.find((c) => c.entities.length);
@@ -4353,14 +4354,14 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
             {messages.length === 0 && (
               <p className="leading-relaxed" style={{ color: t.chromeTextDim }}>
                 Ask about any real Zuper cluster, entity, or data-flow. Every answer is tagged
-                with where it came from — Claude, or this app's own local search.
+                with where it came from — an AI model, or this app's own local search.
               </p>
             )}
             {messages.map((m, i) => (
               <p key={i} className="leading-relaxed whitespace-pre-wrap my-1.5" style={{ color: m.role === "user" ? t.chromeTextDim : t.chromeText }}>
                 {m.role === "user" ? "> " : ""}{m.text}
                 {m.role === "assistant" && (
-                  <span style={{ color: t.chromeTextDim, fontSize: "10px", fontWeight: 500 }}>{m.source === "claude" ? "  — via Claude" : "  — local search"}</span>
+                  <span style={{ color: t.chromeTextDim, fontSize: "10px", fontWeight: 500 }}>{m.source === "llm" ? "  — via AI" : "  — local search"}</span>
                 )}
               </p>
             ))}
@@ -4433,7 +4434,7 @@ function AssistantWidget({ theme, stageRef, worldData, hasFocusedWindow }) {
         className="flex items-center justify-center relative focus-visible:outline focus-visible:outline-2"
         style={{ width: 84, height: 106, outlineColor: t.accent, overflow: "visible", cursor: "grab" }}
         title="Need something? Click to ask — drag to move me"
-        aria-label="Zee, the Zuper OS assistant — real platform data, Claude when configured. Draggable.">
+        aria-label="Zee, the Zuper OS assistant — real platform data, AI-assisted when configured. Draggable.">
         {/* ZEE take 4: real pose art (MascotImage/useMascotState, above) instead of a
             hand-drawn character. Deliberately calm at rest per direct spec - no
             constant bouncing, no permanent glow: breathing is the only continuous
